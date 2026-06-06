@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type RefObject } from 'react';
 import {
   Zap, Search, ShoppingCart, Bell, Upload, Menu, X, Star,
   ChevronRight, ChevronDown, Play, MapPin, Minus, Plus, Trash2,
@@ -104,6 +104,80 @@ export default function Home() {
     if (!requireLogin()) return;
     setCartOpen(true);
   }, [requireLogin]);
+
+  // Swipe-to-close for Sheet panels on mobile
+  useEffect(() => {
+    const THRESHOLD = 80;
+
+    function handleSwipeOnSheet(sheetSelector: string, onClose: () => void) {
+      const panel = document.querySelector(sheetSelector + ' [data-slot="sheet-content"]') as HTMLElement;
+      if (!panel) return;
+
+      let startX = 0;
+      let currentX = 0;
+      let isDragging = false;
+
+      const onTouchStart = (e: TouchEvent) => {
+        startX = e.touches[0].clientX;
+        currentX = startX;
+        isDragging = true;
+        panel.style.transition = 'none';
+      };
+
+      const onTouchMove = (e: TouchEvent) => {
+        if (!isDragging) return;
+        currentX = e.touches[0].clientX;
+        const diff = currentX - startX;
+        if (diff > 0) {
+          panel.style.transform = `translateX(${diff}px)`;
+          const overlay = panel.previousElementSibling as HTMLElement;
+          if (overlay) {
+            const progress = Math.min(diff / panel.offsetWidth, 1);
+            overlay.style.opacity = String(1 - progress * 0.7);
+          }
+        }
+      };
+
+      const onTouchEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        panel.style.transition = '';
+        const overlay = panel.previousElementSibling as HTMLElement;
+        if (overlay) overlay.style.opacity = '';
+        const diff = currentX - startX;
+        if (diff > THRESHOLD) {
+          onClose();
+        } else {
+          panel.style.transform = '';
+          if (overlay) overlay.style.opacity = '';
+        }
+        setTimeout(() => { panel.style.transform = ''; }, 350);
+      };
+
+      panel.addEventListener('touchstart', onTouchStart, { passive: true });
+      panel.addEventListener('touchmove', onTouchMove, { passive: true });
+      panel.addEventListener('touchend', onTouchEnd, { passive: true });
+
+      return () => {
+        panel.removeEventListener('touchstart', onTouchStart);
+        panel.removeEventListener('touchmove', onTouchMove);
+        panel.removeEventListener('touchend', onTouchEnd);
+      };
+    }
+
+    // Apply to cart and detail sheets when they're open
+    const cleanups: (() => void)[] = [];
+    if (cartOpen) {
+      const cleanup = handleSwipeOnSheet('[data-radix-portal]', () => setCartOpen(false));
+      if (cleanup) cleanups.push(cleanup);
+    }
+    if (detailOpen) {
+      const cleanup = handleSwipeOnSheet('[data-radix-portal]:last-child', () => setDetailOpen(false));
+      if (cleanup) cleanups.push(cleanup);
+    }
+
+    return () => cleanups.forEach(fn => fn());
+  }, [cartOpen, detailOpen]);
 
   // Scroll listener for navbar
   useEffect(() => {

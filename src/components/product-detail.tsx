@@ -19,7 +19,6 @@ import { calculateShipping, formatShippingInfo } from '@/lib/shipping';
 import {
   Star,
   MapPin,
-  ShoppingCart,
   Minus,
   Plus,
   Truck,
@@ -401,17 +400,7 @@ function ProductDetailInner({ product }: { product: Product }) {
             className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
             onClick={handleAddToCart}
           >
-            {!user ? (
-              <>
-                <Lock className="h-4 w-4 mr-2" />
-                Login untuk Beli
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Tambah ke Keranjang
-              </>
-            )}
+            {!user ? 'Login untuk Beli' : 'Tambah ke Keranjang'}
           </Button>
           <Button
             variant="outline"
