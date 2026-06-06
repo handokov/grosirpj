@@ -106,6 +106,7 @@ export default function Home() {
   }, [requireLogin]);
 
   // Swipe-to-close for Sheet panels on mobile
+  // Panels slide in from the right, so swipe LEFT to close them
   useEffect(() => {
     const THRESHOLD = 80;
 
@@ -128,11 +129,12 @@ export default function Home() {
         if (!isDragging) return;
         currentX = e.touches[0].clientX;
         const diff = currentX - startX;
-        if (diff > 0) {
+        // Swipe LEFT (diff < 0) to push panel back to the right
+        if (diff < 0) {
           panel.style.transform = `translateX(${diff}px)`;
           const overlay = panel.previousElementSibling as HTMLElement;
           if (overlay) {
-            const progress = Math.min(diff / panel.offsetWidth, 1);
+            const progress = Math.min(Math.abs(diff) / panel.offsetWidth, 1);
             overlay.style.opacity = String(1 - progress * 0.7);
           }
         }
@@ -145,7 +147,8 @@ export default function Home() {
         const overlay = panel.previousElementSibling as HTMLElement;
         if (overlay) overlay.style.opacity = '';
         const diff = currentX - startX;
-        if (diff > THRESHOLD) {
+        // Close if swiped left past threshold
+        if (diff < -THRESHOLD) {
           onClose();
         } else {
           panel.style.transform = '';

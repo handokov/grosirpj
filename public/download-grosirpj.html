@@ -976,6 +976,7 @@
     }
 
     // ===== SWIPE-TO-CLOSE FOR CART & DETAIL PANELS =====
+    // Panels slide in from the right, so swipe LEFT to close them
     (function() {
       function addSwipeToClose(panelId, overlayId, closeFn) {
         const panel = document.getElementById(panelId);
@@ -987,7 +988,6 @@
         const threshold = 80; // min px to swipe to close
 
         panel.addEventListener('touchstart', function(e) {
-          // Only track horizontal swipes near the left edge or on the header
           startX = e.touches[0].clientX;
           currentX = startX;
           isDragging = true;
@@ -998,13 +998,13 @@
           if (!isDragging) return;
           currentX = e.touches[0].clientX;
           const diff = currentX - startX;
-          // Only allow swiping to the right (closing from left edge)
-          if (diff > 0) {
+          // Swipe LEFT (diff < 0) to push panel back to the right
+          if (diff < 0) {
             panel.style.transform = 'translateX(' + diff + 'px)';
             // Dim overlay proportionally
             if (overlay) {
               const panelWidth = panel.offsetWidth;
-              const progress = Math.min(diff / panelWidth, 1);
+              const progress = Math.min(Math.abs(diff) / panelWidth, 1);
               overlay.style.opacity = (1 - progress * 0.7);
             }
           }
@@ -1016,7 +1016,8 @@
           panel.style.transition = '';
           if (overlay) overlay.style.opacity = '';
           const diff = currentX - startX;
-          if (diff > threshold) {
+          // Close if swiped left past threshold
+          if (diff < -threshold) {
             closeFn();
           } else {
             // Snap back
