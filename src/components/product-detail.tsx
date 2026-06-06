@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Product, formatPrice } from '@/lib/data';
 import { useCartStore } from '@/store/cart';
 import {
@@ -88,15 +87,14 @@ function ProductDetailInner({ product }: { product: Product }) {
         <SheetDescription>Detail produk {product.name}</SheetDescription>
       </SheetHeader>
 
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col">
-          {/* Image Section */}
-          <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
-            <img
-              src={images[currentImageIndex]}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        {/* Image Section */}
+        <div className="relative h-48 sm:h-56 md:h-64 bg-gray-100 overflow-hidden shrink-0">
+          <img
+            src={images[currentImageIndex]}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
             {discountPercent > 0 && (
               <Badge className="absolute top-3 left-3 bg-emerald-500 text-white hover:bg-emerald-600 text-xs font-bold px-2 py-1">
                 -{discountPercent}%
@@ -325,8 +323,7 @@ function ProductDetailInner({ product }: { product: Product }) {
 
             <Separator />
           </div>
-        </div>
-      </ScrollArea>
+      </div>
 
       {/* Sticky Bottom Bar */}
       <div className="border-t bg-white p-4 space-y-3 shrink-0">
@@ -366,7 +363,7 @@ export function ProductDetail({ product, open, onOpenChange }: ProductDetailProp
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-lg md:max-w-2xl p-0 flex flex-col"
+        className="w-full sm:max-w-lg md:max-w-2xl p-0 flex flex-col gap-0 overflow-hidden"
         onInteractOutside={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
       >

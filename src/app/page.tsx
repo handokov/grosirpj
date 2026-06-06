@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { ProductDetail } from '@/components/product-detail';
 import { products, flashSaleProducts, categories, formatPrice, Product } from '@/lib/data';
 import { useCartStore } from '@/store/cart';
@@ -661,7 +660,7 @@ export default function Home() {
 
       {/* ===== CART SIDEBAR ===== */}
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
-        <SheetContent side="right" className="w-full sm:w-96 p-0 flex flex-col" onInteractOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
+        <SheetContent side="right" className="w-full sm:w-96 p-0 flex flex-col gap-0 overflow-hidden" onInteractOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
           <SheetHeader className="p-6 pb-4 border-b border-gray-100">
             <SheetTitle className="text-xl" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               Keranjang Belanja
@@ -669,7 +668,7 @@ export default function Home() {
             <SheetDescription>Produk yang sudah ditambahkan</SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="flex-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
             <div className="p-6">
               {cartItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -720,7 +719,7 @@ export default function Home() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {cartItems.length > 0 && (
             <div className="p-6 border-t border-gray-100">
