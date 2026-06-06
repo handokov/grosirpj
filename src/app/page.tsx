@@ -660,7 +660,7 @@ export default function Home() {
 
       {/* ===== CART SIDEBAR ===== */}
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
-        <SheetContent side="right" className="w-full sm:w-96 p-0 flex flex-col gap-0 overflow-hidden" onInteractOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
+        <SheetContent side="right" className="w-full sm:w-96 p-0 flex flex-col gap-0 overflow-hidden">
           <SheetHeader className="p-6 pb-4 border-b border-gray-100">
             <SheetTitle className="text-xl" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               Keranjang Belanja

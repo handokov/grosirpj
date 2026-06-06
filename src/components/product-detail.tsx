@@ -364,8 +364,6 @@ export function ProductDetail({ product, open, onOpenChange }: ProductDetailProp
       <SheetContent
         side="right"
         className="w-full sm:max-w-lg md:max-w-2xl p-0 flex flex-col gap-0 overflow-hidden"
-        onInteractOutside={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => e.preventDefault()}
       >
         {product && <ProductDetailInner key={product.id} product={product} />}
       </SheetContent>
