@@ -75,3 +75,59 @@ Stage Summary:
 - All features from the Next.js GrosirPJ marketplace faithfully converted to vanilla HTML/CSS/JS
 - File is fully self-contained - just open in a browser and it works
 - No React, no Next.js, no build step needed
+
+---
+Task ID: 7
+Agent: Auth & Shipping Agent
+Task: Add authentication (login/register modal), shipping cost estimation, and city selection to grosirpj.html
+
+Work Log:
+- Read existing grosirpj.html (1189 lines) and worklog.md to understand current structure
+- Added CSS for auth modal overlay and modal with scale/translate animations, auth tab styles
+- Added Auth Modal HTML with two tabs: "Masuk" (Login) and "Daftar" (Register)
+  - Login form: Email + Password fields + "Masuk" button + error display
+  - Register form: Name + Email + Password + City dropdown (30 Indonesian cities, default Jakarta) + "Daftar" button + error display
+- Replaced static "Masuk" button in navbar with dynamic `#authArea` div that shows:
+  - When not logged in: green "Masuk" button that opens auth modal
+  - When logged in: avatar (first letter of name) + name + MapPin icon + city + logout button
+- Added citiesData array with 30 Indonesian cities (lat, lng, island)
+- Added haversine() function for distance calculation between coordinates
+- Added calculateShipping(fromCity, toCity) function:
+  - Same city: cost 0, "Gratis Ongkir", 1-2 hari
+  - Same island: 5000 base + distance-based tiers, 1-4 hari
+  - Different island: 15000 base + distance-based tiers, 3-8 hari
+  - Max cost capped at 80000
+  - Returns: { cost, distance, estimatedDays, courier }
+- Added auth state management:
+  - currentUser variable, loadUser(), saveUser(), requireLogin(), logout()
+  - localStorage key 'grosirpj_user' for current session
+  - localStorage key 'grosirpj_users' for registered users list
+  - updateAuthUI() refreshes navbar and re-renders products/detail for button state
+- Added auth modal functions: openAuthModal(), closeAuthModal(), switchAuthTab(), handleLogin(), handleRegister()
+- Updated addToCart(): now checks requireLogin() first, shows login modal if not authenticated
+- Updated openCart(): now checks requireLogin() first, shows login modal if not authenticated
+- Updated product card quick-add buttons:
+  - Logged in: green cart icon, adds to cart directly
+  - Not logged in: gray lock icon, triggers requireLogin()
+- Updated product detail panel:
+  - Added "Estimasi Pengiriman" section between location info and seller info
+  - Logged in: shows Dari/Ke/Jarak/Ongkos Kirim/Estimasi/Kurir with calculated values
+  - Not logged in: shows "Login untuk melihat estimasi ongkir" + "Login Sekarang" button
+  - "Tambah ke Keranjang" button changes to "Login untuk Beli" with lock icon when not logged in
+  - Total price includes shipping cost when logged in
+  - Price breakdown shows shipping cost when applicable
+- Updated cart sidebar:
+  - Added "Subtotal Produk" line
+  - Added "Total Ongkir" line (sum of per-item shipping costs)
+  - Total = Subtotal + Shipping
+  - Each cart item shows per-item shipping cost or "Gratis Ongkir"
+- Demo login: any email with password >= 6 chars works
+- Register saves to localStorage and auto-logs in
+- All existing features preserved: flash sale, categories, products, cart, detail, toast, countdown, reveal animations
+
+Stage Summary:
+- Authentication system added with login/register modal and localStorage persistence
+- Shipping cost estimation with haversine distance calculation between 30 Indonesian cities
+- Cart and product interactions require login, with clear UX (lock icons, login prompts)
+- Per-item and total shipping costs displayed in cart and product detail
+- All existing marketplace features remain fully functional

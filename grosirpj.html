@@ -192,6 +192,37 @@
       color: #10b981;
       font-weight: 600;
     }
+
+    /* Auth Modal */
+    .auth-modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.5);
+      opacity: 0; transition: opacity 0.3s ease;
+      pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auth-modal-overlay.active {
+      opacity: 1; pointer-events: auto;
+    }
+    .auth-modal {
+      background: white; border-radius: 16px; width: 90%; max-width: 420px;
+      overflow: hidden; transform: translateY(20px) scale(0.95);
+      transition: transform 0.3s ease; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    }
+    .auth-modal-overlay.active .auth-modal {
+      transform: translateY(0) scale(1);
+    }
+    .auth-tab {
+      flex: 1; padding: 12px 0; text-align: center; font-weight: 600; font-size: 14px;
+      border-bottom: 2px solid transparent; color: #9ca3af;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .auth-tab.active {
+      color: #10b981; border-bottom-color: #10b981;
+    }
+    .auth-tab:hover:not(.active) {
+      color: #6b7280;
+    }
   </style>
 </head>
 <body class="font-sans text-foreground bg-[#f0fdf4]">
@@ -243,7 +274,10 @@
               <span class="absolute -top-1 -right-1 w-5 h-5 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center">5</span>
             </button>
 
-            <button class="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6 py-2 transition-colors">Masuk</button>
+            <!-- Auth Button Area -->
+            <div id="authArea">
+              <button onclick="openAuthModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6 py-2 transition-colors">Masuk</button>
+            </div>
           </div>
         </div>
       </div>
@@ -605,9 +639,20 @@
 
     <!-- Cart Footer -->
     <div id="cartFooter" class="p-6 border-t border-gray-100 shrink-0 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <span class="text-gray-600">Total</span>
-        <span id="cartTotalPrice" class="text-xl font-bold text-emerald-600 font-display">Rp 0</span>
+      <div class="space-y-2 mb-4">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-600">Subtotal Produk</span>
+          <span id="cartSubtotalPrice" class="font-semibold text-gray-800">Rp 0</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-600">Total Ongkir</span>
+          <span id="cartShippingTotal" class="font-semibold text-gray-800">Rp 0</span>
+        </div>
+        <hr class="border-gray-200">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-800 font-semibold">Total</span>
+          <span id="cartTotalPrice" class="text-xl font-bold text-emerald-600 font-display">Rp 0</span>
+        </div>
       </div>
       <button class="w-full py-6 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-2xl transition-colors">
         Checkout Sekarang
@@ -652,6 +697,86 @@
     </div>
   </div>
 
+  <!-- ===== AUTH MODAL ===== -->
+  <div id="authModalOverlay" class="auth-modal-overlay" onclick="if(event.target===this)closeAuthModal()">
+    <div class="auth-modal">
+      <!-- Header with tabs -->
+      <div class="flex border-b border-gray-200">
+        <button onclick="switchAuthTab('login')" id="authTabLogin" class="auth-tab active">Masuk</button>
+        <button onclick="switchAuthTab('register')" id="authTabRegister" class="auth-tab">Daftar</button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="authLoginForm" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" id="loginEmail" placeholder="nama@email.com" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input type="password" id="loginPassword" placeholder="Masukkan password" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all text-sm">
+        </div>
+        <div id="loginError" class="text-red-500 text-sm hidden"></div>
+        <button onclick="handleLogin()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors">Masuk</button>
+        <p class="text-center text-sm text-gray-500">Belum punya akun? <button onclick="switchAuthTab('register')" class="text-emerald-600 font-medium hover:underline">Daftar sekarang</button></p>
+      </div>
+
+      <!-- Register Form -->
+      <div id="authRegisterForm" class="p-6 space-y-4 hidden">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+          <input type="text" id="regName" placeholder="Nama lengkap Anda" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" id="regEmail" placeholder="nama@email.com" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input type="password" id="regPassword" placeholder="Minimal 6 karakter" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kota</label>
+          <select id="regCity" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all text-sm bg-white">
+            <option value="Jakarta">Jakarta</option>
+            <option value="Surabaya">Surabaya</option>
+            <option value="Bandung">Bandung</option>
+            <option value="Semarang">Semarang</option>
+            <option value="Yogyakarta">Yogyakarta</option>
+            <option value="Solo">Solo</option>
+            <option value="Medan">Medan</option>
+            <option value="Palembang">Palembang</option>
+            <option value="Pekanbaru">Pekanbaru</option>
+            <option value="Padang">Padang</option>
+            <option value="Lampung">Lampung</option>
+            <option value="Makassar">Makassar</option>
+            <option value="Manado">Manado</option>
+            <option value="Denpasar">Denpasar</option>
+            <option value="Balikpapan">Balikpapan</option>
+            <option value="Banjarmasin">Banjarmasin</option>
+            <option value="Pontianak">Pontianak</option>
+            <option value="Samarinda">Samarinda</option>
+            <option value="Lombok">Lombok</option>
+            <option value="Kupang">Kupang</option>
+            <option value="Ambon">Ambon</option>
+            <option value="Jayapura">Jayapura</option>
+            <option value="Pekalongan">Pekalongan</option>
+            <option value="Malang">Malang</option>
+            <option value="Tangerang">Tangerang</option>
+            <option value="Bekasi">Bekasi</option>
+            <option value="Depok">Depok</option>
+            <option value="Bogor">Bogor</option>
+            <option value="Cirebon">Cirebon</option>
+            <option value="Batu">Batu</option>
+          </select>
+        </div>
+        <div id="registerError" class="text-red-500 text-sm hidden"></div>
+        <button onclick="handleRegister()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors">Daftar</button>
+        <p class="text-center text-sm text-gray-500">Sudah punya akun? <button onclick="switchAuthTab('login')" class="text-emerald-600 font-medium hover:underline">Masuk</button></p>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== TOAST CONTAINER ===== -->
   <div id="toastContainer" class="toast-container"></div>
 
@@ -691,6 +816,251 @@
       { name: "Mainan", icon: "M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z", color: "from-yellow-500 to-yellow-600" }
     ];
 
+    // ===== CITIES DATA & SHIPPING =====
+    const citiesData = [
+      { name: "Jakarta", lat: -6.2088, lng: 106.8456, island: "Jawa" },
+      { name: "Surabaya", lat: -7.2575, lng: 112.7521, island: "Jawa" },
+      { name: "Bandung", lat: -6.9175, lng: 107.6191, island: "Jawa" },
+      { name: "Semarang", lat: -6.9666, lng: 110.4196, island: "Jawa" },
+      { name: "Yogyakarta", lat: -7.7972, lng: 110.3688, island: "Jawa" },
+      { name: "Solo", lat: -7.5755, lng: 110.8243, island: "Jawa" },
+      { name: "Medan", lat: 3.5952, lng: 98.6722, island: "Sumatera" },
+      { name: "Palembang", lat: -2.9761, lng: 104.7754, island: "Sumatera" },
+      { name: "Pekanbaru", lat: 0.5071, lng: 101.4478, island: "Sumatera" },
+      { name: "Padang", lat: -0.9493, lng: 100.3543, island: "Sumatera" },
+      { name: "Lampung", lat: -5.4500, lng: 105.2667, island: "Sumatera" },
+      { name: "Makassar", lat: -5.1477, lng: 119.4327, island: "Sulawesi" },
+      { name: "Manado", lat: 1.4748, lng: 124.8421, island: "Sulawesi" },
+      { name: "Denpasar", lat: -8.6500, lng: 115.2167, island: "Bali" },
+      { name: "Balikpapan", lat: -1.2654, lng: 116.8311, island: "Kalimantan" },
+      { name: "Banjarmasin", lat: -3.3186, lng: 114.5944, island: "Kalimantan" },
+      { name: "Pontianak", lat: -0.0226, lng: 109.3471, island: "Kalimantan" },
+      { name: "Samarinda", lat: -0.4948, lng: 117.1436, island: "Kalimantan" },
+      { name: "Lombok", lat: -8.6500, lng: 116.3250, island: "NTB" },
+      { name: "Kupang", lat: -10.1772, lng: 123.5980, island: "NTT" },
+      { name: "Ambon", lat: -3.6954, lng: 128.1814, island: "Maluku" },
+      { name: "Jayapura", lat: -2.5916, lng: 140.6690, island: "Papua" },
+      { name: "Pekalongan", lat: -6.8886, lng: 109.6802, island: "Jawa" },
+      { name: "Malang", lat: -7.9666, lng: 112.6326, island: "Jawa" },
+      { name: "Tangerang", lat: -6.1783, lng: 106.6319, island: "Jawa" },
+      { name: "Bekasi", lat: -6.2349, lng: 106.9896, island: "Jawa" },
+      { name: "Depok", lat: -6.4025, lng: 106.7942, island: "Jawa" },
+      { name: "Bogor", lat: -6.5971, lng: 106.8060, island: "Jawa" },
+      { name: "Cirebon", lat: -6.7063, lng: 108.5570, island: "Jawa" },
+      { name: "Batu", lat: -7.8713, lng: 112.5236, island: "Jawa" }
+    ];
+
+    function haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function calculateShipping(fromCity, toCity) {
+      const from = citiesData.find(c => c.name === fromCity) || citiesData[0];
+      const to = citiesData.find(c => c.name === toCity) || citiesData[0];
+
+      if (fromCity === toCity) {
+        return { cost: 0, distance: 0, estimatedDays: "1-2 hari", courier: "Gratis Ongkir" };
+      }
+
+      const distance = haversine(from.lat, from.lng, to.lat, to.lng);
+      const sameIsland = from.island === to.island;
+
+      let cost, estimatedDays;
+      if (sameIsland) {
+        const extraKm = Math.min(distance, 800);
+        cost = 5000 + Math.ceil(extraKm / 50) * 2000;
+        estimatedDays = distance < 200 ? "1-2 hari" : distance < 500 ? "2-3 hari" : "3-4 hari";
+      } else {
+        const extraKm = Math.min(distance, 3000);
+        cost = 15000 + Math.ceil(extraKm / 100) * 3000;
+        estimatedDays = distance < 1000 ? "3-5 hari" : distance < 2000 ? "4-6 hari" : "5-8 hari";
+      }
+
+      cost = Math.min(cost, 80000);
+      return { cost, distance: Math.round(distance), estimatedDays, courier: "JNE / J&T / SiCepat" };
+    }
+
+    // ===== AUTH STATE MANAGEMENT =====
+    let currentUser = null;
+
+    function loadUser() {
+      const stored = localStorage.getItem('grosirpj_user');
+      if (stored) currentUser = JSON.parse(stored);
+      updateAuthUI();
+    }
+
+    function saveUser(user) {
+      currentUser = user;
+      if (user) {
+        localStorage.setItem('grosirpj_user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('grosirpj_user');
+      }
+      updateAuthUI();
+    }
+
+    function requireLogin() {
+      if (!currentUser) {
+        openAuthModal();
+        showToast('Silakan login terlebih dahulu');
+        return false;
+      }
+      return true;
+    }
+
+    function logout() {
+      saveUser(null);
+      showToast('Berhasil keluar');
+    }
+
+    function updateAuthUI() {
+      const authArea = document.getElementById('authArea');
+      if (currentUser) {
+        const initial = currentUser.name.charAt(0).toUpperCase();
+        authArea.innerHTML = `
+          <div class="flex items-center gap-2">
+            <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+              <div class="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                <span class="text-white text-xs font-bold">${initial}</span>
+              </div>
+              <span class="text-sm font-medium text-emerald-700 max-w-[100px] truncate">${currentUser.name}</span>
+              <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span class="text-xs text-emerald-600">${currentUser.city}</span>
+            </div>
+            <button onclick="logout()" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Keluar">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </button>
+          </div>
+        `;
+      } else {
+        authArea.innerHTML = `<button onclick="openAuthModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6 py-2 transition-colors">Masuk</button>`;
+      }
+      // Re-render products and detail to update button states
+      renderProducts();
+      renderFlashSale();
+      if (currentDetailProduct) renderDetail();
+    }
+
+    // ===== AUTH MODAL =====
+    let authTab = 'login';
+
+    function openAuthModal() {
+      document.getElementById('authModalOverlay').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModalOverlay').classList.remove('active');
+      // Only restore overflow if no other panel is open
+      if (!document.getElementById('cartOverlay').classList.contains('active') &&
+          !document.getElementById('detailOverlay').classList.contains('active')) {
+        document.body.style.overflow = '';
+      }
+      // Clear errors
+      document.getElementById('loginError').classList.add('hidden');
+      document.getElementById('registerError').classList.add('hidden');
+    }
+
+    function switchAuthTab(tab) {
+      authTab = tab;
+      const loginTab = document.getElementById('authTabLogin');
+      const registerTab = document.getElementById('authTabRegister');
+      const loginForm = document.getElementById('authLoginForm');
+      const registerForm = document.getElementById('authRegisterForm');
+
+      if (tab === 'login') {
+        loginTab.classList.add('active');
+        registerTab.classList.remove('active');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+      } else {
+        loginTab.classList.remove('active');
+        registerTab.classList.add('active');
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+      }
+      // Clear errors
+      document.getElementById('loginError').classList.add('hidden');
+      document.getElementById('registerError').classList.add('hidden');
+    }
+
+    function handleLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errorEl = document.getElementById('loginError');
+
+      if (!email || !password) {
+        errorEl.textContent = 'Email dan password harus diisi';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      // Check localStorage for registered users
+      const users = JSON.parse(localStorage.getItem('grosirpj_users') || '[]');
+      const found = users.find(u => u.email === email && u.password === password);
+
+      if (found) {
+        saveUser({ name: found.name, email: found.email, city: found.city });
+        closeAuthModal();
+        showToast('Selamat datang, ' + found.name + '!');
+      } else {
+        // Demo: allow login with any email/password
+        if (email && password.length >= 6) {
+          const cityName = 'Jakarta';
+          saveUser({ name: email.split('@')[0], email: email, city: cityName });
+          closeAuthModal();
+          showToast('Selamat datang!');
+        } else {
+          errorEl.textContent = 'Email atau password salah. Minimal 6 karakter.';
+          errorEl.classList.remove('hidden');
+        }
+      }
+    }
+
+    function handleRegister() {
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const city = document.getElementById('regCity').value;
+      const errorEl = document.getElementById('registerError');
+
+      if (!name || !email || !password) {
+        errorEl.textContent = 'Semua field harus diisi';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      if (password.length < 6) {
+        errorEl.textContent = 'Password minimal 6 karakter';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      if (!email.includes('@')) {
+        errorEl.textContent = 'Format email tidak valid';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      // Save to users list
+      const users = JSON.parse(localStorage.getItem('grosirpj_users') || '[]');
+      if (users.find(u => u.email === email)) {
+        errorEl.textContent = 'Email sudah terdaftar';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      users.push({ name, email, password, city });
+      localStorage.setItem('grosirpj_users', JSON.stringify(users));
+
+      // Auto-login
+      saveUser({ name, email, city });
+      closeAuthModal();
+      showToast('Pendaftaran berhasil! Selamat datang, ' + name + '!');
+    }
+
     // ===== UTILITIES =====
     function formatPrice(price) {
       return 'Rp ' + price.toLocaleString('id-ID');
@@ -704,6 +1074,8 @@
     let cartItems = [];
 
     function addToCart(product) {
+      if (!requireLogin()) return;
+
       const existing = cartItems.find(item => item.id === product.id);
       if (existing) {
         existing.quantity += 1;
@@ -739,6 +1111,14 @@
       return cartItems.reduce((sum, item) => sum + item.quantity, 0);
     }
 
+    function getCartShippingTotal() {
+      if (!currentUser) return 0;
+      return cartItems.reduce((sum, item) => {
+        const shipping = calculateShipping(item.location, currentUser.city);
+        return sum + shipping.cost;
+      }, 0);
+    }
+
     function updateCartUI() {
       const badge = document.getElementById('cartBadge');
       const count = getCartCount();
@@ -749,6 +1129,8 @@
       const listEl = document.getElementById('cartItemsList');
       const footerEl = document.getElementById('cartFooter');
       const totalEl = document.getElementById('cartTotalPrice');
+      const subtotalEl = document.getElementById('cartSubtotalPrice');
+      const shippingTotalEl = document.getElementById('cartShippingTotal');
 
       if (cartItems.length === 0) {
         emptyEl.classList.remove('hidden');
@@ -758,14 +1140,23 @@
         emptyEl.classList.add('hidden');
         listEl.classList.remove('hidden');
         footerEl.classList.remove('hidden');
-        totalEl.textContent = formatPrice(getCartTotal());
 
-        listEl.innerHTML = cartItems.map(item => `
+        const subtotal = getCartTotal();
+        const shippingTotal = getCartShippingTotal();
+        subtotalEl.textContent = formatPrice(subtotal);
+        shippingTotalEl.textContent = shippingTotal === 0 ? 'Gratis' : formatPrice(shippingTotal);
+        totalEl.textContent = formatPrice(subtotal + shippingTotal);
+
+        listEl.innerHTML = cartItems.map(item => {
+          const shipping = currentUser ? calculateShipping(item.location, currentUser.city) : { cost: 0 };
+          const shippingText = shipping.cost === 0 ? '<span class="text-emerald-500 text-xs">Gratis Ongkir</span>' : `<span class="text-gray-500 text-xs">Ongkir: ${formatPrice(shipping.cost)}</span>`;
+          return `
           <div class="flex gap-4 pb-4 border-b border-gray-100">
             <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover rounded-xl">
             <div class="flex-1 min-w-0">
               <h4 class="font-medium text-gray-900 text-sm line-clamp-2">${item.name}</h4>
               <p class="text-emerald-600 font-bold mt-1">${formatPrice(item.price)}</p>
+              ${shippingText}
               <div class="flex items-center gap-2 mt-2">
                 <button onclick="updateCartQuantity(${item.id}, -1)" class="h-8 w-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
                   <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 12h14"/></svg>
@@ -780,12 +1171,13 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
             </button>
           </div>
-        `).join('');
+        `}).join('');
       }
     }
 
     // ===== CART SIDEBAR =====
     function openCart() {
+      if (!requireLogin()) return;
       document.getElementById('cartOverlay').classList.add('active');
       document.getElementById('cartPanel').classList.add('active');
       document.body.style.overflow = 'hidden';
@@ -832,7 +1224,73 @@
       if (!currentDetailProduct) return;
       const p = currentDetailProduct;
       const discount = p.discount || Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
-      const totalPrice = detailQuantity * p.price;
+      const productTotal = detailQuantity * p.price;
+
+      // Calculate shipping
+      let shippingSection = '';
+      if (currentUser) {
+        const shipping = calculateShipping(p.location, currentUser.city);
+        const sameCity = p.location === currentUser.city;
+        shippingSection = `
+          <div class="bg-gray-50 rounded-xl p-3 space-y-2">
+            <div class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              Estimasi Pengiriman
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Dari</span>
+              <span class="text-gray-800 font-medium">${p.location}</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Ke</span>
+              <span class="text-gray-800 font-medium flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${currentUser.city}
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Jarak</span>
+              <span class="text-gray-800 font-medium">${sameCity ? 'Kota yang sama' : shipping.distance + ' km'}</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Ongkos Kirim</span>
+              ${shipping.cost === 0
+                ? '<span class="text-emerald-600 font-bold text-sm">Gratis Ongkir</span>'
+                : `<span class="text-gray-800 font-medium">${formatPrice(shipping.cost)} (~${shipping.estimatedDays})</span>`
+              }
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Estimasi</span>
+              <span class="text-gray-800 font-medium">${shipping.estimatedDays}</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Kurir</span>
+              <span class="text-gray-800 font-medium">${shipping.courier}</span>
+            </div>
+          </div>
+        `;
+      } else {
+        shippingSection = `
+          <div class="bg-gray-50 rounded-xl p-4 text-center">
+            <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            <p class="text-sm text-gray-500 mb-2">Login untuk melihat estimasi ongkir</p>
+            <button onclick="openAuthModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors">Login Sekarang</button>
+          </div>
+        `;
+      }
+
+      // Calculate total with shipping
+      let shippingCost = 0;
+      if (currentUser) {
+        const shipping = calculateShipping(p.location, currentUser.city);
+        shippingCost = shipping.cost;
+      }
+      const grandTotal = productTotal + shippingCost;
+
+      // Auth-aware button
+      const addToCartBtnHtml = currentUser
+        ? `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg> Tambah ke Keranjang`
+        : `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Login untuk Beli`;
 
       document.getElementById('detailContent').innerHTML = `
         <!-- Image -->
@@ -871,6 +1329,11 @@
               <span>${p.location}</span>
             </div>
           </div>
+
+          <hr class="border-gray-100">
+
+          <!-- Shipping Estimation -->
+          ${shippingSection}
 
           <hr class="border-gray-100">
 
@@ -981,8 +1444,22 @@
       `;
 
       // Update footer
-      document.getElementById('detailTotalPrice').textContent = formatPrice(totalPrice);
-      document.getElementById('detailPriceBreakdown').textContent = `${detailQuantity} x ${formatPrice(p.price)}`;
+      let priceBreakdown = `${detailQuantity} x ${formatPrice(p.price)}`;
+      if (shippingCost > 0) {
+        priceBreakdown += ` + ${formatPrice(shippingCost)} ongkir`;
+      }
+      document.getElementById('detailTotalPrice').textContent = formatPrice(grandTotal);
+      document.getElementById('detailPriceBreakdown').textContent = priceBreakdown;
+
+      // Update add-to-cart button
+      const addToCartBtn = document.getElementById('detailAddToCartBtn');
+      if (currentUser) {
+        addToCartBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg> Tambah ke Keranjang`;
+        addToCartBtn.className = 'flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2';
+      } else {
+        addToCartBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Login untuk Beli`;
+        addToCartBtn.className = 'flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2';
+      }
     }
 
     function selectVariant(v) {
@@ -1004,6 +1481,7 @@
     }
 
     function handleDetailAddToCart() {
+      if (!requireLogin()) return;
       if (currentDetailProduct) {
         addToCart(currentDetailProduct);
       }
@@ -1072,13 +1550,23 @@
 
       container.innerHTML = filtered.map(p => {
         const discount = p.discount || Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+        const quickAddOnclick = currentUser
+          ? `event.stopPropagation(); addToCart(products.find(x=>x.id===${p.id}))`
+          : `event.stopPropagation(); requireLogin()`;
+        const quickAddClass = currentUser
+          ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+          : 'bg-gray-400 text-white hover:bg-gray-500';
+
         return `
           <div class="product-card bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl cursor-pointer group" onclick="openDetail(products.find(x=>x.id===${p.id}))">
             <div class="relative overflow-hidden">
               <img src="${p.image}" alt="${p.name}" class="product-image w-full h-40 md:h-48 object-cover">
               ${discount > 0 ? `<span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded">-${discount}%</span>` : ''}
-              <button class="absolute bottom-3 right-3 w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-emerald-600 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg" onclick="event.stopPropagation(); addToCart(products.find(x=>x.id===${p.id}))">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>
+              <button class="absolute bottom-3 right-3 w-10 h-10 ${quickAddClass} rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg" onclick="${quickAddOnclick}">
+                ${currentUser
+                  ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>'
+                  : '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'
+                }
               </button>
             </div>
             <div class="p-3 md:p-4">
@@ -1169,6 +1657,7 @@
 
     // ===== INIT =====
     function init() {
+      loadUser();
       renderFlashSale();
       renderCategories();
       renderProducts();

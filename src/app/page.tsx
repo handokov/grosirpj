@@ -5,15 +5,18 @@ import {
   Zap, Search, ShoppingCart, Bell, Upload, Menu, X, Star,
   ChevronRight, ChevronDown, Play, MapPin, Minus, Plus, Trash2,
   Truck, Shield, RotateCcw, Store, Users, Package, Heart,
-  Smartphone, Apple, CreditCard, Mail, Phone, MessageCircle
+  Smartphone, Apple, CreditCard, Mail, Phone, MessageCircle, LogOut, User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { ProductDetail } from '@/components/product-detail';
+import { AuthModal } from '@/components/auth-modal';
 import { products, flashSaleProducts, categories, formatPrice, Product } from '@/lib/data';
 import { useCartStore } from '@/store/cart';
+import { useAuthStore } from '@/store/auth';
+import { calculateShipping, formatShippingInfo, ShippingEstimate } from '@/lib/shipping';
 
 // ===== FLASH SALE COUNTDOWN =====
 function FlashSaleTimer() {
@@ -71,6 +74,37 @@ export default function Home() {
   const cartTotal = useCartStore((s) => s.getTotal());
   const cartCount = useCartStore((s) => s.getCount());
 
+  // Auth state
+  const user = useAuthStore((s) => s.user);
+  const loading = useAuthStore((s) => s.loading);
+  const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
+  const logout = useAuthStore((s) => s.logout);
+  const initAuth = useAuthStore((s) => s.init);
+
+  // Init auth on mount
+  useEffect(() => {
+    initAuth();
+  }, [initAuth]);
+
+  // Helper: require login to add to cart
+  const requireLogin = useCallback(() => {
+    if (!user) {
+      setLoginModalOpen(true);
+      return false;
+    }
+    return true;
+  }, [user, setLoginModalOpen]);
+
+  const handleAddToCart = useCallback((product: Product) => {
+    if (!requireLogin()) return;
+    addItem(product);
+  }, [requireLogin, addItem]);
+
+  const handleOpenCart = useCallback(() => {
+    if (!requireLogin()) return;
+    setCartOpen(true);
+  }, [requireLogin]);
+
   // Scroll listener for navbar
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 50);
@@ -103,6 +137,19 @@ export default function Home() {
   const filteredProducts = activeFilter === 'all'
     ? products
     : products.filter((p) => p.category === activeFilter);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f0fdf4]">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Zap className="w-7 h-7 text-white" />
+          </div>
+          <p className="text-gray-500">Memuat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0fdf4]">
@@ -155,7 +202,7 @@ export default function Home() {
               </a>
 
               <button
-                onClick={() => setCartOpen(true)}
+                onClick={handleOpenCart}
                 className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors"
               >
                 <ShoppingCart className="w-6 h-6" />
@@ -173,9 +220,33 @@ export default function Home() {
                 </span>
               </button>
 
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6">
-                Masuk
-              </Button>
+              {/* Auth Button */}
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+                    <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">{user.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <span className="text-sm font-medium text-emerald-700 max-w-[100px] truncate">{user.name}</span>
+                    <MapPin className="w-3 h-3 text-emerald-500" />
+                    <span className="text-xs text-emerald-600">{user.city}</span>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                    title="Keluar"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => setLoginModalOpen(true)}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6"
+                >
+                  Masuk
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -197,23 +268,18 @@ export default function Home() {
 
       {/* ===== HERO SECTION ===== */}
       <section className="hero-bg pt-32 md:pt-24 pb-12 md:pb-20 relative overflow-hidden">
-        {/* Floating decorative elements */}
         <div className="absolute top-40 left-10 w-20 h-20 bg-amber-400/20 rounded-full blur-2xl float-1" />
         <div className="absolute top-60 right-20 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl float-2" />
         <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-cyan-400/20 rounded-full blur-2xl float-3" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Hero Text */}
             <div className="animate-slide-up">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 rounded-full mb-6">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                 <span className="text-sm font-medium text-emerald-700">Flash Sale Hari Ini</span>
               </div>
-              <h1
-                className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6"
-                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-              >
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                 Belanja Grosir{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500">
                   Mudah &amp; Murah
@@ -251,16 +317,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Hero Card */}
             <div className="relative hidden lg:block animate-scale-in">
               <div className="relative z-10">
                 <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-md mx-auto float-1">
                   <div className="relative rounded-2xl overflow-hidden mb-4">
-                    <img
-                      src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop"
-                      alt="Shopping"
-                      className="w-full h-48 object-cover"
-                    />
+                    <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop" alt="Shopping" className="w-full h-48 object-cover" />
                     <div className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-orange-400 px-3 py-1 rounded-full text-white text-sm font-semibold">
                       Diskon 70%
                     </div>
@@ -284,7 +345,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Floating badges */}
                 <div className="absolute -top-4 -right-8 bg-white rounded-2xl shadow-xl p-4 float-2">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -348,30 +408,19 @@ export default function Home() {
                 onClick={() => openProductDetail(product)}
               >
                 <div className="relative">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-32 md:h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  <img src={product.image} alt={product.name} className="w-full h-32 md:h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
                   <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
                     {product.discount}%
                   </span>
                 </div>
                 <div className="p-3">
-                  <h3 className="text-sm font-medium text-gray-800 line-clamp-2 mb-2 h-10">
-                    {product.name}
-                  </h3>
+                  <h3 className="text-sm font-medium text-gray-800 line-clamp-2 mb-2 h-10">{product.name}</h3>
                   <p className="text-emerald-600 font-bold">{formatPrice(product.price)}</p>
                   <p className="text-xs text-gray-400 line-through">{formatPrice(product.originalPrice)}</p>
                   <div className="mt-2 bg-gray-200 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full rounded-full"
-                      style={{ width: `${Math.min((product.sold / 5000) * 100, 90)}%` }}
-                    />
+                    <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full rounded-full" style={{ width: `${Math.min((product.sold / 5000) * 100, 90)}%` }} />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {product.sold.toLocaleString('id-ID')} terjual
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{product.sold.toLocaleString('id-ID')} terjual</p>
                 </div>
               </div>
             ))}
@@ -380,18 +429,11 @@ export default function Home() {
       </section>
 
       {/* ===== CATEGORIES SECTION ===== */}
-      <section
-        id="categories"
-        className={`py-16 bg-white reveal-section transition-all duration-800 ${
-          visibleSections.has('categories') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-        }`}
-      >
+      <section id="categories" className={`py-16 bg-white reveal-section transition-all duration-800 ${visibleSections.has('categories') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                Kategori Populer
-              </h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Kategori Populer</h2>
               <p className="text-gray-500 mt-1">Temukan produk berdasarkan kategori favorit</p>
             </div>
             <a className="hidden md:flex items-center gap-2 text-emerald-600 font-medium hover:text-emerald-700 transition-colors cursor-pointer">
@@ -400,14 +442,8 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
             {categories.map((cat) => (
-              <a
-                key={cat.name}
-                href="#"
-                className="category-card flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-all hover:scale-105"
-              >
-                <div
-                  className={`category-icon w-14 h-14 bg-gradient-to-br ${cat.color} rounded-2xl flex items-center justify-center shadow-lg transition-transform hover:scale-110 hover:rotate-3`}
-                >
+              <a key={cat.name} href="#" className="category-card flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-all hover:scale-105">
+                <div className={`category-icon w-14 h-14 bg-gradient-to-br ${cat.color} rounded-2xl flex items-center justify-center shadow-lg transition-transform hover:scale-110 hover:rotate-3`}>
                   <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={cat.icon} />
                   </svg>
@@ -420,18 +456,11 @@ export default function Home() {
       </section>
 
       {/* ===== PRODUCTS SECTION ===== */}
-      <section
-        id="products"
-        className={`py-16 reveal-section transition-all duration-800 bg-gradient-to-b from-white to-[#f0fdf4] ${
-          visibleSections.has('products') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-        }`}
-      >
+      <section id="products" className={`py-16 reveal-section transition-all duration-800 bg-gradient-to-b from-white to-[#f0fdf4] ${visibleSections.has('products') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-10">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                Produk Terlaris
-              </h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Produk Terlaris</h2>
               <p className="text-gray-500 mt-1">Pilihan terbaik untuk kebutuhan grosir Anda</p>
             </div>
             <div className="flex gap-2 bg-gray-100 p-1 rounded-full">
@@ -443,11 +472,7 @@ export default function Home() {
               ].map((filter) => (
                 <button
                   key={filter.key}
-                  className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${
-                    activeFilter === filter.key
-                      ? 'bg-white text-emerald-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${activeFilter === filter.key ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
                   onClick={() => setActiveFilter(filter.key)}
                 >
                   {filter.label}
@@ -460,40 +485,26 @@ export default function Home() {
             {filteredProducts.map((product) => {
               const discount = product.discount || Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
               return (
-                <div
-                  key={product.id}
-                  className="product-card bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl cursor-pointer group"
-                  onClick={() => openProductDetail(product)}
-                >
+                <div key={product.id} className="product-card bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl cursor-pointer group" onClick={() => openProductDetail(product)}>
                   <div className="relative overflow-hidden">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="product-image w-full h-40 md:h-48 object-cover"
-                    />
+                    <img src={product.image} alt={product.name} className="product-image w-full h-40 md:h-48 object-cover" />
                     {discount > 0 && (
-                      <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded">
-                        -{discount}%
-                      </span>
+                      <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded">-{discount}%</span>
                     )}
                     <button
                       className="absolute bottom-3 right-3 w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-emerald-600 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg"
                       onClick={(e) => {
                         e.stopPropagation();
-                        addItem(product);
+                        handleAddToCart(product);
                       }}
                     >
                       <ShoppingCart className="w-5 h-5" />
                     </button>
                   </div>
                   <div className="p-3 md:p-4">
-                    <h3 className="text-sm font-medium text-gray-800 line-clamp-2 mb-2 h-10">
-                      {product.name}
-                    </h3>
+                    <h3 className="text-sm font-medium text-gray-800 line-clamp-2 mb-2 h-10">{product.name}</h3>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-base md:text-lg font-bold text-emerald-600">
-                        {formatPrice(product.price)}
-                      </span>
+                      <span className="text-base md:text-lg font-bold text-emerald-600">{formatPrice(product.price)}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <div className="flex items-center gap-1">
@@ -510,10 +521,7 @@ export default function Home() {
           </div>
 
           <div className="text-center mt-10">
-            <Button
-              variant="outline"
-              className="px-8 py-6 bg-white text-emerald-600 font-semibold rounded-2xl border-2 border-emerald-500 hover:bg-emerald-50 transition-all inline-flex items-center gap-2"
-            >
+            <Button variant="outline" className="px-8 py-6 bg-white text-emerald-600 font-semibold rounded-2xl border-2 border-emerald-500 hover:bg-emerald-50 transition-all inline-flex items-center gap-2">
               Lihat Lebih Banyak <ChevronDown className="w-5 h-5" />
             </Button>
           </div>
@@ -521,45 +529,25 @@ export default function Home() {
       </section>
 
       {/* ===== PROMO BANNERS ===== */}
-      <section
-        id="promo"
-        className={`py-12 reveal-section transition-all duration-800 ${
-          visibleSections.has('promo') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-        }`}
-      >
+      <section id="promo" className={`py-12 reveal-section transition-all duration-800 ${visibleSections.has('promo') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Free Shipping Banner */}
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-500 to-emerald-500 p-8 md:p-10 group cursor-pointer">
               <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
               <div className="relative z-10">
-                <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-white text-sm font-medium mb-4">
-                  Promo Spesial
-                </span>
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                  Gratis Ongkir Seluruh Indonesia
-                </h3>
+                <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-white text-sm font-medium mb-4">Promo Spesial</span>
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Gratis Ongkir Seluruh Indonesia</h3>
                 <p className="text-white/80 mb-6">Minimal pembelian Rp 100.000</p>
-                <Button className="px-6 py-3 bg-white text-emerald-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors">
-                  Belanja Sekarang
-                </Button>
+                <Button className="px-6 py-3 bg-white text-emerald-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors">Belanja Sekarang</Button>
               </div>
             </div>
-
-            {/* Seller Banner */}
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 to-pink-500 p-8 md:p-10 group cursor-pointer">
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
               <div className="relative z-10">
-                <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-white text-sm font-medium mb-4">
-                  New Seller
-                </span>
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                  Mulai Jual di GrosirPJ
-                </h3>
+                <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-white text-sm font-medium mb-4">New Seller</span>
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Mulai Jual di GrosirPJ</h3>
                 <p className="text-white/80 mb-6">Gratis biaya pendaftaran, potongan 0%!</p>
-                <Button className="px-6 py-3 bg-white text-orange-500 font-semibold rounded-xl hover:bg-gray-50 transition-colors">
-                  Daftar Sekarang
-                </Button>
+                <Button className="px-6 py-3 bg-white text-orange-500 font-semibold rounded-xl hover:bg-gray-50 transition-colors">Daftar Sekarang</Button>
               </div>
             </div>
           </div>
@@ -570,88 +558,53 @@ export default function Home() {
       <footer className="bg-gray-900 text-gray-300 pt-16 pb-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-            {/* Brand */}
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
-                <span className="font-bold text-xl text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                  GrosirPJ
-                </span>
+                <span className="font-bold text-xl text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>GrosirPJ</span>
               </div>
-              <p className="text-gray-400 text-sm mb-4">
-                Marketplace grosir terpercaya di Indonesia dengan jutaan produk berkualitas dan harga bersaing.
-              </p>
+              <p className="text-gray-400 text-sm mb-4">Marketplace grosir terpercaya di Indonesia dengan jutaan produk berkualitas dan harga bersaing.</p>
             </div>
-
-            {/* Layanan */}
             <div>
-              <h4 className="font-semibold text-white mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                Layanan
-              </h4>
+              <h4 className="font-semibold text-white mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Layanan</h4>
               <ul className="space-y-2 text-sm">
                 {['Cara Belanja', 'Pengiriman', 'Pengembalian', 'FAQ'].map((item) => (
-                  <li key={item}>
-                    <a href="#" className="hover:text-emerald-400 transition-colors">{item}</a>
-                  </li>
+                  <li key={item}><a href="#" className="hover:text-emerald-400 transition-colors">{item}</a></li>
                 ))}
               </ul>
             </div>
-
-            {/* Tentang */}
             <div>
-              <h4 className="font-semibold text-white mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                Tentang
-              </h4>
+              <h4 className="font-semibold text-white mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Tentang</h4>
               <ul className="space-y-2 text-sm">
                 {['Tentang Kami', 'Karir', 'Blog', 'Kontak'].map((item) => (
-                  <li key={item}>
-                    <a href="#" className="hover:text-emerald-400 transition-colors">{item}</a>
-                  </li>
+                  <li key={item}><a href="#" className="hover:text-emerald-400 transition-colors">{item}</a></li>
                 ))}
               </ul>
             </div>
-
-            {/* Download */}
             <div>
-              <h4 className="font-semibold text-white mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                Download Aplikasi
-              </h4>
+              <h4 className="font-semibold text-white mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Download Aplikasi</h4>
               <div className="space-y-3">
                 <a href="#" className="flex items-center gap-3 bg-gray-800 rounded-xl p-3 hover:bg-gray-700 transition-colors">
                   <Smartphone className="w-8 h-8 text-white" />
-                  <div>
-                    <p className="text-xs text-gray-400">Download di</p>
-                    <p className="text-sm font-semibold text-white">Play Store</p>
-                  </div>
+                  <div><p className="text-xs text-gray-400">Download di</p><p className="text-sm font-semibold text-white">Play Store</p></div>
                 </a>
                 <a href="#" className="flex items-center gap-3 bg-gray-800 rounded-xl p-3 hover:bg-gray-700 transition-colors">
                   <Apple className="w-8 h-8 text-white" />
-                  <div>
-                    <p className="text-xs text-gray-400">Download di</p>
-                    <p className="text-sm font-semibold text-white">App Store</p>
-                  </div>
+                  <div><p className="text-xs text-gray-400">Download di</p><p className="text-sm font-semibold text-white">App Store</p></div>
                 </a>
               </div>
             </div>
           </div>
-
-          {/* Payment Methods */}
           <div className="border-t border-gray-800 pt-8 mb-8">
             <p className="text-sm text-gray-400 mb-4">Metode Pembayaran</p>
             <div className="flex flex-wrap gap-3">
-              {['VISA', 'Mastercard', 'BCA', 'Mandiri', 'BNI', 'BRI', 'GoPay', 'OVO', 'DANA'].map(
-                (method) => (
-                  <div key={method} className="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">
-                    {method}
-                  </div>
-                )
-              )}
+              {['VISA', 'Mastercard', 'BCA', 'Mandiri', 'BNI', 'BRI', 'GoPay', 'OVO', 'DANA'].map((method) => (
+                <div key={method} className="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">{method}</div>
+              ))}
             </div>
           </div>
-
-          {/* Copyright */}
           <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
             <p>&copy; 2024 GrosirPJ. Hak cipta dilindungi.</p>
           </div>
@@ -678,44 +631,43 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="flex gap-4 pb-4 border-b border-gray-100">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-20 h-20 object-cover rounded-xl"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{item.name}</h4>
-                        <p className="text-emerald-600 font-bold mt-1">{formatPrice(item.price)}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.id, -1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center text-sm">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.id, 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
+                  {cartItems.map((item) => {
+                    // Calculate shipping for this item
+                    const shipping = user ? calculateShipping(item.location, user.city) : null;
+                    return (
+                      <div key={item.id} className="flex gap-4 pb-4 border-b border-gray-100">
+                        <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-xl" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{item.name}</h4>
+                          <p className="text-emerald-600 font-bold mt-1">{formatPrice(item.price)}</p>
+                          {shipping && shipping.cost > 0 && (
+                            <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                              <Truck className="w-3 h-3" />
+                              Ongkir: {formatShippingInfo(shipping)}
+                            </p>
+                          )}
+                          {shipping && shipping.cost === 0 && (
+                            <p className="text-xs text-emerald-500 mt-0.5 flex items-center gap-1">
+                              <Truck className="w-3 h-3" />
+                              Gratis Ongkir
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, -1)}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center text-sm">{item.quantity}</span>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, 1)}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
+                        <button onClick={() => removeItem(item.id)} className="text-gray-400 hover:text-red-500 transition-colors self-start">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors self-start"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -723,10 +675,23 @@ export default function Home() {
 
           {cartItems.length > 0 && (
             <div className="p-6 border-t border-gray-100">
+              {/* Shipping summary */}
+              {user && (() => {
+                const totalShipping = cartItems.reduce((sum, item) => {
+                  const s = calculateShipping(item.location, user.city);
+                  return sum + s.cost;
+                }, 0);
+                return totalShipping > 0 ? (
+                  <div className="flex items-center justify-between mb-2 text-sm">
+                    <span className="text-gray-500 flex items-center gap-1"><Truck className="w-4 h-4" /> Total Ongkir</span>
+                    <span className="font-medium text-gray-700">{formatPrice(totalShipping)}</span>
+                  </div>
+                ) : null;
+              })()}
               <div className="flex items-center justify-between mb-4">
                 <span className="text-gray-600">Total</span>
                 <span className="text-xl font-bold text-emerald-600" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                  {formatPrice(cartTotal)}
+                  {formatPrice(cartTotal + (user ? cartItems.reduce((sum, item) => sum + calculateShipping(item.location, user.city).cost, 0) : 0))}
                 </span>
               </div>
               <Button className="w-full py-6 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-2xl">
@@ -743,6 +708,9 @@ export default function Home() {
         open={detailOpen}
         onOpenChange={setDetailOpen}
       />
+
+      {/* ===== AUTH MODAL ===== */}
+      <AuthModal />
     </div>
   );
 }
