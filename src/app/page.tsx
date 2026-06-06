@@ -89,11 +89,11 @@ export default function Home() {
   // Helper: require login to add to cart
   const requireLogin = useCallback(() => {
     if (!user) {
-      setLoginModalOpen(true);
+      window.location.href = '/login-buyer.html';
       return false;
     }
     return true;
-  }, [user, setLoginModalOpen]);
+  }, [user]);
 
   const handleAddToCart = useCallback((product: Product) => {
     if (!requireLogin()) return;
@@ -196,7 +196,7 @@ export default function Home() {
 
             {/* Nav Actions */}
             <div className="flex items-center gap-2 md:gap-4">
-              <a className="hidden sm:flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-emerald-600 transition-colors cursor-pointer">
+              <a href="/login-seller.html" className="hidden sm:flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-emerald-600 transition-colors cursor-pointer">
                 <Upload className="w-5 h-5" />
                 <span className="text-sm font-medium">Jual</span>
               </a>
@@ -240,12 +240,12 @@ export default function Home() {
                   </button>
                 </div>
               ) : (
-                <Button
-                  onClick={() => setLoginModalOpen(true)}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6"
+                <a
+                  href="/login-buyer.html"
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6 py-2 transition-colors inline-block"
                 >
                   Masuk
-                </Button>
+                </a>
               )}
             </div>
           </div>
@@ -547,7 +547,7 @@ export default function Home() {
                 <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-white text-sm font-medium mb-4">New Seller</span>
                 <h3 className="text-2xl md:text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Mulai Jual di GrosirPJ</h3>
                 <p className="text-white/80 mb-6">Gratis biaya pendaftaran, potongan 0%!</p>
-                <Button className="px-6 py-3 bg-white text-orange-500 font-semibold rounded-xl hover:bg-gray-50 transition-colors">Daftar Sekarang</Button>
+                <a href="/login-seller.html" className="px-6 py-3 bg-white text-orange-500 font-semibold rounded-xl hover:bg-gray-50 transition-colors inline-block">Daftar Sekarang</a>
               </div>
             </div>
           </div>
