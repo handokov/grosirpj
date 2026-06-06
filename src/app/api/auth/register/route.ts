@@ -16,7 +16,7 @@ function simpleHash(str: string): string {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, city } = body;
+    const { name, email, password, city, role } = body;
 
     if (!name || !email || !password || !city) {
       return NextResponse.json(
@@ -34,6 +34,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const userRole = role === 'seller' ? 'seller' : 'buyer';
+
     const user = await db.user.create({
       data: {
         id: createId(),
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
         email,
         password: simpleHash(password),
         city,
+        role: userRole,
       },
     });
 
@@ -49,6 +52,7 @@ export async function POST(request: Request) {
       name: user.name,
       email: user.email,
       city: user.city,
+      role: user.role,
     }, { status: 201 });
   } catch (error) {
     console.error('Register error:', error);

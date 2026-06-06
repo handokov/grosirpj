@@ -1182,6 +1182,13 @@
 
     // ===== INIT =====
     function init() {
+      // Check if user is logged in as seller
+      const user = loadSellerInfo();
+      if (!user || user.role !== 'seller') {
+        window.location.href = 'login-seller.html';
+        return;
+      }
+
       loadProducts();
       updateSellerDisplay();
       updateStats();

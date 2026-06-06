@@ -5,16 +5,19 @@ export interface AuthUser {
   name: string;
   email: string;
   city: string;
+  role: string;
 }
 
 interface AuthStore {
   user: AuthUser | null;
   loading: boolean;
   loginModalOpen: boolean;
+  sellerMode: boolean;
   setLoginModalOpen: (open: boolean) => void;
+  setSellerMode: (mode: boolean) => void;
   setUser: (user: AuthUser | null) => void;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string, city: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, city: string, role?: string) => Promise<boolean>;
   logout: () => void;
   init: () => Promise<void>;
 }
@@ -23,8 +26,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   loading: true,
   loginModalOpen: false,
+  sellerMode: false,
 
   setLoginModalOpen: (open) => set({ loginModalOpen: open }),
+
+  setSellerMode: (mode) => set({ sellerMode: mode }),
 
   setUser: (user) => {
     if (user) {
@@ -47,6 +53,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         throw new Error(data.error || 'Login gagal');
       }
       get().setUser(data);
+      if (data.role === 'seller') {
+        set({ sellerMode: true });
+      }
       set({ loginModalOpen: false });
       return true;
     } catch (error) {
@@ -55,12 +64,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  register: async (name, email, password, city) => {
+  register: async (name, email, password, city, role) => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, city }),
+        body: JSON.stringify({ name, email, password, city, role }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -68,6 +77,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
       // Auto login after register
       get().setUser(data);
+      if (data.role === 'seller') {
+        set({ sellerMode: true });
+      }
       set({ loginModalOpen: false });
       return true;
     } catch (error) {
@@ -78,6 +90,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: () => {
     get().setUser(null);
+    set({ sellerMode: false });
   },
 
   init: async () => {
@@ -89,10 +102,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const res = await fetch(`/api/auth/me?userId=${user.id}`);
         const data = await res.json();
         if (data.user) {
-          set({ user: data.user, loading: false });
+          set({
+            user: data.user,
+            loading: false,
+            sellerMode: data.user.role === 'seller',
+          });
         } else {
           localStorage.removeItem('grosirpj_user');
-          set({ user: null, loading: false });
+          set({ user: null, loading: false, sellerMode: false });
         }
       } else {
         set({ loading: false });

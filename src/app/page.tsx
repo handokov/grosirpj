@@ -67,7 +67,8 @@ export default function Home() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sellerMode, setSellerMode] = useState(false);
+  const sellerMode = useAuthStore((s) => s.sellerMode);
+  const setSellerMode = useAuthStore((s) => s.setSellerMode);
 
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
@@ -87,6 +88,17 @@ export default function Home() {
   useEffect(() => {
     initAuth();
   }, [initAuth]);
+
+  // Auto-enable seller mode after login if pending
+  useEffect(() => {
+    if (user && user.role === 'seller' && !sellerMode) {
+      const pending = localStorage.getItem('grosirpj_pending_seller');
+      if (pending === 'true') {
+        localStorage.removeItem('grosirpj_pending_seller');
+        setSellerMode(true);
+      }
+    }
+  }, [user, sellerMode, setSellerMode]);
 
   // Helper: require login to add to cart
   const requireLogin = useCallback(() => {
@@ -317,7 +329,11 @@ export default function Home() {
             <div className="flex items-center gap-2 md:gap-4">
               <button
                 onClick={() => {
-                  if (!user) { setLoginModalOpen(true); return; }
+                  if (!user) {
+                    setLoginModalOpen(true);
+                    localStorage.setItem('grosirpj_pending_seller', 'true');
+                    return;
+                  }
                   setSellerMode(true);
                 }}
                 className="hidden sm:flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-emerald-600 transition-colors cursor-pointer"

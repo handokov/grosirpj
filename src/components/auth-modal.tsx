@@ -28,6 +28,9 @@ export function AuthModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Check if this is a seller registration attempt
+  const isSellerIntent = typeof window !== 'undefined' && localStorage.getItem('grosirpj_pending_seller') === 'true';
+
   // Form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -72,7 +75,10 @@ export function AuthModal() {
     }
 
     setLoading(true);
-    const success = await register(name, email, password, city);
+    // Check if registering as seller (from "Jual" button click)
+    const pendingSeller = localStorage.getItem('grosirpj_pending_seller') === 'true';
+    const role = pendingSeller ? 'seller' : 'buyer';
+    const success = await register(name, email, password, city, role);
     if (!success) {
       setError('Registrasi gagal. Email mungkin sudah terdaftar.');
     }
@@ -98,8 +104,12 @@ export function AuthModal() {
             </div>
             <DialogDescription className="text-emerald-100">
               {mode === 'login'
-                ? 'Masuk ke akun Anda untuk mulai berbelanja'
-                : 'Buat akun baru dan mulai belanja grosir'}
+                ? isSellerIntent
+                  ? 'Masuk ke akun seller untuk mulai berjualan'
+                  : 'Masuk ke akun Anda untuk mulai berbelanja'
+                : isSellerIntent
+                  ? 'Buat akun seller baru dan mulai berjualan'
+                  : 'Buat akun baru dan mulai belanja grosir'}
             </DialogDescription>
           </DialogHeader>
         </div>

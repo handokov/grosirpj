@@ -884,7 +884,7 @@
         localStorage.setItem('grosirpj_user', JSON.stringify(user));
         showToast('Selamat datang, ' + found.storeName + '!', 'success');
         setTimeout(() => {
-          window.location.href = 'index.html';
+          window.location.href = 'seller-dashboard.html';
         }, 800);
       } else {
         // Demo: allow login with any email/password >= 6 chars
@@ -900,7 +900,7 @@
           localStorage.setItem('grosirpj_user', JSON.stringify(user));
           showToast('Selamat datang, Seller!', 'success');
           setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'seller-dashboard.html';
           }, 800);
         } else {
           showError('loginError', 'Email atau password salah. Password minimal 6 karakter.');
@@ -971,7 +971,7 @@
 
       showToast('Pendaftaran berhasil! Selamat datang, ' + storeName, 'success');
       setTimeout(() => {
-        window.location.href = 'index.html';
+        window.location.href = 'seller-dashboard.html';
       }, 800);
     }
 
@@ -1021,7 +1021,7 @@
       const user = JSON.parse(localStorage.getItem('grosirpj_user') || 'null');
       if (user && user.role === 'seller') {
         // Already logged in as seller, redirect
-        window.location.href = 'index.html';
+        window.location.href = 'seller-dashboard.html';
       }
     }
 
