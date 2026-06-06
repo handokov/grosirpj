@@ -61,6 +61,7 @@ function FlashSaleTimer() {
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [showAll, setShowAll] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -105,36 +106,50 @@ export default function Home() {
   }, [requireLogin]);
 
   // Swipe-to-close for Sheet panels on mobile
-  // Panels slide in from the right, so swipe LEFT to close them
+  // Panel slides in from right, so swipe RIGHT to push it off screen
   useEffect(() => {
-    const THRESHOLD = 80;
+    const THRESHOLD = 60;
 
     function handleSwipeOnSheet(sheetSelector: string, onClose: () => void) {
       const panel = document.querySelector(sheetSelector + ' [data-slot="sheet-content"]') as HTMLElement;
       if (!panel) return;
 
       let startX = 0;
+      let startY = 0;
       let currentX = 0;
       let isDragging = false;
+      let isHorizontal: boolean | null = null;
 
       const onTouchStart = (e: TouchEvent) => {
         startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
         currentX = startX;
         isDragging = true;
-        panel.style.transition = 'none';
+        isHorizontal = null;
       };
 
       const onTouchMove = (e: TouchEvent) => {
         if (!isDragging) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+
+        if (isHorizontal === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+          isHorizontal = Math.abs(dx) > Math.abs(dy);
+        }
+        if (!isHorizontal) return;
+
         currentX = e.touches[0].clientX;
         const diff = currentX - startX;
-        // Swipe LEFT (diff < 0) to push panel back to the right
-        if (diff < 0) {
+
+        // Swipe RIGHT (diff > 0) to push panel off screen right
+        if (diff > 0) {
+          e.preventDefault();
+          panel.style.transition = 'none';
           panel.style.transform = `translateX(${diff}px)`;
           const overlay = panel.previousElementSibling as HTMLElement;
           if (overlay) {
-            const progress = Math.min(Math.abs(diff) / panel.offsetWidth, 1);
-            overlay.style.opacity = String(1 - progress * 0.7);
+            const progress = Math.min(diff / panel.offsetWidth, 1);
+            overlay.style.opacity = String(1 - progress);
           }
         }
       };
@@ -142,22 +157,36 @@ export default function Home() {
       const onTouchEnd = () => {
         if (!isDragging) return;
         isDragging = false;
-        panel.style.transition = '';
-        const overlay = panel.previousElementSibling as HTMLElement;
-        if (overlay) overlay.style.opacity = '';
+        if (!isHorizontal) { isHorizontal = null; return; }
+        isHorizontal = null;
+
         const diff = currentX - startX;
-        // Close if swiped left past threshold
-        if (diff < -THRESHOLD) {
-          onClose();
+        if (diff > THRESHOLD) {
+          panel.style.transition = 'transform 0.25s ease-out';
+          panel.style.transform = 'translateX(100%)';
+          const overlay = panel.previousElementSibling as HTMLElement;
+          if (overlay) { overlay.style.transition = 'opacity 0.25s ease-out'; overlay.style.opacity = '0'; }
+          setTimeout(() => {
+            panel.style.transition = '';
+            panel.style.transform = '';
+            if (overlay) { overlay.style.transition = ''; overlay.style.opacity = ''; }
+            onClose();
+          }, 260);
         } else {
+          panel.style.transition = 'transform 0.25s ease-out';
           panel.style.transform = '';
-          if (overlay) overlay.style.opacity = '';
+          const overlay = panel.previousElementSibling as HTMLElement;
+          if (overlay) { overlay.style.transition = 'opacity 0.25s ease-out'; overlay.style.opacity = ''; }
+          setTimeout(() => {
+            panel.style.transition = '';
+            const overlay2 = panel.previousElementSibling as HTMLElement;
+            if (overlay2) overlay2.style.transition = '';
+          }, 260);
         }
-        setTimeout(() => { panel.style.transform = ''; }, 350);
       };
 
       panel.addEventListener('touchstart', onTouchStart, { passive: true });
-      panel.addEventListener('touchmove', onTouchMove, { passive: true });
+      panel.addEventListener('touchmove', onTouchMove, { passive: false });
       panel.addEventListener('touchend', onTouchEnd, { passive: true });
 
       return () => {
@@ -167,7 +196,6 @@ export default function Home() {
       };
     }
 
-    // Apply to cart and detail sheets when they're open
     const cleanups: (() => void)[] = [];
     if (cartOpen) {
       const cleanup = handleSwipeOnSheet('[data-radix-portal]', () => setCartOpen(false));
@@ -196,6 +224,8 @@ export default function Home() {
   const filteredProducts = activeFilter === 'all'
     ? products
     : products.filter((p) => p.category === activeFilter);
+
+  const displayedProducts = showAll ? filteredProducts : filteredProducts.slice(0, 10);
 
   if (loading) {
     return (
@@ -541,7 +571,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-            {filteredProducts.map((product) => {
+            {displayedProducts.map((product) => {
               const discount = product.discount || Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
               return (
                 <div key={product.id} className="product-card bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl cursor-pointer group" onClick={() => openProductDetail(product)}>
@@ -579,11 +609,28 @@ export default function Home() {
             })}
           </div>
 
-          <div className="text-center mt-10">
-            <Button variant="outline" className="px-8 py-6 bg-white text-emerald-600 font-semibold rounded-2xl border-2 border-emerald-500 hover:bg-emerald-50 transition-all inline-flex items-center gap-2">
-              Lihat Lebih Banyak <ChevronDown className="w-5 h-5" />
-            </Button>
-          </div>
+          {!showAll && filteredProducts.length > 10 && (
+            <div className="text-center mt-10">
+              <Button
+                variant="outline"
+                className="px-8 py-6 bg-white text-emerald-600 font-semibold rounded-2xl border-2 border-emerald-500 hover:bg-emerald-50 transition-all inline-flex items-center gap-2"
+                onClick={() => setShowAll(true)}
+              >
+                Lihat Lebih Banyak ({filteredProducts.length - 10} produk lagi) <ChevronDown className="w-5 h-5" />
+              </Button>
+            </div>
+          )}
+          {showAll && (
+            <div className="text-center mt-10">
+              <Button
+                variant="outline"
+                className="px-8 py-6 bg-white text-gray-500 font-semibold rounded-2xl border-2 border-gray-300 hover:bg-gray-50 transition-all inline-flex items-center gap-2"
+                onClick={() => { setShowAll(false); document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' }); }}
+              >
+                Tampilkan Sedikit <ChevronDown className="w-5 h-5 rotate-180" />
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
