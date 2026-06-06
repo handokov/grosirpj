@@ -96,7 +96,7 @@ export const products: Product[] = [
   },
   {
     id: 2, name: "Set Panci Masak Stainless Steel", price: 289000, originalPrice: 550000,
-    image: "https://images.unsplash.com/photo-1584990347449-a5d9f8dba27f?w=300&h=300&fit=crop",
+    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=300&fit=crop",
     rating: 4.8, sold: 892, location: "Surabaya", category: "rumah",
     description: "Set panci masak stainless steel 5 lapis isi 4 pcs dengan tutup kaca. Bahan food grade, tahan lama, dan mudah dibersihkan. Cocok untuk dapur rumah tangga maupun restoran.",
     minOrder: 3, stock: 600, seller: "Home Kitchen Surabaya", sellerRating: 4.8,
@@ -112,7 +112,7 @@ export const products: Product[] = [
   },
   {
     id: 4, name: "Rok Plisket Wanita 1 Paket", price: 125000, originalPrice: 280000,
-    image: "https://images.unsplash.com/photo-1583496661160-fb5886a0uj9a?w=300&h=300&fit=crop",
+    image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=300&h=300&fit=crop",
     rating: 4.9, sold: 1876, location: "Yogyakarta", category: "fashion",
     description: "Rok plisket wanita premium dengan bahan crepe berkualitas. Tidak mudah kusut dan jatuh sempurna. 1 paket isi 6 pcs campuran warna. Cocok untuk resale.",
     minOrder: 6, stock: 5500, seller: "Fashion Yogyakarta", sellerRating: 4.8,
