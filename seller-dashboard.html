@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GrosirPJ - Dashboard Penjual</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'display': ['Space Grotesk', 'sans-serif'],
+            'sans': ['DM Sans', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    /* Background gradient */
+    .dashboard-bg {
+      background: radial-gradient(ellipse 80% 50% at 20% 40%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
+        linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+    }
+
+    /* Animations */
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scale-in {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(16px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toast-out {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(16px) scale(0.95); }
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .animate-slide-up { animation: slide-up 0.5s ease-out forwards; }
+    .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
+    .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .animate-slide-up, .animate-scale-in, .animate-fade-in {
+        animation: none;
+      }
+      .product-card, .stat-card, .btn-primary {
+        transition: none !important;
+      }
+    }
+
+    /* Button effects */
+    .btn-primary { position: relative; overflow: hidden; transition: all 0.3s ease; }
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s ease;
+    }
+    .btn-primary:hover::before { left: 100%; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4); }
+
+    /* Stat card hover */
+    .stat-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1); }
+
+    /* Product card */
+    .product-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1); }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #059669; }
+
+    /* Modal overlay */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.5);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Modal content */
+    .modal-content {
+      position: fixed; top: 0; right: 0; bottom: 0; z-index: 101;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .modal-content.active {
+      transform: translateX(0);
+    }
+
+    /* Tab styling */
+    .tab-btn { transition: all 0.2s ease; }
+    .tab-btn.active {
+      border-bottom: 2px solid #10b981;
+      color: #10b981;
+      font-weight: 600;
+    }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast-item {
+      pointer-events: auto;
+      animation: toast-in 0.3s ease-out forwards;
+    }
+    .toast-item.removing {
+      animation: toast-out 0.3s ease-in forwards;
+    }
+
+    /* Tag input */
+    .variant-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .variant-tag:hover {
+      background: #d1fae5;
+    }
+    .variant-tag button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: transparent;
+      transition: background 0.2s;
+    }
+    .variant-tag button:hover {
+      background: rgba(4, 120, 87, 0.2);
+    }
+
+    /* Image thumbnail */
+    .img-thumb {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid #e5e7eb;
+      transition: border-color 0.2s;
+    }
+    .img-thumb:hover { border-color: #10b981; }
+    .img-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .img-thumb .utama-badge {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #10b981;
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 1px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .img-thumb .remove-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 20px;
+      height: 20px;
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .img-thumb:hover .remove-btn { opacity: 1; }
+
+    /* Confirm dialog */
+    .confirm-overlay {
+      position: fixed; inset: 0; z-index: 150;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .confirm-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .confirm-box {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+    .confirm-overlay.active .confirm-box {
+      transform: scale(1);
+    }
+
+    /* Line clamp */
+    .line-clamp-1 {
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Focus ring */
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+      border-color: #10b981;
+    }
+  </style>
+</head>
+<body class="font-sans text-foreground dashboard-bg">
+  <div id="app" class="min-h-screen flex flex-col">
+
+    <!-- ===== NAVIGATION ===== -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <!-- Logo & Brand -->
+          <div class="flex items-center gap-3">
+            <a href="grosirpj.html" class="flex items-center gap-2 group">
+              <div class="w-9 h-9 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center transform group-hover:rotate-6 transition-transform">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <span class="font-bold text-lg text-emerald-700 font-display">GrosirPJ</span>
+            </a>
+            <span class="hidden sm:inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-100">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+              Dashboard Penjual
+            </span>
+          </div>
+
+          <!-- Seller Info & Actions -->
+          <div class="flex items-center gap-3">
+            <div id="sellerInfo" class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl">
+              <div class="w-7 h-7 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              </div>
+              <div class="text-xs">
+                <p id="navSellerName" class="font-semibold text-gray-800">Seller</p>
+                <p id="navSellerCity" class="text-gray-500">Kota</p>
+              </div>
+            </div>
+            <a href="grosirpj.html" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors border border-emerald-100">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+              <span class="hidden sm:inline">Kembali ke Toko</span>
+              <span class="sm:hidden">Kembali</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="flex-1 pt-20 pb-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Welcome Header -->
+        <div class="mb-8 animate-slide-up">
+          <h1 class="text-2xl md:text-3xl font-bold text-gray-900 font-display">
+            Selamat Datang, <span id="welcomeName" class="text-emerald-600">Seller</span>! 👋
+          </h1>
+          <p class="text-gray-500 mt-1">Kelola produk dan pantau performa tokomu di sini.</p>
+        </div>
+
+        <!-- ===== STATS CARDS ===== -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8" id="statsContainer">
+          <!-- Total Produk -->
+          <div class="stat-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              </div>
+              <span class="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-lg">Semua</span>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 font-display" id="statTotalProducts">0</p>
+            <p class="text-xs text-gray-500 mt-1">Total Produk</p>
+          </div>
+          <!-- Produk Aktif -->
+          <div class="stat-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full" style="animation: pulse-dot 2s ease-in-out infinite;"></span>
+                Aktif
+              </span>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 font-display" id="statActiveProducts">0</p>
+            <p class="text-xs text-gray-500 mt-1">Produk Aktif</p>
+          </div>
+          <!-- Total Terjual -->
+          <div class="stat-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
+                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>
+              </div>
+              <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">Terjual</span>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 font-display" id="statTotalSold">0</p>
+            <p class="text-xs text-gray-500 mt-1">Total Terjual</p>
+          </div>
+          <!-- Pendapatan -->
+          <div class="stat-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center">
+                <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <span class="text-xs font-medium text-cyan-600 bg-cyan-50 px-2 py-1 rounded-lg">Revenue</span>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 font-display" id="statRevenue">Rp 0</p>
+            <p class="text-xs text-gray-500 mt-1">Pendapatan</p>
+          </div>
+        </div>
+
+        <!-- ===== TABS ===== -->
+        <div class="flex items-center justify-between border-b border-gray-200 mb-6">
+          <div class="flex gap-6">
+            <button class="tab-btn pb-3 text-sm font-medium text-gray-500 hover:text-emerald-600 active" data-tab="products" onclick="switchTab('products')">
+              <span class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                Kelola Produk
+              </span>
+            </button>
+            <button class="tab-btn pb-3 text-sm font-medium text-gray-500 hover:text-emerald-600" data-tab="statistics" onclick="switchTab('statistics')">
+              <span class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Statistik
+              </span>
+            </button>
+          </div>
+          <button id="addProductBtn" onclick="openProductForm()" class="btn-primary flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white font-semibold rounded-xl text-sm hover:bg-emerald-600 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            Tambah Produk
+          </button>
+        </div>
+
+        <!-- ===== PRODUCTS TAB ===== -->
+        <div id="productsTab">
+          <!-- Empty State -->
+          <div id="emptyState" class="hidden">
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+              <div class="w-24 h-24 bg-emerald-50 rounded-3xl flex items-center justify-center mb-6">
+                <svg class="w-12 h-12 text-emerald-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              </div>
+              <h3 class="text-xl font-bold text-gray-800 font-display mb-2">Belum Ada Produk</h3>
+              <p class="text-gray-500 mb-6 max-w-sm">Mulai tambahkan produk pertamamu dan jual di GrosirPJ untuk menjangkau ribuan pembeli!</p>
+              <button onclick="openProductForm()" class="btn-primary px-6 py-3 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-all inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                Tambah Produk Pertama
+              </button>
+            </div>
+          </div>
+
+          <!-- Product List -->
+          <div id="productList" class="space-y-4"></div>
+        </div>
+
+        <!-- ===== STATISTICS TAB ===== -->
+        <div id="statisticsTab" class="hidden">
+          <div id="statsEmpty" class="hidden">
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+              <div class="w-24 h-24 bg-cyan-50 rounded-3xl flex items-center justify-center mb-6">
+                <svg class="w-12 h-12 text-cyan-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+              </div>
+              <h3 class="text-xl font-bold text-gray-800 font-display mb-2">Belum Ada Data</h3>
+              <p class="text-gray-500">Tambahkan produk untuk melihat statistik penjualan.</p>
+            </div>
+          </div>
+          <div id="statsContent" class="hidden">
+            <!-- Stats Summary -->
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <p class="text-sm text-gray-500 mb-1">Rata-rata Harga Produk</p>
+                <p class="text-2xl font-bold text-gray-900 font-display" id="avgPrice">Rp 0</p>
+              </div>
+              <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <p class="text-sm text-gray-500 mb-1">Rata-rata Penjualan</p>
+                <p class="text-2xl font-bold text-gray-900 font-display" id="avgSold">0 pcs</p>
+              </div>
+              <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <p class="text-sm text-gray-500 mb-1">Total Stok Tersedia</p>
+                <p class="text-2xl font-bold text-gray-900 font-display" id="totalStock">0</p>
+              </div>
+            </div>
+            <!-- Per-product stats table -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="p-5 border-b border-gray-100">
+                <h3 class="font-bold text-gray-900 font-display">Statistik Per Produk</h3>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="text-left px-5 py-3 font-semibold text-gray-600">Produk</th>
+                      <th class="text-right px-5 py-3 font-semibold text-gray-600">Harga</th>
+                      <th class="text-right px-5 py-3 font-semibold text-gray-600">Stok</th>
+                      <th class="text-right px-5 py-3 font-semibold text-gray-600">Terjual</th>
+                      <th class="text-right px-5 py-3 font-semibold text-gray-600">Pendapatan</th>
+                      <th class="text-center px-5 py-3 font-semibold text-gray-600">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="statsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="bg-white border-t border-gray-100 py-6 mt-auto">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span class="font-bold text-sm text-emerald-700 font-display">GrosirPJ</span>
+          </div>
+          <p class="text-sm text-gray-400">&copy; 2025 GrosirPJ. Hak cipta dilindungi.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ===== PRODUCT FORM MODAL ===== -->
+  <div id="formOverlay" class="modal-overlay" onclick="closeProductForm()"></div>
+  <div id="formPanel" class="modal-content w-full sm:max-w-lg md:max-w-xl bg-white flex flex-col h-full shadow-2xl">
+    <!-- Form Header -->
+    <div class="p-5 border-b border-gray-100 flex items-center justify-between shrink-0">
+      <div>
+        <h2 id="formTitle" class="text-lg font-display font-bold text-gray-900">Tambah Produk</h2>
+        <p id="formSubtitle" class="text-sm text-gray-500">Isi data produk baru</p>
+      </div>
+      <button onclick="closeProductForm()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Form Body -->
+    <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <form id="productForm" class="p-5 space-y-5" onsubmit="return false;">
+        <input type="hidden" id="editProductId" value="">
+
+        <!-- Nama Produk -->
+        <div>
+          <label for="productName" class="block text-sm font-semibold text-gray-700 mb-1.5">Nama Produk <span class="text-red-500">*</span></label>
+          <input type="text" id="productName" required placeholder="Contoh: Kaos Polos Premium Cotton 1 Lusin" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder:text-gray-400">
+        </div>
+
+        <!-- Kategori -->
+        <div>
+          <label for="productCategory" class="block text-sm font-semibold text-gray-700 mb-1.5">Kategori <span class="text-red-500">*</span></label>
+          <select id="productCategory" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all appearance-none cursor-pointer">
+            <option value="">Pilih Kategori</option>
+            <option value="Fashion">Fashion</option>
+            <option value="Elektronik">Elektronik</option>
+            <option value="Rumah Tangga">Rumah Tangga</option>
+            <option value="Kecantikan">Kecantikan</option>
+            <option value="Kesehatan">Kesehatan</option>
+            <option value="Olahraga">Olahraga</option>
+            <option value="Mainan">Mainan</option>
+          </select>
+        </div>
+
+        <!-- Harga -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="productPrice" class="block text-sm font-semibold text-gray-700 mb-1.5">Harga Jual <span class="text-red-500">*</span></label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">Rp</span>
+              <input type="number" id="productPrice" required min="0" placeholder="0" class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder:text-gray-400">
+            </div>
+          </div>
+          <div>
+            <label for="productOriginalPrice" class="block text-sm font-semibold text-gray-700 mb-1.5">Harga Coret</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">Rp</span>
+              <input type="number" id="productOriginalPrice" min="0" placeholder="0" class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder:text-gray-400">
+            </div>
+          </div>
+        </div>
+
+        <!-- Min Order & Stock -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="productMinOrder" class="block text-sm font-semibold text-gray-700 mb-1.5">Min. Pembelian</label>
+            <input type="number" id="productMinOrder" min="1" value="1" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all">
+          </div>
+          <div>
+            <label for="productStock" class="block text-sm font-semibold text-gray-700 mb-1.5">Stok</label>
+            <input type="number" id="productStock" min="0" value="100" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all">
+          </div>
+        </div>
+
+        <!-- Lokasi -->
+        <div>
+          <label for="productLocation" class="block text-sm font-semibold text-gray-700 mb-1.5">Lokasi/Kota <span class="text-red-500">*</span></label>
+          <input type="text" id="productLocation" required placeholder="Contoh: Jakarta" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder:text-gray-400">
+        </div>
+
+        <!-- Gambar Produk -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Gambar Produk</label>
+          <p class="text-xs text-gray-400 mb-2">Maksimal 5 gambar. Gambar pertama menjadi gambar utama.</p>
+          <div class="flex gap-2">
+            <input type="url" id="imageUrlInput" placeholder="https://example.com/gambar.jpg" class="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder:text-gray-400">
+            <button type="button" onclick="addImage()" class="px-4 py-2.5 bg-emerald-50 text-emerald-600 font-semibold rounded-xl text-sm hover:bg-emerald-100 transition-colors border border-emerald-100 shrink-0">
+              + Tambah
+            </button>
+          </div>
+          <div id="imageThumbnails" class="flex flex-wrap gap-3 mt-3"></div>
+        </div>
+
+        <!-- Varian/Ukuran -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Varian/Ukuran</label>
+          <p class="text-xs text-gray-400 mb-2">Tekan Enter untuk menambahkan varian.</p>
+          <input type="text" id="variantInput" placeholder="Ketik varian, lalu tekan Enter" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder:text-gray-400" onkeydown="handleVariantKey(event)">
+          <div id="variantTags" class="flex flex-wrap gap-2 mt-2"></div>
+        </div>
+
+        <!-- Deskripsi -->
+        <div>
+          <label for="productDescription" class="block text-sm font-semibold text-gray-700 mb-1.5">Deskripsi Produk</label>
+          <textarea id="productDescription" rows="4" placeholder="Jelaskan detail produkmu..." class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder:text-gray-400 resize-none"></textarea>
+        </div>
+      </form>
+    </div>
+
+    <!-- Form Footer -->
+    <div class="p-5 border-t border-gray-100 shrink-0">
+      <div class="flex gap-3">
+        <button onclick="closeProductForm()" class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl text-sm hover:bg-gray-200 transition-colors">
+          Batal
+        </button>
+        <button onclick="saveProduct()" class="flex-1 btn-primary px-4 py-3 bg-emerald-500 text-white font-semibold rounded-xl text-sm hover:bg-emerald-600 transition-all">
+          Simpan Produk
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONFIRM DIALOG ===== -->
+  <div id="confirmOverlay" class="confirm-overlay">
+    <div class="confirm-box">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div>
+          <h3 class="font-bold text-gray-900 font-display">Hapus Produk?</h3>
+          <p class="text-sm text-gray-500">Produk yang dihapus tidak dapat dikembalikan.</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="closeConfirm()" class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-sm hover:bg-gray-200 transition-colors">Batal</button>
+        <button id="confirmDeleteBtn" class="flex-1 px-4 py-2.5 bg-red-500 text-white font-semibold rounded-xl text-sm hover:bg-red-600 transition-colors">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    // ===== CONSTANTS =====
+    const STORAGE_KEY = 'grosirpj_seller_products';
+    const USER_KEY = 'grosirpj_user';
+    const CATEGORIES = ['Fashion', 'Elektronik', 'Rumah Tangga', 'Kecantikan', 'Kesehatan', 'Olahraga', 'Mainan'];
+    const CATEGORY_COLORS = {
+      'Fashion': { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-100' },
+      'Elektronik': { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
+      'Rumah Tangga': { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100' },
+      'Kecantikan': { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100' },
+      'Kesehatan': { bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-100' },
+      'Olahraga': { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-100' },
+      'Mainan': { bg: 'bg-cyan-50', text: 'text-cyan-600', border: 'border-cyan-100' },
+    };
+    const CATEGORY_ICONS = {
+      'Fashion': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z"/></svg>',
+      'Elektronik': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+      'Rumah Tangga': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+      'Kecantikan': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+      'Kesehatan': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+      'Olahraga': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20"/><path d="M2 12h20"/></svg>',
+      'Mainan': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    };
+
+    // ===== STATE =====
+    let products = [];
+    let currentTab = 'products';
+    let formImages = [];
+    let formVariants = [];
+    let deleteTargetId = null;
+
+    // ===== UTILITY FUNCTIONS =====
+    function formatRupiah(num) {
+      if (num === null || num === undefined) return 'Rp 0';
+      return 'Rp ' + Number(num).toLocaleString('id-ID');
+    }
+
+    function formatNumber(num) {
+      if (num === null || num === undefined) return '0';
+      return Number(num).toLocaleString('id-ID');
+    }
+
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    }
+
+    function getDiscountPercent(price, originalPrice) {
+      if (!originalPrice || originalPrice <= price) return 0;
+      return Math.round(((originalPrice - price) / originalPrice) * 100);
+    }
+
+    // ===== STORAGE =====
+    function loadProducts() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        products = data ? JSON.parse(data) : [];
+      } catch {
+        products = [];
+      }
+    }
+
+    function saveProducts() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    }
+
+    function loadSellerInfo() {
+      try {
+        const data = localStorage.getItem(USER_KEY);
+        return data ? JSON.parse(data) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    // ===== SELLER INFO =====
+    function updateSellerDisplay() {
+      const user = loadSellerInfo();
+      const name = user?.name || 'Seller';
+      const city = user?.city || 'Indonesia';
+
+      document.getElementById('navSellerName').textContent = name;
+      document.getElementById('navSellerCity').textContent = city;
+      document.getElementById('welcomeName').textContent = name;
+
+      // Pre-fill location in form
+      document.getElementById('productLocation').value = city;
+    }
+
+    // ===== STATS =====
+    function updateStats() {
+      const totalProducts = products.length;
+      const activeProducts = products.filter(p => p.active).length;
+      const totalSold = products.reduce((sum, p) => sum + (p.sold || 0), 0);
+      const revenue = products.reduce((sum, p) => sum + ((p.sold || 0) * (p.price || 0)), 0);
+
+      document.getElementById('statTotalProducts').textContent = totalProducts;
+      document.getElementById('statActiveProducts').textContent = activeProducts;
+      document.getElementById('statTotalSold').textContent = formatNumber(totalSold);
+      document.getElementById('statRevenue').textContent = formatRupiah(revenue);
+    }
+
+    // ===== RENDER PRODUCT LIST =====
+    function renderProducts() {
+      const listEl = document.getElementById('productList');
+      const emptyEl = document.getElementById('emptyState');
+
+      if (products.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+
+      listEl.innerHTML = products.map((product, index) => {
+        const cat = CATEGORY_COLORS[product.category] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-100' };
+        const catIcon = CATEGORY_ICONS[product.category] || '';
+        const discount = getDiscountPercent(product.price, product.originalPrice);
+        const mainImage = product.images && product.images.length > 0
+          ? product.images[0]
+          : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" fill="none"><rect width="200" height="200" fill="#f3f4f6"/><text x="100" y="105" text-anchor="middle" fill="#9ca3af" font-size="14">No Image</text></svg>');
+
+        return `
+          <div class="product-card bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in" style="animation-delay: ${index * 50}ms">
+            <div class="flex flex-col sm:flex-row">
+              <!-- Image -->
+              <div class="relative w-full sm:w-48 h-48 sm:h-auto shrink-0 overflow-hidden bg-gray-100">
+                <img src="${mainImage}" alt="${product.name}" class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" fill="none"><rect width="200" height="200" fill="#f3f4f6"/><text x="100" y="105" text-anchor="middle" fill="#9ca3af" font-size="14">No Image</text></svg>')}'">
+                ${discount > 0 ? `<div class="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-orange-400 px-2.5 py-1 rounded-lg text-white text-xs font-bold shadow-lg">${discount}%</div>` : ''}
+                ${product.images && product.images.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-lg">${product.images.length} foto</div>` : ''}
+              </div>
+
+              <!-- Info -->
+              <div class="flex-1 p-4 sm:p-5">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 ${cat.bg} ${cat.text} text-xs font-medium rounded-lg ${cat.border} border">
+                        ${catIcon}
+                        ${product.category}
+                      </span>
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 ${product.active ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100'} text-xs font-medium rounded-lg border">
+                        <span class="w-1.5 h-1.5 rounded-full ${product.active ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                        ${product.active ? 'Aktif' : 'Nonaktif'}
+                      </span>
+                    </div>
+                    <h3 class="font-bold text-gray-900 font-display line-clamp-1">${product.name}</h3>
+                  </div>
+                </div>
+
+                <!-- Price & Details -->
+                <div class="flex flex-wrap items-baseline gap-2 mb-3">
+                  <span class="text-lg font-bold text-emerald-600 font-display">${formatRupiah(product.price)}</span>
+                  ${product.originalPrice && product.originalPrice > product.price ? `<span class="text-sm text-gray-400 line-through">${formatRupiah(product.originalPrice)}</span>` : ''}
+                </div>
+
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-3">
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+                    Min. ${product.minOrder || 1} pcs
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    Stok: ${formatNumber(product.stock || 0)}
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    ${product.location}
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>
+                    ${formatNumber(product.sold || 0)} terjual
+                  </span>
+                </div>
+
+                ${product.variants && product.variants.length > 0 ? `
+                  <div class="flex flex-wrap gap-1.5 mb-3">
+                    ${product.variants.map(v => `<span class="px-2 py-0.5 bg-gray-50 text-gray-600 text-xs rounded-md border border-gray-100">${v}</span>`).join('')}
+                  </div>
+                ` : ''}
+
+                <!-- Actions -->
+                <div class="flex items-center gap-2 pt-2 border-t border-gray-50">
+                  <button onclick="toggleProductStatus('${product.id}')" class="flex items-center gap-1.5 px-3 py-1.5 ${product.active ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-green-50 text-green-600 hover:bg-green-100'} rounded-lg text-xs font-semibold transition-colors" title="${product.active ? 'Nonaktifkan' : 'Aktifkan'}">
+                    ${product.active
+                      ? '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg> Nonaktifkan'
+                      : '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Aktifkan'
+                    }
+                  </button>
+                  <button onclick="editProduct('${product.id}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors" title="Edit">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    Edit
+                  </button>
+                  <button onclick="confirmDelete('${product.id}')" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-xs font-semibold transition-colors" title="Hapus">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ===== RENDER STATISTICS =====
+    function renderStatistics() {
+      const statsEmptyEl = document.getElementById('statsEmpty');
+      const statsContentEl = document.getElementById('statsContent');
+
+      if (products.length === 0) {
+        statsEmptyEl.classList.remove('hidden');
+        statsContentEl.classList.add('hidden');
+        return;
+      }
+
+      statsEmptyEl.classList.add('hidden');
+      statsContentEl.classList.remove('hidden');
+
+      const avgPrice = products.reduce((sum, p) => sum + (p.price || 0), 0) / products.length;
+      const avgSold = products.reduce((sum, p) => sum + (p.sold || 0), 0) / products.length;
+      const totalStock = products.reduce((sum, p) => sum + (p.stock || 0), 0);
+
+      document.getElementById('avgPrice').textContent = formatRupiah(Math.round(avgPrice));
+      document.getElementById('avgSold').textContent = Math.round(avgSold) + ' pcs';
+      document.getElementById('totalStock').textContent = formatNumber(totalStock);
+
+      const tbody = document.getElementById('statsTableBody');
+      // Sort by sold descending
+      const sorted = [...products].sort((a, b) => (b.sold || 0) - (a.sold || 0));
+
+      tbody.innerHTML = sorted.map(product => {
+        const revenue = (product.sold || 0) * (product.price || 0);
+        return `
+          <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+                  ${product.images && product.images.length > 0
+                    ? `<img src="${product.images[0]}" alt="" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center\\'><svg class=\\'w-4 h-4 text-gray-300\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'2\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'/></svg></div>'">`
+                    : '<div class="w-full h-full flex items-center justify-center"><svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>'
+                  }
+                </div>
+                <span class="font-medium text-gray-900 line-clamp-1">${product.name}</span>
+              </div>
+            </td>
+            <td class="px-5 py-3 text-right font-medium text-gray-700">${formatRupiah(product.price)}</td>
+            <td class="px-5 py-3 text-right text-gray-600">${formatNumber(product.stock || 0)}</td>
+            <td class="px-5 py-3 text-right font-semibold text-emerald-600">${formatNumber(product.sold || 0)}</td>
+            <td class="px-5 py-3 text-right font-bold text-gray-900">${formatRupiah(revenue)}</td>
+            <td class="px-5 py-3 text-center">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 ${product.active ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'} text-xs font-medium rounded-lg">
+                <span class="w-1.5 h-1.5 rounded-full ${product.active ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                ${product.active ? 'Aktif' : 'Nonaktif'}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ===== TABS =====
+    function switchTab(tab) {
+      currentTab = tab;
+
+      // Update tab buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+
+      // Show/hide tabs
+      document.getElementById('productsTab').classList.toggle('hidden', tab !== 'products');
+      document.getElementById('statisticsTab').classList.toggle('hidden', tab !== 'statistics');
+
+      // Show/hide add product button
+      document.getElementById('addProductBtn').classList.toggle('hidden', tab !== 'products');
+
+      if (tab === 'statistics') {
+        renderStatistics();
+      }
+    }
+
+    // ===== PRODUCT FORM =====
+    function openProductForm(editId) {
+      // Reset form
+      document.getElementById('productForm').reset();
+      document.getElementById('editProductId').value = '';
+      formImages = [];
+      formVariants = [];
+      renderImageThumbnails();
+      renderVariantTags();
+
+      if (editId) {
+        const product = products.find(p => p.id === editId);
+        if (product) {
+          document.getElementById('formTitle').textContent = 'Edit Produk';
+          document.getElementById('formSubtitle').textContent = 'Ubah data produk';
+          document.getElementById('editProductId').value = product.id;
+          document.getElementById('productName').value = product.name || '';
+          document.getElementById('productCategory').value = product.category || '';
+          document.getElementById('productPrice').value = product.price || '';
+          document.getElementById('productOriginalPrice').value = product.originalPrice || '';
+          document.getElementById('productMinOrder').value = product.minOrder || 1;
+          document.getElementById('productStock').value = product.stock || 100;
+          document.getElementById('productLocation').value = product.location || '';
+          document.getElementById('productDescription').value = product.description || '';
+          formImages = [...(product.images || [])];
+          formVariants = [...(product.variants || [])];
+          renderImageThumbnails();
+          renderVariantTags();
+        }
+      } else {
+        document.getElementById('formTitle').textContent = 'Tambah Produk';
+        document.getElementById('formSubtitle').textContent = 'Isi data produk baru';
+        // Pre-fill location from seller info
+        const user = loadSellerInfo();
+        if (user?.city) {
+          document.getElementById('productLocation').value = user.city;
+        }
+      }
+
+      document.getElementById('formOverlay').classList.add('active');
+      document.getElementById('formPanel').classList.add('active');
+      document.body.style.overflow = 'hidden';
+
+      // Focus first field
+      setTimeout(() => document.getElementById('productName').focus(), 300);
+    }
+
+    function closeProductForm() {
+      document.getElementById('formOverlay').classList.remove('active');
+      document.getElementById('formPanel').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // ===== IMAGE MANAGEMENT =====
+    function addImage() {
+      const input = document.getElementById('imageUrlInput');
+      const url = input.value.trim();
+      if (!url) return;
+      if (formImages.length >= 5) {
+        showToast('Maksimal 5 gambar!', 'error');
+        return;
+      }
+      formImages.push(url);
+      input.value = '';
+      renderImageThumbnails();
+    }
+
+    function removeImage(index) {
+      formImages.splice(index, 1);
+      renderImageThumbnails();
+    }
+
+    function renderImageThumbnails() {
+      const container = document.getElementById('imageThumbnails');
+      if (formImages.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = formImages.map((url, i) => `
+        <div class="img-thumb">
+          <img src="${url}" alt="Gambar ${i + 1}" onerror="this.src='data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="none"><rect width="80" height="80" fill="#fee2e2"/><text x="40" y="44" text-anchor="middle" fill="#f87171" font-size="10">Error</text></svg>')}'">
+          ${i === 0 ? '<div class="utama-badge">Utama</div>' : ''}
+          <div class="remove-btn" onclick="removeImage(${i})" title="Hapus gambar">&times;</div>
+        </div>
+      `).join('');
+    }
+
+    // ===== VARIANT MANAGEMENT =====
+    function handleVariantKey(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const input = document.getElementById('variantInput');
+        const value = input.value.trim();
+        if (!value) return;
+        if (formVariants.includes(value)) {
+          showToast('Varian sudah ada!', 'error');
+          return;
+        }
+        formVariants.push(value);
+        input.value = '';
+        renderVariantTags();
+      }
+    }
+
+    function removeVariant(index) {
+      formVariants.splice(index, 1);
+      renderVariantTags();
+    }
+
+    function renderVariantTags() {
+      const container = document.getElementById('variantTags');
+      if (formVariants.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = formVariants.map((v, i) => `
+        <span class="variant-tag">
+          ${v}
+          <button type="button" onclick="removeVariant(${i})" title="Hapus varian">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </span>
+      `).join('');
+    }
+
+    // ===== SAVE PRODUCT =====
+    function saveProduct() {
+      const name = document.getElementById('productName').value.trim();
+      const category = document.getElementById('productCategory').value;
+      const price = parseInt(document.getElementById('productPrice').value) || 0;
+      const originalPrice = parseInt(document.getElementById('productOriginalPrice').value) || 0;
+      const minOrder = parseInt(document.getElementById('productMinOrder').value) || 1;
+      const stock = parseInt(document.getElementById('productStock').value) || 100;
+      const location = document.getElementById('productLocation').value.trim();
+      const description = document.getElementById('productDescription').value.trim();
+
+      // Validation
+      if (!name) { showToast('Nama produk harus diisi!', 'error'); document.getElementById('productName').focus(); return; }
+      if (!category) { showToast('Kategori harus dipilih!', 'error'); document.getElementById('productCategory').focus(); return; }
+      if (price <= 0) { showToast('Harga jual harus lebih dari 0!', 'error'); document.getElementById('productPrice').focus(); return; }
+      if (!location) { showToast('Lokasi/Kota harus diisi!', 'error'); document.getElementById('productLocation').focus(); return; }
+      if (originalPrice > 0 && originalPrice <= price) { showToast('Harga coret harus lebih besar dari harga jual!', 'error'); document.getElementById('productOriginalPrice').focus(); return; }
+
+      const editId = document.getElementById('editProductId').value;
+
+      if (editId) {
+        // Update existing
+        const idx = products.findIndex(p => p.id === editId);
+        if (idx !== -1) {
+          products[idx] = {
+            ...products[idx],
+            name, category, price, originalPrice, minOrder, stock, location, description,
+            images: [...formImages],
+            variants: [...formVariants],
+            updatedAt: new Date().toISOString(),
+          };
+          showToast('Produk berhasil diperbarui! ✅', 'success');
+        }
+      } else {
+        // Add new
+        const newProduct = {
+          id: generateId(),
+          name, category, price, originalPrice, minOrder, stock, location, description,
+          images: [...formImages],
+          variants: [...formVariants],
+          active: true,
+          sold: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        products.unshift(newProduct);
+        showToast('Produk berhasil ditambahkan! 🎉', 'success');
+      }
+
+      saveProducts();
+      updateStats();
+      renderProducts();
+      closeProductForm();
+    }
+
+    // ===== TOGGLE STATUS =====
+    function toggleProductStatus(id) {
+      const product = products.find(p => p.id === id);
+      if (product) {
+        product.active = !product.active;
+        product.updatedAt = new Date().toISOString();
+        saveProducts();
+        updateStats();
+        renderProducts();
+        showToast(`Produk ${product.active ? 'diaktifkan' : 'dinonaktifkan'}`, 'success');
+      }
+    }
+
+    // ===== EDIT PRODUCT =====
+    function editProduct(id) {
+      openProductForm(id);
+    }
+
+    // ===== DELETE PRODUCT =====
+    function confirmDelete(id) {
+      deleteTargetId = id;
+      document.getElementById('confirmOverlay').classList.add('active');
+      document.getElementById('confirmDeleteBtn').onclick = () => deleteProduct();
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirmOverlay').classList.remove('active');
+      deleteTargetId = null;
+    }
+
+    function deleteProduct() {
+      if (deleteTargetId) {
+        products = products.filter(p => p.id !== deleteTargetId);
+        saveProducts();
+        updateStats();
+        renderProducts();
+        showToast('Produk berhasil dihapus! 🗑️', 'success');
+      }
+      closeConfirm();
+    }
+
+    // ===== TOAST =====
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+
+      const colors = {
+        success: 'bg-emerald-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500',
+      };
+
+      const icons = {
+        success: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+        error: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+        info: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+      };
+
+      toast.className = `toast-item flex items-center gap-3 px-4 py-3 ${colors[type] || colors.info} text-white rounded-xl shadow-lg min-w-[280px]`;
+      toast.innerHTML = `${icons[type] || icons.info}<span class="text-sm font-medium">${message}</span>`;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // ===== KEYBOARD SHORTCUTS =====
+    document.addEventListener('keydown', (e) => {
+      // Escape to close modals
+      if (e.key === 'Escape') {
+        if (document.getElementById('confirmOverlay').classList.contains('active')) {
+          closeConfirm();
+        } else if (document.getElementById('formPanel').classList.contains('active')) {
+          closeProductForm();
+        }
+      }
+    });
+
+    // ===== INIT =====
+    function init() {
+      loadProducts();
+      updateSellerDisplay();
+      updateStats();
+      renderProducts();
+    }
+
+    init();
+  </script>
+</body>
+</html>

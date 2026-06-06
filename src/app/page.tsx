@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Separator } from '@/components/ui/separator';
 import { ProductDetail } from '@/components/product-detail';
 import { AuthModal } from '@/components/auth-modal';
+import { SellerDashboard } from '@/components/seller-dashboard';
 import { products, flashSaleProducts, categories, formatPrice, Product } from '@/lib/data';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
@@ -66,6 +67,7 @@ export default function Home() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sellerMode, setSellerMode] = useState(false);
 
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
@@ -89,11 +91,11 @@ export default function Home() {
   // Helper: require login to add to cart
   const requireLogin = useCallback(() => {
     if (!user) {
-      window.location.href = '/login-buyer.html';
+      setLoginModalOpen(true);
       return false;
     }
     return true;
-  }, [user]);
+  }, [user, setLoginModalOpen]);
 
   const handleAddToCart = useCallback((product: Product) => {
     if (!requireLogin()) return;
@@ -257,6 +259,17 @@ export default function Home() {
     );
   }
 
+  // ===== SELLER MODE =====
+  if (sellerMode) {
+    return (
+      <SellerDashboard
+        sellerName={user?.name || 'Seller'}
+        sellerCity={user?.city || 'Jakarta'}
+        onBack={() => setSellerMode(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f0fdf4]">
       {/* ===== NAVIGATION ===== */}
@@ -302,10 +315,16 @@ export default function Home() {
 
             {/* Nav Actions */}
             <div className="flex items-center gap-2 md:gap-4">
-              <a href="/login-seller.html" className="hidden sm:flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-emerald-600 transition-colors cursor-pointer">
+              <button
+                onClick={() => {
+                  if (!user) { setLoginModalOpen(true); return; }
+                  setSellerMode(true);
+                }}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-emerald-600 transition-colors cursor-pointer"
+              >
                 <Upload className="w-5 h-5" />
                 <span className="text-sm font-medium">Jual</span>
-              </a>
+              </button>
 
               <button
                 onClick={handleOpenCart}
