@@ -106,9 +106,9 @@ export default function Home() {
   }, [requireLogin]);
 
   // Swipe-to-close for Sheet panels on mobile
-  // Panel slides in from right, so swipe RIGHT to push it off screen
+  // Support BOTH left swipe AND right swipe to close
   useEffect(() => {
-    const THRESHOLD = 60;
+    const THRESHOLD = 50;
 
     function handleSwipeOnSheet(sheetSelector: string, onClose: () => void) {
       const panel = document.querySelector(sheetSelector + ' [data-slot="sheet-content"]') as HTMLElement;
@@ -141,7 +141,7 @@ export default function Home() {
         currentX = e.touches[0].clientX;
         const diff = currentX - startX;
 
-        // Swipe RIGHT (diff > 0) to push panel off screen right
+        // Right swipe: drag-follow (push panel off screen right)
         if (diff > 0) {
           e.preventDefault();
           panel.style.transition = 'none';
@@ -152,6 +152,7 @@ export default function Home() {
             overlay.style.opacity = String(1 - progress);
           }
         }
+        // Left swipe: just track for gesture detection (no drag-follow)
       };
 
       const onTouchEnd = () => {
@@ -161,18 +162,24 @@ export default function Home() {
         isHorizontal = null;
 
         const diff = currentX - startX;
+        let shouldClose = false;
+
         if (diff > THRESHOLD) {
+          // Right swipe: animate panel off to the right
+          shouldClose = true;
           panel.style.transition = 'transform 0.25s ease-out';
           panel.style.transform = 'translateX(100%)';
           const overlay = panel.previousElementSibling as HTMLElement;
           if (overlay) { overlay.style.transition = 'opacity 0.25s ease-out'; overlay.style.opacity = '0'; }
-          setTimeout(() => {
-            panel.style.transition = '';
-            panel.style.transform = '';
-            if (overlay) { overlay.style.transition = ''; overlay.style.opacity = ''; }
-            onClose();
-          }, 260);
+        } else if (diff < -THRESHOLD) {
+          // Left swipe: animate panel off to the right
+          shouldClose = true;
+          panel.style.transition = 'transform 0.25s ease-out';
+          panel.style.transform = 'translateX(100%)';
+          const overlay = panel.previousElementSibling as HTMLElement;
+          if (overlay) { overlay.style.transition = 'opacity 0.25s ease-out'; overlay.style.opacity = '0'; }
         } else {
+          // Snap back
           panel.style.transition = 'transform 0.25s ease-out';
           panel.style.transform = '';
           const overlay = panel.previousElementSibling as HTMLElement;
@@ -181,6 +188,16 @@ export default function Home() {
             panel.style.transition = '';
             const overlay2 = panel.previousElementSibling as HTMLElement;
             if (overlay2) overlay2.style.transition = '';
+          }, 260);
+        }
+
+        if (shouldClose) {
+          setTimeout(() => {
+            panel.style.transition = '';
+            panel.style.transform = '';
+            const overlay = panel.previousElementSibling as HTMLElement;
+            if (overlay) { overlay.style.transition = ''; overlay.style.opacity = ''; }
+            onClose();
           }, 260);
         }
       };
@@ -713,6 +730,14 @@ export default function Home() {
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
             <p>&copy; 2024 GrosirPJ. Hak cipta dilindungi.</p>
+            <a
+              href="/download-grosirpj.html"
+              download="grosirpj.html"
+              className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Download File HTML
+            </a>
           </div>
         </div>
       </footer>
