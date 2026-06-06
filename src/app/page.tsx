@@ -730,14 +730,6 @@ export default function Home() {
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
             <p>&copy; 2024 GrosirPJ. Hak cipta dilindungi.</p>
-            <a
-              href="/download-grosirpj.html"
-              download="grosirpj.html"
-              className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              Download File HTML
-            </a>
           </div>
         </div>
       </footer>

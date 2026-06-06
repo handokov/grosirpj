@@ -575,10 +575,6 @@
         <!-- Copyright -->
         <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
           <p>&copy; 2024 GrosirPJ. Hak cipta dilindungi.</p>
-          <button onclick="downloadHTML()" class="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Download File HTML
-          </button>
         </div>
       </div>
     </footer>
@@ -870,19 +866,7 @@
       return sold.toLocaleString('id-ID');
     }
 
-    function downloadHTML() {
-      const htmlContent = document.documentElement.outerHTML;
-      const blob = new Blob(['<!DOCTYPE html>\n' + htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'grosirpj.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('File HTML berhasil didownload!');
-    }
+
 
     // ===== CART STATE =====
     let cartItems = [];
