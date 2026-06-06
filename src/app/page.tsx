@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, type RefObject } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Zap, Search, ShoppingCart, Bell, Upload, Menu, X, Star,
   ChevronRight, ChevronDown, Play, MapPin, Minus, Plus, Trash2,
@@ -65,7 +65,6 @@ export default function Home() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
 
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
@@ -188,23 +187,6 @@ export default function Home() {
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
   }, []);
-
-  // Intersection observer for reveal animations
-  const sectionRefs = useRef<Map<string, IntersectionObserverEntry>>(new Map());
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisibleSections((prev) => new Set(prev).add(entry.target.id));
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    document.querySelectorAll('.reveal-section').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [activeFilter]);
 
   const openProductDetail = useCallback((product: Product) => {
     setSelectedProduct(product);
@@ -506,7 +488,7 @@ export default function Home() {
       </section>
 
       {/* ===== CATEGORIES SECTION ===== */}
-      <section id="categories" className={`py-16 bg-white reveal-section transition-all duration-800 ${visibleSections.has('categories') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <section id="categories" className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-10">
             <div>
@@ -533,7 +515,7 @@ export default function Home() {
       </section>
 
       {/* ===== PRODUCTS SECTION ===== */}
-      <section id="products" className={`py-16 reveal-section transition-all duration-800 bg-gradient-to-b from-white to-[#f0fdf4] ${visibleSections.has('products') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <section id="products" className="py-16 bg-gradient-to-b from-white to-[#f0fdf4]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-10">
             <div>
@@ -606,7 +588,7 @@ export default function Home() {
       </section>
 
       {/* ===== PROMO BANNERS ===== */}
-      <section id="promo" className={`py-12 reveal-section transition-all duration-800 ${visibleSections.has('promo') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <section id="promo" className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-6">
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-500 to-emerald-500 p-8 md:p-10 group cursor-pointer">
