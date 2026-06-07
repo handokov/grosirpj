@@ -16,11 +16,12 @@ interface AuthStore {
   loading: boolean;
   loginModalOpen: boolean;
   sellerMode: boolean;
+  error: string;
   setLoginModalOpen: (open: boolean) => void;
   setSellerMode: (mode: boolean) => void;
   setUser: (user: AuthUser | null) => void;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (data: { name: string; email: string; password: string; city: string; role?: string; phone?: string; storeName?: string; storeDescription?: string }) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (data: { name: string; email: string; password: string; city: string; role?: string; phone?: string; storeName?: string; storeDescription?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   init: () => Promise<void>;
 }
@@ -30,6 +31,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   loading: true,
   loginModalOpen: false,
   sellerMode: false,
+  error: '',
 
   setLoginModalOpen: (open) => set({ loginModalOpen: open }),
   setSellerMode: (mode) => set({ sellerMode: mode }),
@@ -45,43 +47,57 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   login: async (email, password) => {
     try {
+      set({ error: '' });
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login gagal');
+      if (!res.ok) {
+        const errorMsg = data.error || 'Login gagal';
+        set({ error: errorMsg });
+        return { success: false, error: errorMsg };
+      }
       get().setUser(data);
       if (data.role === 'seller') set({ sellerMode: true });
-      set({ loginModalOpen: false });
-      return true;
-    } catch {
-      return false;
+      set({ loginModalOpen: false, error: '' });
+      return { success: true };
+    } catch (err) {
+      const errorMsg = 'Tidak dapat terhubung ke server. Silakan coba lagi.';
+      set({ error: errorMsg });
+      return { success: false, error: errorMsg };
     }
   },
 
   register: async (registerData) => {
     try {
+      set({ error: '' });
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerData),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Registrasi gagal');
+      if (!res.ok) {
+        const errorMsg = data.error || 'Registrasi gagal';
+        set({ error: errorMsg });
+        return { success: false, error: errorMsg };
+      }
       get().setUser(data);
       if (data.role === 'seller') set({ sellerMode: true });
-      set({ loginModalOpen: false });
-      return true;
-    } catch {
-      return false;
+      set({ loginModalOpen: false, error: '' });
+      return { success: true };
+    } catch (err) {
+      const errorMsg = 'Tidak dapat terhubung ke server. Silakan coba lagi.';
+      set({ error: errorMsg });
+      return { success: false, error: errorMsg };
     }
   },
 
   logout: () => {
     get().setUser(null);
-    set({ sellerMode: false });
+    set({ sellerMode: false, error: '' });
   },
 
   init: async () => {

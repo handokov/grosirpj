@@ -32,7 +32,7 @@ function checkSellerIntent(): boolean {
 }
 
 export function AuthModal() {
-  const { loginModalOpen, setLoginModalOpen, login, register } = useAuthStore();
+  const { loginModalOpen, setLoginModalOpen, login, register, error: storeError } = useAuthStore();
 
   // Detect seller intent at component creation time
   const [initialSellerIntent] = useState(checkSellerIntent);
@@ -82,9 +82,9 @@ export function AuthModal() {
     setError('');
     setLoading(true);
 
-    const success = await login(loginEmail, loginPassword);
-    if (!success) {
-      setError('Email atau password salah. Silakan coba lagi.');
+    const result = await login(loginEmail, loginPassword);
+    if (!result.success) {
+      setError(result.error || 'Email atau password salah. Silakan coba lagi.');
     } else {
       resetForm();
     }
@@ -106,7 +106,7 @@ export function AuthModal() {
 
     setLoading(true);
     const role = isSeller ? 'seller' : 'buyer';
-    const success = await register({
+    const result = await register({
       name: regName,
       email: regEmail,
       password: regPassword,
@@ -117,8 +117,8 @@ export function AuthModal() {
       storeDescription: isSeller ? regStoreDesc : undefined,
     });
 
-    if (!success) {
-      setError('Registrasi gagal. Email mungkin sudah terdaftar.');
+    if (!result.success) {
+      setError(result.error || 'Registrasi gagal. Email mungkin sudah terdaftar.');
     } else {
       localStorage.removeItem('grosirpj_pending_seller');
       resetForm();

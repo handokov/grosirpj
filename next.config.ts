@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: false,
   serverExternalPackages: ["prisma", "@prisma/client"],
+  allowedDevOrigins: [
+    ".space-z.ai",
+    ".vercel.app",
+  ],
 };
 
 export default nextConfig;

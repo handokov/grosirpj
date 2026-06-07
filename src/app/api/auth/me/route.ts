@@ -4,8 +4,6 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
   try {
     await ensureDb();
-    // In a real app, this would check session/JWT
-    // For this demo, we'll read userId from query param
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -15,7 +13,7 @@ export async function GET(request: Request) {
 
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, city: true, role: true },
+      select: { id: true, name: true, email: true, city: true, role: true, phone: true, storeName: true, storeDescription: true },
     });
 
     if (!user) {

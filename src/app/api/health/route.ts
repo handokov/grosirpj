@@ -2,39 +2,50 @@ import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const debug: Record<string, unknown> = {};
+  const health: Record<string, unknown> = {
+    status: 'checking',
+    timestamp: new Date().toISOString(),
+    env: {
+      VERCEL: process.env.VERCEL || 'not set',
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      DATABASE_URL_SET: !!process.env.DATABASE_URL,
+    },
+  };
 
   try {
-    debug.isOnVercel = !!process.env.VERCEL;
-    debug.databaseUrl = process.env.DATABASE_URL || 'not set';
+    await ensureDb();
+    const userCount = await db.user.count();
+    const productCount = await db.product.count();
 
-    // Try ensureDb
-    try {
-      await ensureDb();
-      debug.ensureDbResult = 'success';
-    } catch (e) {
-      debug.ensureDbResult = 'failed: ' + (e instanceof Error ? e.message : String(e));
+    health.db = 'connected';
+    health.users = userCount;
+    health.products = productCount;
+    health.status = 'healthy';
+
+    // Test login hash
+    function simpleHash(str: string): string {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0;
+      }
+      return Math.abs(hash).toString(36);
     }
 
-    // Try counting users
-    try {
-      const userCount = await db.user.count();
-      debug.userCount = userCount;
-    } catch (e) {
-      debug.userCountError = (e instanceof Error ? e.message : String(e));
-    }
-
-    // Try listing tables
-    try {
-      const tables = await db.$queryRawUnsafe("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
-      debug.tables = tables;
-    } catch (e) {
-      debug.tablesError = (e instanceof Error ? e.message : String(e));
+    // Check if demo user exists with correct password hash
+    const demoBuyer = await db.user.findUnique({ where: { email: 'buyer@grosirpj.id' } });
+    if (demoBuyer) {
+      health.demoBuyerPassword = demoBuyer.password === simpleHash('password123') ? 'correct' : 'MISMATCH';
+    } else {
+      health.demoBuyerPassword = 'user not found';
     }
 
   } catch (error) {
-    debug.fatalError = error instanceof Error ? error.message : String(error);
+    health.db = 'error';
+    health.error = error instanceof Error ? error.message : String(error);
+    health.status = 'unhealthy';
   }
 
-  return NextResponse.json(debug, { status: 200 });
+  return NextResponse.json(health);
 }

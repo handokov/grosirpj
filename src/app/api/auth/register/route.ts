@@ -26,8 +26,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check if user already exists
-    const existing = await db.user.findUnique({ where: { email } });
+    const existing = await db.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json(
         { error: 'Email sudah terdaftar. Silakan login.' },
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
       data: {
         id: createId(),
         name,
-        email,
+        email: normalizedEmail,
         password: simpleHash(password),
         city,
         role: userRole,
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Register error:', error);
     return NextResponse.json(
-      { error: 'Terjadi kesalahan saat mendaftar' },
+      { error: 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.' },
       { status: 500 }
     );
   }

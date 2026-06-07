@@ -14,7 +14,9 @@ function simpleHash(str: string): string {
 
 export async function POST(request: Request) {
   try {
+    // Ensure DB is initialized (creates tables + seeds on Vercel cold starts)
     await ensureDb();
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -25,7 +27,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await db.user.findUnique({ where: { email } });
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await db.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       return NextResponse.json(
         { error: 'Email tidak ditemukan' },
@@ -33,7 +38,8 @@ export async function POST(request: Request) {
       );
     }
 
-    if (user.password !== simpleHash(password)) {
+    const hashedPassword = simpleHash(password);
+    if (user.password !== hashedPassword) {
       return NextResponse.json(
         { error: 'Password salah' },
         { status: 401 }
@@ -53,7 +59,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
-      { error: 'Terjadi kesalahan saat login' },
+      { error: 'Terjadi kesalahan saat login. Silakan coba lagi.' },
       { status: 500 }
     );
   }
