@@ -457,8 +457,8 @@
           <!-- Products rendered by JS -->
         </div>
 
-        <div class="text-center mt-10">
-          <button class="px-8 py-6 bg-white text-emerald-600 font-semibold rounded-2xl border-2 border-emerald-500 hover:bg-emerald-50 transition-all inline-flex items-center gap-2">
+        <div id="loadMoreContainer" class="text-center mt-10">
+          <button id="loadMoreBtn" onclick="loadMore()" class="px-8 py-6 bg-white text-emerald-600 font-semibold rounded-2xl border-2 border-emerald-500 hover:bg-emerald-50 transition-all inline-flex items-center gap-2">
             Lihat Lebih Banyak
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
           </button>
@@ -695,7 +695,27 @@
       { id: 7, name: "Kemeja Batik Pria Modern", price: 145000, originalPrice: 295000, image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=300&h=300&fit=crop", rating: 4.7, sold: 3456, location: "Pekalongan", category: "fashion", description: "Kemeja batik pria modern dengan motif batik tulis asli Pekalongan.", minOrder: 6, stock: 4200, seller: "Batik Pekalongan Store", sellerRating: 4.9, variants: ["S", "M", "L", "XL", "XXL"] },
       { id: 8, name: "Speaker Bluetooth Portable", price: 165000, originalPrice: 350000, image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop", rating: 4.5, sold: 2109, location: "Jakarta", category: "elektronik", description: "Speaker bluetooth portable dengan output 20W dan bass mendalam. IPX7 waterproof.", minOrder: 5, stock: 3800, seller: "Audio Jakarta Center", sellerRating: 4.5, variants: ["Hitam", "Merah", "Biru"] },
       { id: 9, name: "Bedcover Set King Size", price: 325000, originalPrice: 650000, image: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=300&h=300&fit=crop", rating: 4.9, sold: 567, location: "Solo", category: "rumah", description: "Bedcover set king size dengan bahan katun Jepang premium.", minOrder: 3, stock: 900, seller: "Textile Solo Center", sellerRating: 4.9, variants: ["Putih", "Krem", "Abu-abu"] },
-      { id: 10, name: "Celana Chino Pria Slim Fit", price: 135000, originalPrice: 275000, image: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=300&h=300&fit=crop", rating: 4.8, sold: 2890, location: "Bandung", category: "fashion", description: "Celana chino pria slim fit dengan bahan stretch yang nyaman.", minOrder: 6, stock: 6200, seller: "Bandung Fashion Store", sellerRating: 4.8, variants: ["28", "29", "30", "31", "32", "33", "34"] }
+      { id: 10, name: "Celana Chino Pria Slim Fit", price: 135000, originalPrice: 275000, image: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=300&h=300&fit=crop", rating: 4.8, sold: 2890, location: "Bandung", category: "fashion", description: "Celana chino pria slim fit dengan bahan stretch yang nyaman.", minOrder: 6, stock: 6200, seller: "Bandung Fashion Store", sellerRating: 4.8, variants: ["28", "29", "30", "31", "32", "33", "34"] },
+      { id: 11, name: "Jaket Bomber Pria Premium", price: 195000, originalPrice: 420000, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=300&fit=crop", rating: 4.8, sold: 1678, location: "Jakarta", category: "fashion", description: "Jaket bomber pria premium dengan bahan parasut waterproof. Dilengkapi sleting berkualitas dan saku dalam.", minOrder: 6, stock: 3500, seller: "Jakarta Jacket Store", sellerRating: 4.7, variants: ["M", "L", "XL", "XXL"] },
+      { id: 12, name: "Rice Cooker Digital 1.8L", price: 275000, originalPrice: 500000, image: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=300&h=300&fit=crop", rating: 4.7, sold: 943, location: "Surabaya", category: "elektronik", description: "Rice cooker digital 1.8L dengan fitur slow cook, steam, dan keep warm. Panel LED touch screen.", minOrder: 3, stock: 780, seller: "Elektronik Surabaya", sellerRating: 4.7, variants: ["Putih", "Hitam"] },
+      { id: 13, name: "Handuk Set 4 Pcs Premium", price: 95000, originalPrice: 200000, image: "https://images.unsplash.com/photo-1543946602-8495315b5c3a?w=300&h=300&fit=crop", rating: 4.6, sold: 2345, location: "Solo", category: "rumah", description: "Handuk set 4 pcs premium cotton 600 GSM. Lembut, tebal, dan daya serap tinggi.", minOrder: 10, stock: 7800, seller: "Textile Solo Center", sellerRating: 4.8, variants: ["Putih", "Biru", "Abu-abu", "Campur"] },
+      { id: 14, name: "Kerudung Segi Empat 1 Lusin", price: 108000, originalPrice: 240000, image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?w=300&h=300&fit=crop", rating: 4.9, sold: 5432, location: "Pekalongan", category: "fashion", description: "Kerudung segi empat 1 lusin dengan bahan voal premium. Tidak mudah kusut, lembut dan ringan.", minOrder: 12, stock: 12000, seller: "Hijab Pekalongan", sellerRating: 4.9, variants: ["Mix Color", "Pastel", "Dark", "Earth Tone"] },
+      { id: 15, name: "Powerbank 20000mAh Fast Charging", price: 135000, originalPrice: 280000, image: "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=300&h=300&fit=crop", rating: 4.5, sold: 3210, location: "Jakarta", category: "elektronik", description: "Powerbank 20000mAh fast charging 22.5W dengan 3 port output. Baterai lithium polymer.", minOrder: 10, stock: 5600, seller: "Gadget Jakarta", sellerRating: 4.6, variants: ["Hitam", "Putih", "Biru"] },
+      { id: 16, name: "Set Sprei Karet King Size", price: 185000, originalPrice: 350000, image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=300&h=300&fit=crop", rating: 4.8, sold: 1456, location: "Solo", category: "rumah", description: "Set sprei karet king size dengan bahan katun Jepang 100%. Lembut dan sejuk dipakai.", minOrder: 5, stock: 3200, seller: "Textile Solo Center", sellerRating: 4.8, variants: ["Putih", "Krem", "Abu Muda"] },
+      { id: 17, name: "Sandal Slide Pria Anti Slip", price: 65000, originalPrice: 150000, image: "https://images.unsplash.com/photo-1603487742131-4160ec999306?w=300&h=300&fit=crop", rating: 4.6, sold: 6789, location: "Bandung", category: "fashion", description: "Sandal slide pria anti slip dengan sol EVA tebal. Nyaman dipakai seharian, ringan dan tahan lama.", minOrder: 12, stock: 15000, seller: "Bandung Shoes Center", sellerRating: 4.7, variants: ["39", "40", "41", "42", "43", "44"] },
+      { id: 18, name: "Kamera CCTV WiFi 1080P", price: 215000, originalPrice: 450000, image: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=300&h=300&fit=crop", rating: 4.4, sold: 876, location: "Jakarta", category: "elektronik", description: "Kamera CCTV WiFi 1080P HD dengan night vision dan 2-way audio. Bisa monitoring via smartphone.", minOrder: 5, stock: 2300, seller: "Security Jakarta", sellerRating: 4.5, variants: ["Putih", "Hitam"] },
+      { id: 19, name: "Teh Herbal Premium 20 Sachet", price: 75000, originalPrice: 150000, image: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300&h=300&fit=crop", rating: 4.9, sold: 7654, location: "Malang", category: "rumah", description: "Teh herbal premium 20 sachet dengan campuran jahe, temulawak, dan kunyit. Tanpa bahan pengawet.", minOrder: 10, stock: 18000, seller: "Herba Malang", sellerRating: 4.9, variants: ["Original", "Jahe", "Temulawak", "Kunyit"] },
+      { id: 20, name: "Tas Ransel Laptop 15.6 Inch", price: 165000, originalPrice: 320000, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop", rating: 4.7, sold: 4321, location: "Tangerang", category: "fashion", description: "Tas ransel laptop 15.6 inch dengan bahan polyester 900D waterproof. Dilengkapi port USB charging.", minOrder: 6, stock: 4500, seller: "Bag Store Tangerang", sellerRating: 4.7, variants: ["Hitam", "Abu-abu", "Navy"] },
+      { id: 21, name: "Earbuds TWS ANC Premium", price: 185000, originalPrice: 400000, image: "https://images.unsplash.com/photo-1590658268037-6bf12f032f55?w=300&h=300&fit=crop", rating: 4.6, sold: 2567, location: "Jakarta", category: "elektronik", description: "Earbuds TWS dengan Active Noise Cancelling dan baterai 30 jam. Bluetooth 5.3, driver 13mm.", minOrder: 8, stock: 4200, seller: "Audio Jakarta Center", sellerRating: 4.6, variants: ["Hitam", "Putih", "Hijau"] },
+      { id: 22, name: "Piring Melamine Set 12 Pcs", price: 125000, originalPrice: 250000, image: "https://images.unsplash.com/photo-1603199506016-5f36e6d72b0c?w=300&h=300&fit=crop", rating: 4.5, sold: 3456, location: "Semarang", category: "rumah", description: "Piring melamine set 12 pcs tahan pecah dan ringan. Cocok untuk rumah makan dan restoran.", minOrder: 10, stock: 9500, seller: "Home Kitchen Semarang", sellerRating: 4.6, variants: ["Putih", "Motif Batik", "Motif Bunga"] },
+      { id: 23, name: "Kemeja Flannel Premium 1 Lusin", price: 198000, originalPrice: 420000, image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=300&fit=crop", rating: 4.8, sold: 2156, location: "Bandung", category: "fashion", description: "Kemeja flannel premium 1 lusin dengan bahan cotton flannel tebal. Nyaman dan hangat untuk cuaca dingin.", minOrder: 12, stock: 3800, seller: "Bandung Fashion Store", sellerRating: 4.8, variants: ["S", "M", "L", "XL", "XXL"] },
+      { id: 24, name: "Kipas Angin Orbit 16 Inch", price: 155000, originalPrice: 300000, image: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop", rating: 4.4, sold: 1234, location: "Surabaya", category: "elektronik", description: "Kipas angin orbit 16 inch dengan 3 speed dan oscillate. Motor copper tahan lama dan hemat listrik.", minOrder: 5, stock: 2100, seller: "Elektronik Surabaya", sellerRating: 4.5, variants: ["Putih", "Biru"] },
+      { id: 25, name: "Gorden Blackout 2 Panel", price: 115000, originalPrice: 250000, image: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=300&h=300&fit=crop", rating: 4.7, sold: 1890, location: "Solo", category: "rumah", description: "Gorden blackout 2 panel yang mampu menahan cahaya hingga 95%. Bahan tebal dan jatuh sempurna.", minOrder: 5, stock: 3400, seller: "Textile Solo Center", sellerRating: 4.7, variants: ["Abu Tua", "Navy", "Coklat", "Hitam"] },
+      { id: 26, name: "Daster Wanita 1 Paket 6 Pcs", price: 98000, originalPrice: 210000, image: "https://images.unsplash.com/photo-1616627577385-5c0c4dab91f7?w=300&h=300&fit=crop", rating: 4.9, sold: 8765, location: "Yogyakarta", category: "fashion", description: "Daster wanita 1 paket 6 pcs dengan bahan rayon premium. Nyaman untuk di rumah, motif cantik.", minOrder: 10, stock: 20000, seller: "Fashion Yogyakarta", sellerRating: 4.9, variants: ["S", "M", "L", "XL"] },
+      { id: 27, name: "Mouse Gaming RGB 7200DPI", price: 89000, originalPrice: 200000, image: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=300&h=300&fit=crop", rating: 4.5, sold: 4320, location: "Jakarta", category: "elektronik", description: "Mouse gaming RGB 7200DPI dengan 7 tombol programmable. Sensor optical presisi tinggi.", minOrder: 10, stock: 6500, seller: "Gadget Jakarta", sellerRating: 4.5, variants: ["Hitam", "Putih"] },
+      { id: 28, name: "Teflon Anti Lengket 28cm", price: 85000, originalPrice: 180000, image: "https://images.unsplash.com/photo-1584990347449-a5d9f8dba27f?w=300&h=300&fit=crop", rating: 4.6, sold: 5678, location: "Medan", category: "rumah", description: "Teflon anti lengket 28cm dengan coating marble 5 lapis. Bahan aluminium tebal, distribusi panas merata.", minOrder: 10, stock: 8900, seller: "Home Kitchen Medan", sellerRating: 4.7, variants: ["28cm", "30cm", "32cm"] },
+      { id: 29, name: "Sarung Tangan Kulit Pria", price: 125000, originalPrice: 280000, image: "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=300&h=300&fit=crop", rating: 4.7, sold: 1987, location: "Yogyakarta", category: "fashion", description: "Sarung tangan kulit asli pria untuk riding. Dilengkapi pelindung buku jari dan ventilasi udara.", minOrder: 6, stock: 2900, seller: "Yogyakarta Leather", sellerRating: 4.8, variants: ["S", "M", "L", "XL"] },
+      { id: 30, name: "Charger USB-C 65W GaN", price: 145000, originalPrice: 320000, image: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=300&h=300&fit=crop", rating: 4.8, sold: 3456, location: "Tangerang", category: "elektronik", description: "Charger USB-C 65W GaN dengan 2 port USB-C dan 1 port USB-A. Compact dan fast charging.", minOrder: 8, stock: 5100, seller: "Gadget Tangerang", sellerRating: 4.8, variants: ["Putih", "Hitam"] }
     ];
 
     const categories = [
@@ -1364,12 +1384,16 @@
 
     // ===== RENDER PRODUCTS =====
     let activeFilter = 'all';
+    let productsShown = 8;
+    const PRODUCTS_PER_LOAD = 8;
 
-    function renderProducts() {
+    function renderProducts(resetCount) {
+      if (resetCount) productsShown = PRODUCTS_PER_LOAD;
       const container = document.getElementById('productsContainer');
       const filtered = activeFilter === 'all' ? products : products.filter(p => p.category === activeFilter);
+      const toShow = filtered.slice(0, productsShown);
 
-      container.innerHTML = filtered.map(p => {
+      container.innerHTML = toShow.map(p => {
         const discount = p.discount || Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
         const quickAddOnclick = currentUser
           ? `event.stopPropagation(); addToCart(products.find(x=>x.id===${p.id}))`
@@ -1407,6 +1431,27 @@
           </div>
         `;
       }).join('');
+
+      // Update load more button visibility
+      const loadMoreContainer = document.getElementById('loadMoreContainer');
+      if (productsShown >= filtered.length) {
+        loadMoreContainer.style.display = 'none';
+      } else {
+        loadMoreContainer.style.display = 'block';
+      }
+    }
+
+    function loadMore() {
+      productsShown += PRODUCTS_PER_LOAD;
+      renderProducts(false);
+      // Smooth scroll to the newly added products
+      setTimeout(() => {
+        const container = document.getElementById('productsContainer');
+        const lastCard = container.lastElementChild;
+        if (lastCard) {
+          lastCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
 
     // ===== FILTER TABS =====
@@ -1420,7 +1465,7 @@
           });
           btn.classList.add('bg-white', 'text-emerald-600', 'shadow-sm');
           btn.classList.remove('text-gray-600');
-          renderProducts();
+          renderProducts(true);
         });
       });
     }
