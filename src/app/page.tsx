@@ -629,17 +629,17 @@ export default function Home() {
     }
   }, [user, sellerMode, setSellerMode]);
 
-  // Seed database on first visit
+  // Ensure database is seeded (auto-seeds on Vercel via ensureDb)
+  // The /api/seed endpoint is idempotent - it checks if data exists first
   useEffect(() => {
-    const seeded = localStorage.getItem('grosirpj_seeded');
-    if (!seeded) {
-      fetch('/api/seed')
-        .then(res => res.json())
-        .then(() => {
-          localStorage.setItem('grosirpj_seeded', 'true');
-        })
-        .catch(console.error);
-    }
+    fetch('/api/seed')
+      .then(res => res.json())
+      .then((data) => {
+        if (data.success) {
+          console.log('Database ready:', data.data?.users?.total || 0, 'users');
+        }
+      })
+      .catch(console.error);
   }, []);
 
   // Loading state
