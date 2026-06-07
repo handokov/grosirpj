@@ -4,17 +4,27 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// On Vercel, use /tmp for the SQLite database
-// The DATABASE_URL env var should be set to "file:./dev.db" on Vercel
+// ============================================================
+// Database URL Resolution for Vercel Serverless
+// ============================================================
 function getDatabaseUrl() {
   const defaultUrl = process.env.DATABASE_URL || 'file:./dev.db';
 
   // If running on Vercel and DATABASE_URL is a relative path, redirect to /tmp
   if (process.env.VERCEL && defaultUrl.startsWith('file:./')) {
-    return `file:/tmp/${defaultUrl.replace('file:./', '')}`;
+    // Use triple-slash for absolute path in SQLite URI format
+    return `file:///tmp/${defaultUrl.replace('file:./', '')}`;
   }
 
   return defaultUrl;
+}
+
+// On Vercel, we MUST set process.env.DATABASE_URL at runtime
+// because Prisma reads from env vars during query execution,
+// not just at client initialization time.
+const resolvedUrl = getDatabaseUrl();
+if (process.env.VERCEL) {
+  process.env.DATABASE_URL = resolvedUrl;
 }
 
 export const db =
@@ -23,7 +33,7 @@ export const db =
     log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
     datasources: {
       db: {
-        url: getDatabaseUrl(),
+        url: resolvedUrl,
       },
     },
   })
@@ -39,8 +49,7 @@ let dbEnsurePromise: Promise<void> | null = null;
 /**
  * Ensures all database tables exist. On Vercel, the /tmp database is
  * ephemeral and starts empty on each cold start, so we need to create
- * tables before any query. Uses CREATE TABLE IF NOT EXISTS with proper
- * foreign keys and indexes matching the Prisma schema.
+ * tables before any query.
  */
 export async function ensureDb(): Promise<void> {
   if (dbTablesEnsured) return;
@@ -65,7 +74,7 @@ async function createTablesIfNeeded(): Promise<void> {
     // Tables don't exist yet, continue to create them
   }
 
-  console.log('[ensureDb] Creating database tables...');
+  console.log('[ensureDb] Creating database tables on Vercel /tmp...');
 
   try {
     // Create all tables with proper foreign keys and indexes
@@ -83,7 +92,7 @@ async function createTablesIfNeeded(): Promise<void> {
           "storeName" TEXT,
           "storeDescription" TEXT,
           "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" DATETIME NOT NULL
+          "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -105,7 +114,7 @@ async function createTablesIfNeeded(): Promise<void> {
           "sold" INTEGER NOT NULL DEFAULT 0,
           "rating" REAL NOT NULL DEFAULT 0,
           "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" DATETIME NOT NULL,
+          "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "sellerId" TEXT NOT NULL,
           CONSTRAINT "Product_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
       )
@@ -149,7 +158,7 @@ async function createTablesIfNeeded(): Promise<void> {
           "shippingAddress" TEXT NOT NULL DEFAULT '',
           "paymentMethod" TEXT NOT NULL DEFAULT 'cod',
           "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" DATETIME NOT NULL,
+          "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           CONSTRAINT "Order_buyerId_fkey" FOREIGN KEY ("buyerId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
           CONSTRAINT "Order_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
       )
@@ -239,8 +248,11 @@ async function createTablesIfNeeded(): Promise<void> {
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_userId_read_idx" ON "Notification"("userId", "read")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_userId_createdAt_idx" ON "Notification"("userId", "createdAt")`);
 
+    // Verify tables were created successfully
+    const userCount = await db.user.count();
+    console.log(`[ensureDb] All database tables created successfully. User count: ${userCount}`);
+
     dbTablesEnsured = true;
-    console.log('[ensureDb] All database tables created successfully');
   } catch (error) {
     console.error('[ensureDb] Failed to create tables:', error);
     throw error;
