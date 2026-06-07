@@ -1,8 +1,9 @@
-import { db } from '@/lib/db';
+import { db, ensureDb } from '@/lib/db';
 
 // GET /api/reviews - Get reviews for a product
 export async function GET(request: Request) {
   try {
+    await ensureDb();
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
 
@@ -39,6 +40,7 @@ export async function GET(request: Request) {
 // POST /api/reviews - Create a review
 export async function POST(request: Request) {
   try {
+    await ensureDb();
     const body = await request.json();
     const { productId, userId, rating, comment } = body;
 

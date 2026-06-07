@@ -1,9 +1,10 @@
-import { db } from '@/lib/db';
+import { db, ensureDb } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 
 // GET /api/products — List, search, filter, paginate products
 export async function GET(request: Request) {
   try {
+    await ensureDb();
     const { searchParams } = new URL(request.url);
 
     const search = searchParams.get('search') || '';
@@ -151,6 +152,7 @@ export async function GET(request: Request) {
 // POST /api/products — Create a new product (seller only)
 export async function POST(request: Request) {
   try {
+    await ensureDb();
     const body = await request.json();
     const {
       name,

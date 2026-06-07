@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { createId } from '@paralleldrive/cuid2';
 
@@ -15,6 +15,7 @@ function simpleHash(str: string): string {
 
 export async function POST(request: Request) {
   try {
+    await ensureDb();
     const body = await request.json();
     const { name, email, password, city, role, phone, storeName, storeDescription, address } = body;
 

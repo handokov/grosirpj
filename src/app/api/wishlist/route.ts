@@ -1,8 +1,9 @@
-import { db } from '@/lib/db';
+import { db, ensureDb } from '@/lib/db';
 
 // GET /api/wishlist — List user wishlist items
 export async function GET(request: Request) {
   try {
+    await ensureDb();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -72,6 +73,7 @@ export async function GET(request: Request) {
 // POST /api/wishlist — Toggle wishlist item (add/remove)
 export async function POST(request: Request) {
   try {
+    await ensureDb();
     const body = await request.json();
     const { userId, productId } = body;
 

@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, ensureDb } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 
 // GET /api/products/[id] — Get single product detail
@@ -7,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureDb();
     const { id } = await params;
 
     const product = await db.product.findUnique({
@@ -92,6 +93,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureDb();
     const { id } = await params;
 
     // Check if product exists
@@ -214,6 +216,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureDb();
     const { id } = await params;
 
     // Check if product exists

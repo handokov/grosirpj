@@ -28,3 +28,31 @@ Stage Summary:
 - Notification system: Bell icon in navbar shows unread count, dropdown shows notification list with mark-as-read
 - All new features integrated into existing UI seamlessly
 - Database now has Wishlist and Notification tables with proper indexes
+
+---
+Task ID: 1b
+Agent: ensure-db-agent
+Task: Add ensureDb() call at the beginning of every API route handler that uses the database
+
+Work Log:
+- Read all 11 API route files and verified ensureDb is exported from @/lib/db
+- Updated import in all files: `import { db } from '@/lib/db'` → `import { db, ensureDb } from '@/lib/db'`
+- Added `await ensureDb();` as first line inside try block of every handler function
+- Files updated:
+  1. products/route.ts — GET, POST
+  2. products/[id]/route.ts — GET, PUT, DELETE
+  3. orders/route.ts — GET, POST
+  4. orders/[id]/route.ts — GET, PATCH
+  5. wishlist/route.ts — GET, POST
+  6. reviews/route.ts — GET, POST
+  7. notifications/route.ts — GET, PATCH
+  8. chat/route.ts — GET, POST
+  9. auth/login/route.ts — POST
+  10. auth/me/route.ts — GET
+  11. auth/register/route.ts — POST
+- Lint check passes with no errors
+
+Stage Summary:
+- All 11 API route files now call ensureDb() before any database query
+- This ensures database tables exist on Vercel's ephemeral /tmp filesystem before queries run
+- No other code changes were made; only import and ensureDb() call added

@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, ensureDb } from '@/lib/db';
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -15,6 +15,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureDb();
     const { id } = await params;
 
     const order = await db.order.findUnique({
@@ -66,6 +67,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureDb();
     const { id } = await params;
     const body = await request.json();
     const { status } = body;

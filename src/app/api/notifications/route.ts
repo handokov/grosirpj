@@ -1,8 +1,9 @@
-import { db } from '@/lib/db';
+import { db, ensureDb } from '@/lib/db';
 
 // GET /api/notifications — List notifications for a user
 export async function GET(request: Request) {
   try {
+    await ensureDb();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -42,6 +43,7 @@ export async function GET(request: Request) {
 // PATCH /api/notifications — Mark notification(s) as read
 export async function PATCH(request: Request) {
   try {
+    await ensureDb();
     const body = await request.json();
     const { id, markAllRead, userId } = body;
 

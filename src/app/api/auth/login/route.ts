@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 // Simple hash function (must match seed)
@@ -14,6 +14,7 @@ function simpleHash(str: string): string {
 
 export async function POST(request: Request) {
   try {
+    await ensureDb();
     const body = await request.json();
     const { email, password } = body;
 
