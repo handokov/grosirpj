@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GrosirPJ - Belanja Grosir Mudah & Murah</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'display': ['Space Grotesk', 'sans-serif'],
+            'sans': ['DM Sans', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    /* Hero background gradient */
+    .hero-bg {
+      background: radial-gradient(ellipse 80% 50% at 20% 40%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(6, 182, 212, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 30% at 60% 80%, rgba(251, 191, 36, 0.1) 0%, transparent 50%),
+        linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+    }
+
+    /* Floating animations */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(2deg); }
+    }
+    @keyframes float-reverse {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(20px) rotate(-2deg); }
+    }
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scale-in {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(16px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toast-out {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(16px) scale(0.95); }
+    }
+
+    .float-1 { animation: float 6s ease-in-out infinite; }
+    .float-2 { animation: float-reverse 5s ease-in-out infinite; }
+    .float-3 { animation: float 7s ease-in-out 0.5s infinite; }
+
+    .animate-slide-up { animation: slide-up 0.8s ease-out forwards; }
+    .animate-scale-in { animation: scale-in 0.5s ease-out forwards; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .float-1, .float-2, .float-3, .animate-slide-up, .animate-scale-in {
+        animation: none;
+      }
+      .product-card, .category-card, .product-image, .category-icon, .btn-primary {
+        transition: none !important;
+      }
+    }
+
+    /* Product card hover */
+    .product-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .product-card:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); }
+    .product-card:hover .product-image { transform: scale(1.05); }
+    .product-image { transition: transform 0.4s ease; }
+
+    /* Category card */
+    .category-card { transition: all 0.3s ease; }
+    .category-card:hover { transform: scale(1.05); }
+    .category-card:hover .category-icon { transform: scale(1.1) rotate(5deg); }
+    .category-icon { transition: transform 0.3s ease; }
+
+    /* Button shine effect */
+    .btn-primary { position: relative; overflow: hidden; transition: all 0.3s ease; }
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s ease;
+    }
+    .btn-primary:hover::before { left: 100%; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.4); }
+
+    /* Search bar focus */
+    .search-bar:focus-within { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3); }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #059669; }
+
+    /* Hide scrollbar utility */
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Line clamp */
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Font display utility */
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+
+    /* Panel overlay */
+    .panel-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.5);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .panel-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Panel slide */
+    .panel-slide {
+      position: fixed; top: 0; right: 0; bottom: 0; z-index: 101;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .panel-slide.active {
+      transform: translateX(0);
+    }
+
+    /* Reveal section animation */
+    .reveal-section {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .reveal-section.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Toast notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast-item {
+      pointer-events: auto;
+      animation: toast-in 0.3s ease-out forwards;
+    }
+    .toast-item.removing {
+      animation: toast-out 0.3s ease-in forwards;
+    }
+
+    /* Product detail variant button active */
+    .variant-btn.active {
+      border-color: #10b981;
+      background-color: #ecfdf5;
+      color: #047857;
+    }
+    .variant-btn.active:hover {
+      background-color: #d1fae5;
+      color: #047857;
+    }
+
+    /* Tab button active */
+    .tab-btn.active {
+      border-bottom: 2px solid #10b981;
+      color: #10b981;
+      font-weight: 600;
+    }
+
+
+  </style>
+</head>
+<body class="font-sans text-foreground bg-[#f0fdf4]">
+  <div id="app" class="min-h-screen flex flex-col">
+
+    <!-- ===== NAVIGATION ===== -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16 md:h-20">
+          <!-- Logo -->
+          <a href="/" class="flex items-center gap-2 group">
+            <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center transform group-hover:rotate-6 transition-transform">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span class="font-bold text-xl text-emerald-700 font-display">GrosirPJ</span>
+          </a>
+
+          <!-- Desktop Search -->
+          <div class="hidden md:flex flex-1 max-w-xl mx-8">
+            <div class="search-bar w-full flex items-center bg-white rounded-full border border-gray-200 overflow-hidden transition-all focus-within:ring-2 focus-within:ring-emerald-300">
+              <select class="bg-gray-50 px-4 py-3 text-sm text-gray-600 border-r border-gray-200 focus:outline-none cursor-pointer">
+                <option>Semua Kategori</option>
+                <option>Fashion Pria</option>
+                <option>Fashion Wanita</option>
+                <option>Elektronik</option>
+                <option>Rumah Tangga</option>
+              </select>
+              <input type="text" placeholder="Cari produk grosir murah..." class="flex-1 px-4 py-3 text-sm focus:outline-none">
+              <button class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Nav Actions -->
+          <div class="flex items-center gap-2 md:gap-4">
+            <a href="login-seller.html" id="sellerNavLink" class="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-gray-600 hover:text-emerald-600 transition-colors cursor-pointer rounded-lg hover:bg-emerald-50">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span class="text-xs sm:text-sm font-medium">Jual</span>
+            </a>
+
+            <button id="cartBtn" class="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>
+              <span id="cartBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center hidden">0</span>
+            </button>
+
+            <button class="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors hidden sm:block">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+              <span class="absolute -top-1 -right-1 w-5 h-5 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center">5</span>
+            </button>
+
+            <!-- Auth Button Area -->
+            <div id="authArea">
+              <a href="login-buyer.html" class="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6 py-2 transition-colors inline-block">Masuk</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Mobile Search -->
+    <div id="mobileSearch" class="md:hidden fixed top-16 left-0 right-0 z-40 bg-white border-b border-gray-100 px-4 py-3">
+      <div class="flex items-center bg-gray-50 rounded-full border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-300">
+        <input type="text" placeholder="Cari produk..." class="flex-1 px-4 py-2.5 text-sm bg-transparent focus:outline-none">
+        <button class="p-2.5 bg-emerald-500 text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== HERO SECTION ===== -->
+    <section class="hero-bg pt-32 md:pt-24 pb-12 md:pb-20 relative overflow-hidden">
+      <!-- Floating decorative elements -->
+      <div class="absolute top-40 left-10 w-20 h-20 bg-amber-400/20 rounded-full blur-2xl float-1"></div>
+      <div class="absolute top-60 right-20 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl float-2"></div>
+      <div class="absolute bottom-20 left-1/4 w-24 h-24 bg-cyan-400/20 rounded-full blur-2xl float-3"></div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          <!-- Hero Text -->
+          <div class="animate-slide-up">
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 rounded-full mb-6">
+              <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span class="text-sm font-medium text-emerald-700">Flash Sale Hari Ini</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6 font-display">
+              Belanja Grosir
+              <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500">&nbsp;Mudah & Murah</span>
+            </h1>
+            <p class="text-lg text-gray-600 mb-8 max-w-lg">
+              Temukan ribuan produk grosir berkualitas dengan harga terbaik. Gratis ongkir, pembayaran aman, dan pengiriman cepat!
+            </p>
+            <div class="flex flex-wrap gap-4 mb-10">
+              <button class="btn-primary px-8 py-6 bg-emerald-500 text-white font-semibold rounded-2xl hover:bg-emerald-600 transition-all flex items-center gap-2 text-base">
+                Mulai Belanja
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </button>
+              <button class="px-8 py-6 bg-white text-gray-700 font-semibold rounded-2xl border border-gray-200 hover:border-emerald-300 hover:text-emerald-600 transition-all flex items-center gap-2 text-base">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Cara Belanja
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-8">
+              <div class="hover:scale-110 transition-transform cursor-default">
+                <p class="text-3xl font-bold text-gray-900 font-display">50K+</p>
+                <p class="text-sm text-gray-500">Produk Aktif</p>
+              </div>
+              <div class="hover:scale-110 transition-transform cursor-default">
+                <p class="text-3xl font-bold text-gray-900 font-display">10K+</p>
+                <p class="text-sm text-gray-500">Seller Terpercaya</p>
+              </div>
+              <div class="hover:scale-110 transition-transform cursor-default">
+                <p class="text-3xl font-bold text-gray-900 font-display">99%</p>
+                <p class="text-sm text-gray-500">Kepuasan</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero Card (desktop only) -->
+          <div class="relative hidden lg:block animate-scale-in">
+            <div class="relative z-10">
+              <div class="bg-white rounded-3xl shadow-2xl p-6 max-w-md mx-auto float-1">
+                <div class="relative rounded-2xl overflow-hidden mb-4">
+                  <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop" alt="Shopping" class="w-full h-48 object-cover">
+                  <div class="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-orange-400 px-3 py-1 rounded-full text-white text-sm font-semibold">
+                    Diskon 70%
+                  </div>
+                </div>
+                <h3 class="font-bold text-lg text-gray-900 mb-2 font-display">Paket Grosir Fashion Wanita</h3>
+                <div class="flex items-center gap-2 mb-3">
+                  <span class="text-2xl font-bold text-emerald-600">Rp 299.000</span>
+                  <span class="text-sm text-gray-400 line-through">Rp 999.000</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-1">
+                    <svg class="w-4 h-4 fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span class="text-sm font-medium text-gray-700">4.9</span>
+                    <span class="text-sm text-gray-400">(2.4k terjual)</span>
+                  </div>
+                  <button class="p-2 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Floating badges -->
+              <div class="absolute -top-4 -right-8 bg-white rounded-2xl shadow-xl p-4 float-2">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900">Transaksi Sukses</p>
+                    <p class="text-xs text-gray-500">Baru saja</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="absolute -bottom-4 -left-8 bg-white rounded-2xl shadow-xl p-4 float-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900">+500 User</p>
+                    <p class="text-xs text-gray-500">Hari ini</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== FLASH SALE SECTION ===== -->
+    <section class="py-12 bg-gradient-to-r from-emerald-600 to-emerald-500 relative overflow-hidden">
+      <div class="absolute inset-0 opacity-10">
+        <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <defs>
+            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)"/>
+        </svg>
+      </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+              <h2 class="text-2xl md:text-3xl font-bold text-white font-display">Flash Sale</h2>
+              <p class="text-emerald-100">Diskon hingga 90%</p>
+            </div>
+          </div>
+          <!-- Countdown Timer -->
+          <div class="flex items-center gap-3">
+            <span class="text-white/80 text-sm">Berakhir dalam</span>
+            <div class="flex gap-2">
+              <div class="bg-emerald-800/60 px-3 py-2 rounded-lg text-center min-w-[50px]">
+                <span id="timerHours" class="font-display text-xl font-bold text-white">08</span>
+                <p class="text-xs text-white/70">Jam</p>
+              </div>
+              <div class="bg-emerald-800/60 px-3 py-2 rounded-lg text-center min-w-[50px]">
+                <span id="timerMinutes" class="font-display text-xl font-bold text-white">45</span>
+                <p class="text-xs text-white/70">Menit</p>
+              </div>
+              <div class="bg-emerald-800/60 px-3 py-2 rounded-lg text-center min-w-[50px]">
+                <span id="timerSeconds" class="font-display text-xl font-bold text-white">30</span>
+                <p class="text-xs text-white/70">Detik</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="flashSaleContainer" class="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+          <!-- Flash sale products rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CATEGORIES SECTION ===== -->
+    <section id="categories" class="py-16 bg-white reveal-section">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between mb-10">
+          <div>
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-900 font-display">Kategori Populer</h2>
+            <p class="text-gray-500 mt-1">Temukan produk berdasarkan kategori favorit</p>
+          </div>
+          <a class="hidden md:flex items-center gap-2 text-emerald-600 font-medium hover:text-emerald-700 transition-colors cursor-pointer">
+            Lihat Semua
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+        <div id="categoriesContainer" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+          <!-- Categories rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PRODUCTS SECTION ===== -->
+    <section id="products" class="py-16 reveal-section bg-gradient-to-b from-white to-[#f0fdf4]">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-10">
+          <div>
+            <h2 class="text-2xl md:text-3xl font-bold text-gray-900 font-display">Produk Terlaris</h2>
+            <p class="text-gray-500 mt-1">Pilihan terbaik untuk kebutuhan grosir Anda</p>
+          </div>
+          <div id="filterTabs" class="flex gap-2 bg-gray-100 p-1 rounded-full">
+            <button class="filter-tab px-4 py-2 text-sm font-medium rounded-full transition-all bg-white text-emerald-600 shadow-sm" data-filter="all">Semua</button>
+            <button class="filter-tab px-4 py-2 text-sm font-medium rounded-full transition-all text-gray-600 hover:text-gray-900" data-filter="fashion">Fashion</button>
+            <button class="filter-tab px-4 py-2 text-sm font-medium rounded-full transition-all text-gray-600 hover:text-gray-900" data-filter="elektronik">Elektronik</button>
+            <button class="filter-tab px-4 py-2 text-sm font-medium rounded-full transition-all text-gray-600 hover:text-gray-900" data-filter="rumah">Rumah</button>
+          </div>
+        </div>
+
+        <div id="productsContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+          <!-- Products rendered by JS -->
+        </div>
+
+        <div id="loadMoreContainer" class="text-center mt-10">
+          <button id="loadMoreBtn" onclick="loadMore()" class="px-8 py-6 bg-white text-emerald-600 font-semibold rounded-2xl border-2 border-emerald-500 hover:bg-emerald-50 transition-all inline-flex items-center gap-2">
+            Lihat Lebih Banyak
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PROMO BANNERS ===== -->
+    <section id="promo" class="py-12 reveal-section">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- Free Shipping Banner -->
+          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-500 to-emerald-500 p-8 md:p-10 group cursor-pointer">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
+            <div class="relative z-10">
+              <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-white text-sm font-medium mb-4">Promo Spesial</span>
+              <h3 class="text-2xl md:text-3xl font-bold text-white mb-2 font-display">Gratis Ongkir Seluruh Indonesia</h3>
+              <p class="text-white/80 mb-6">Minimal pembelian Rp 100.000</p>
+              <button class="px-6 py-3 bg-white text-emerald-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors">Belanja Sekarang</button>
+            </div>
+          </div>
+
+          <!-- Seller Banner -->
+          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 to-pink-500 p-8 md:p-10 group cursor-pointer">
+            <div class="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2 group-hover:scale-150 transition-transform duration-500"></div>
+            <div class="relative z-10">
+              <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-white text-sm font-medium mb-4">New Seller</span>
+              <h3 class="text-2xl md:text-3xl font-bold text-white mb-2 font-display">Mulai Jual di GrosirPJ</h3>
+              <p class="text-white/80 mb-6">Gratis biaya pendaftaran, potongan 0%!</p>
+              <a href="login-seller.html" class="px-6 py-3 bg-white text-orange-500 font-semibold rounded-xl hover:bg-gray-50 transition-colors inline-block">Daftar Sekarang</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="bg-gray-900 text-gray-300 pt-16 pb-8 mt-auto">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+          <!-- Brand -->
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <span class="font-bold text-xl text-white font-display">GrosirPJ</span>
+            </div>
+            <p class="text-gray-400 text-sm mb-4">
+              Marketplace grosir terpercaya di Indonesia dengan jutaan produk berkualitas dan harga bersaing.
+            </p>
+          </div>
+
+          <!-- Layanan -->
+          <div>
+            <h4 class="font-semibold text-white mb-4 font-display">Layanan</h4>
+            <ul class="space-y-2 text-sm">
+              <li><a href="#" class="hover:text-emerald-400 transition-colors">Cara Belanja</a></li>
+              <li><a href="#" class="hover:text-emerald-400 transition-colors">Pengiriman</a></li>
+              <li><a href="#" class="hover:text-emerald-400 transition-colors">Pengembalian</a></li>
+              <li><a href="#" class="hover:text-emerald-400 transition-colors">FAQ</a></li>
+            </ul>
+          </div>
+
+          <!-- Tentang -->
+          <div>
+            <h4 class="font-semibold text-white mb-4 font-display">Tentang</h4>
+            <ul class="space-y-2 text-sm">
+              <li><a href="#" class="hover:text-emerald-400 transition-colors">Tentang Kami</a></li>
+              <li><a href="#" class="hover:text-emerald-400 transition-colors">Karir</a></li>
+              <li><a href="#" class="hover:text-emerald-400 transition-colors">Blog</a></li>
+              <li><a href="#" class="hover:text-emerald-400 transition-colors">Kontak</a></li>
+            </ul>
+          </div>
+
+          <!-- Download -->
+          <div>
+            <h4 class="font-semibold text-white mb-4 font-display">Download Aplikasi</h4>
+            <div class="space-y-3">
+              <a href="#" class="flex items-center gap-3 bg-gray-800 rounded-xl p-3 hover:bg-gray-700 transition-colors">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                <div>
+                  <p class="text-xs text-gray-400">Download di</p>
+                  <p class="text-sm font-semibold text-white">Play Store</p>
+                </div>
+              </a>
+              <a href="#" class="flex items-center gap-3 bg-gray-800 rounded-xl p-3 hover:bg-gray-700 transition-colors">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                <div>
+                  <p class="text-xs text-gray-400">Download di</p>
+                  <p class="text-sm font-semibold text-white">App Store</p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="border-t border-gray-800 pt-8 mb-8">
+          <p class="text-sm text-gray-400 mb-4">Metode Pembayaran</p>
+          <div class="flex flex-wrap gap-3">
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">VISA</div>
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">Mastercard</div>
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">BCA</div>
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">Mandiri</div>
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">BNI</div>
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">BRI</div>
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">GoPay</div>
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">OVO</div>
+            <div class="px-4 py-2 bg-gray-800 rounded-lg text-xs font-medium">DANA</div>
+          </div>
+        </div>
+
+        <!-- Copyright -->
+        <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
+          <p>&copy; 2024 GrosirPJ. Hak cipta dilindungi.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ===== CART SIDEBAR ===== -->
+  <div id="cartOverlay" class="panel-overlay" onclick="closeCart()"></div>
+  <div id="cartPanel" class="panel-slide w-full sm:w-96 bg-white flex flex-col h-full">
+    <!-- Header -->
+    <div class="p-6 pb-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+      <div>
+        <h2 class="text-xl font-display font-bold">Keranjang Belanja</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Produk yang sudah ditambahkan</p>
+      </div>
+      <button onclick="closeCart()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Cart Items -->
+    <div id="cartItemsContainer" class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <div class="p-6">
+        <!-- Empty state (default) -->
+        <div id="cartEmpty" class="flex flex-col items-center justify-center h-64 text-center">
+          <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>
+          <p class="text-gray-500">Keranjang kosong</p>
+          <p class="text-sm text-gray-400">Mulai belanja sekarang!</p>
+        </div>
+        <!-- Cart items list -->
+        <div id="cartItemsList" class="space-y-4 hidden"></div>
+      </div>
+    </div>
+
+    <!-- Cart Footer -->
+    <div id="cartFooter" class="p-6 border-t border-gray-100 shrink-0 hidden">
+      <div class="space-y-2 mb-4">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-600">Subtotal Produk</span>
+          <span id="cartSubtotalPrice" class="font-semibold text-gray-800">Rp 0</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-600">Total Ongkir</span>
+          <span id="cartShippingTotal" class="font-semibold text-gray-800">Rp 0</span>
+        </div>
+        <hr class="border-gray-200">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-800 font-semibold">Total</span>
+          <span id="cartTotalPrice" class="text-xl font-bold text-emerald-600 font-display">Rp 0</span>
+        </div>
+      </div>
+      <button class="w-full py-6 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-2xl transition-colors">
+        Checkout Sekarang
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PRODUCT DETAIL PANEL ===== -->
+  <div id="detailOverlay" class="panel-overlay" onclick="closeDetail()"></div>
+  <div id="detailPanel" class="panel-slide w-full sm:max-w-lg md:max-w-2xl bg-white flex flex-col h-full">
+    <!-- Header -->
+    <div class="p-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+      <h2 class="text-lg font-display font-bold">Detail Produk</h2>
+      <button onclick="closeDetail()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Detail Content -->
+    <div id="detailContent" class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- Detail Footer (sticky bottom) -->
+    <div id="detailFooter" class="border-t bg-white p-4 space-y-3 shrink-0 hidden">
+      <div class="flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-xs text-gray-500">Total Harga</span>
+          <span id="detailTotalPrice" class="text-lg font-bold text-emerald-600 font-display">Rp 0</span>
+        </div>
+        <div id="detailPriceBreakdown" class="text-xs text-gray-400"></div>
+      </div>
+      <div class="flex gap-2">
+        <button id="detailAddToCartBtn" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>
+          Tambah ke Keranjang
+        </button>
+        <button class="flex-1 border border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-semibold py-3 rounded-lg transition-colors">
+          Beli Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    // ===== DATA =====
+    const flashSaleProducts = [
+      { id: 101, name: "Pakaian Dalam Pria Premium", price: 45000, originalPrice: 150000, image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop", sold: 2340, discount: 70, rating: 4.8, location: "Jakarta", category: "fashion", description: "Pakaian dalam pria premium dengan bahan cotton combed 30s yang lembut dan nyaman. Tersedia dalam berbagai ukuran S-XXL. 1 paket isi 12 pcs.", minOrder: 12, stock: 5000, seller: "CV Garment Prima", sellerRating: 4.9, variants: ["S", "M", "L", "XL", "XXL"] },
+      { id: 102, name: "Tas Selempang Wanita", price: 89000, originalPrice: 250000, image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=200&h=200&fit=crop", sold: 1856, discount: 64, rating: 4.7, location: "Surabaya", category: "fashion", description: "Tas selempang wanita dengan desain elegan dan bahan kulit sintetis premium. Cocok untuk acara formal maupun kasual.", minOrder: 6, stock: 3200, seller: "Toko Bag Surabaya", sellerRating: 4.8, variants: ["Hitam", "Coklat", "Krem", "Merah"] },
+      { id: 103, name: "Sepatu Sneakers Unisex", price: 125000, originalPrice: 350000, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop", sold: 987, discount: 65, rating: 4.6, location: "Bandung", category: "fashion", description: "Sepatu sneakers unisex dengan sol karet anti slip dan bahan canvas premium. Nyaman digunakan seharian.", minOrder: 6, stock: 1800, seller: "Bandung Shoes Center", sellerRating: 4.7, variants: ["38", "39", "40", "41", "42", "43", "44"] },
+      { id: 104, name: "Headset Bluetooth Premium", price: 79000, originalPrice: 200000, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop", sold: 3421, discount: 60, rating: 4.5, location: "Jakarta", category: "elektronik", description: "Headset bluetooth premium dengan noise cancelling, bass mendalam, dan baterai tahan 12 jam.", minOrder: 10, stock: 7500, seller: "Elektronik Jakarta", sellerRating: 4.6, variants: ["Hitam", "Putih", "Merah"] },
+      { id: 105, name: "Peralatan Makan 24pcs", price: 165000, originalPrice: 450000, image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop", sold: 654, discount: 63, rating: 4.8, location: "Semarang", category: "rumah", description: "Set peralatan makan 24 pcs terbuat dari stainless steel 304 food grade.", minOrder: 5, stock: 1200, seller: "Home Kitchen Store", sellerRating: 4.9, variants: ["Silver", "Gold"] },
+      { id: 106, name: "Dress Wanita Elegant", price: 99000, originalPrice: 320000, image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200&h=200&fit=crop", sold: 2134, discount: 69, rating: 4.9, location: "Yogyakarta", category: "fashion", description: "Dress wanita elegan dengan bahan chiffon berkualitas tinggi. Cocok untuk pesta, acara formal, dan kondangan.", minOrder: 6, stock: 4500, seller: "Fashion Yogyakarta", sellerRating: 4.8, variants: ["S", "M", "L", "XL"] }
+    ];
+
+    const products = [
+      { id: 1, name: "Kaos Polos Premium Cotton 1 Lusin", price: 185000, originalPrice: 350000, image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop", rating: 4.9, sold: 4521, location: "Jakarta", category: "fashion", description: "Kaos polos premium cotton combed 30s, jahitan rantai double needle. Bahan tebal, dingin, dan nyaman dipakai sehari-hari.", minOrder: 12, stock: 8500, seller: "CV Garment Jakarta", sellerRating: 4.9, variants: ["S", "M", "L", "XL", "XXL", "Hitam", "Putih", "Navy"], variantGroups: [{ name: "Ukuran", options: ["S", "M", "L", "XL", "XXL"] }, { name: "Warna", options: ["Hitam", "Putih", "Navy"] }] },
+      { id: 2, name: "Set Panci Masak Stainless Steel", price: 289000, originalPrice: 550000, image: "https://images.unsplash.com/photo-1584990347449-a5d9f8dba27f?w=300&h=300&fit=crop", rating: 4.8, sold: 892, location: "Surabaya", category: "rumah", description: "Set panci masak stainless steel 5 lapis isi 4 pcs dengan tutup kaca. Bahan food grade, tahan lama.", minOrder: 3, stock: 600, seller: "Home Kitchen Surabaya", sellerRating: 4.8, variants: ["4 Pcs", "6 Pcs", "8 Pcs"] },
+      { id: 3, name: "Smartwatch Sport Waterproof", price: 199000, originalPrice: 450000, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop", rating: 4.7, sold: 2341, location: "Bandung", category: "elektronik", description: "Smartwatch sport waterproof IP68 dengan layar AMOLED 1.69 inch. Dilengkapi heart rate monitor, GPS.", minOrder: 5, stock: 3200, seller: "Tech Store Bandung", sellerRating: 4.7, variants: ["Hitam", "Putih", "Hijau"], variantGroups: [{ name: "Warna", options: ["Hitam", "Putih", "Hijau"] }] },
+      { id: 4, name: "Rok Plisket Wanita 1 Paket", price: 125000, originalPrice: 280000, image: "https://images.unsplash.com/photo-1583496661160-fb5886a0uj9a?w=300&h=300&fit=crop", rating: 4.9, sold: 1876, location: "Yogyakarta", category: "fashion", description: "Rok plisket wanita premium dengan bahan crepe berkualitas. Tidak mudah kusut dan jatuh sempurna.", minOrder: 6, stock: 5500, seller: "Fashion Yogyakarta", sellerRating: 4.8, variants: ["S", "M", "L", "XL", "Hitam", "Navy", "Coklat"], variantGroups: [{ name: "Ukuran", options: ["S", "M", "L", "XL"] }, { name: "Warna", options: ["Hitam", "Navy", "Coklat"] }] },
+      { id: 5, name: "Blender Philips 2L 350Watt", price: 245000, originalPrice: 420000, image: "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=300&h=300&fit=crop", rating: 4.6, sold: 654, location: "Semarang", category: "elektronik", description: "Blender Philips kapasitas 2L dengan motor 350Watt. Mata pisau 6 sisi anti karat.", minOrder: 3, stock: 450, seller: "Elektronik Semarang", sellerRating: 4.6, variants: ["Putih", "Hitam"] },
+      { id: 6, name: "Set Alat Makan 36 Pcs Premium", price: 175000, originalPrice: 320000, image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=300&fit=crop", rating: 4.8, sold: 1234, location: "Medan", category: "rumah", description: "Set alat makan 36 pcs terbuat dari stainless steel 304 food grade premium.", minOrder: 5, stock: 2800, seller: "Home Kitchen Medan", sellerRating: 4.9, variants: ["Silver", "Gold", "Rose Gold"], variantGroups: [{ name: "Finishing", options: ["Silver", "Gold", "Rose Gold"] }] },
+      { id: 7, name: "Kemeja Batik Pria Modern", price: 145000, originalPrice: 295000, image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=300&h=300&fit=crop", rating: 4.7, sold: 3456, location: "Pekalongan", category: "fashion", description: "Kemeja batik pria modern dengan motif batik tulis asli Pekalongan.", minOrder: 6, stock: 4200, seller: "Batik Pekalongan Store", sellerRating: 4.9, variants: ["S", "M", "L", "XL", "XXL", "Biru Tua", "Coklat", "Hitam"], variantGroups: [{ name: "Ukuran", options: ["S", "M", "L", "XL", "XXL"] }, { name: "Warna", options: ["Biru Tua", "Coklat", "Hitam"] }] },
+      { id: 8, name: "Speaker Bluetooth Portable", price: 165000, originalPrice: 350000, image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop", rating: 4.5, sold: 2109, location: "Jakarta", category: "elektronik", description: "Speaker bluetooth portable dengan output 20W dan bass mendalam. IPX7 waterproof.", minOrder: 5, stock: 3800, seller: "Audio Jakarta Center", sellerRating: 4.5, variants: ["Hitam", "Merah", "Biru"] },
+      { id: 9, name: "Bedcover Set King Size", price: 325000, originalPrice: 650000, image: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=300&h=300&fit=crop", rating: 4.9, sold: 567, location: "Solo", category: "rumah", description: "Bedcover set king size dengan bahan katun Jepang premium.", minOrder: 3, stock: 900, seller: "Textile Solo Center", sellerRating: 4.9, variants: ["Putih", "Krem", "Abu-abu"] },
+      { id: 10, name: "Celana Chino Pria Slim Fit", price: 135000, originalPrice: 275000, image: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=300&h=300&fit=crop", rating: 4.8, sold: 2890, location: "Bandung", category: "fashion", description: "Celana chino pria slim fit dengan bahan stretch yang nyaman.", minOrder: 6, stock: 6200, seller: "Bandung Fashion Store", sellerRating: 4.8, variants: ["28", "29", "30", "31", "32", "33", "34", "Hitam", "Khaki", "Navy"], variantGroups: [{ name: "Ukuran", options: ["28", "29", "30", "31", "32", "33", "34"] }, { name: "Warna", options: ["Hitam", "Khaki", "Navy"] }] },
+      { id: 11, name: "Jaket Bomber Pria Premium", price: 195000, originalPrice: 420000, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&h=300&fit=crop", rating: 4.8, sold: 1678, location: "Jakarta", category: "fashion", description: "Jaket bomber pria premium dengan bahan parasut waterproof. Dilengkapi sleting berkualitas dan saku dalam.", minOrder: 6, stock: 3500, seller: "Jakarta Jacket Store", sellerRating: 4.7, variants: ["M", "L", "XL", "XXL", "Hitam", "Hijau Army"], variantGroups: [{ name: "Ukuran", options: ["M", "L", "XL", "XXL"] }, { name: "Warna", options: ["Hitam", "Hijau Army"] }] },
+      { id: 12, name: "Rice Cooker Digital 1.8L", price: 275000, originalPrice: 500000, image: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=300&h=300&fit=crop", rating: 4.7, sold: 943, location: "Surabaya", category: "elektronik", description: "Rice cooker digital 1.8L dengan fitur slow cook, steam, dan keep warm. Panel LED touch screen.", minOrder: 3, stock: 780, seller: "Elektronik Surabaya", sellerRating: 4.7, variants: ["Putih", "Hitam"] },
+      { id: 13, name: "Handuk Set 4 Pcs Premium", price: 95000, originalPrice: 200000, image: "https://images.unsplash.com/photo-1543946602-8495315b5c3a?w=300&h=300&fit=crop", rating: 4.6, sold: 2345, location: "Solo", category: "rumah", description: "Handuk set 4 pcs premium cotton 600 GSM. Lembut, tebal, dan daya serap tinggi.", minOrder: 10, stock: 7800, seller: "Textile Solo Center", sellerRating: 4.8, variants: ["Putih", "Biru", "Abu-abu", "Campur"] },
+      { id: 14, name: "Kerudung Segi Empat 1 Lusin", price: 108000, originalPrice: 240000, image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?w=300&h=300&fit=crop", rating: 4.9, sold: 5432, location: "Pekalongan", category: "fashion", description: "Kerudung segi empat 1 lusin dengan bahan voal premium. Tidak mudah kusut, lembut dan ringan.", minOrder: 12, stock: 12000, seller: "Hijab Pekalongan", sellerRating: 4.9, variants: ["Mix Color", "Pastel", "Dark", "Earth Tone", "Voal", "Cotton"], variantGroups: [{ name: "Paket Warna", options: ["Mix Color", "Pastel", "Dark", "Earth Tone"] }, { name: "Bahan", options: ["Voal", "Cotton"] }] },
+      { id: 15, name: "Powerbank 20000mAh Fast Charging", price: 135000, originalPrice: 280000, image: "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=300&h=300&fit=crop", rating: 4.5, sold: 3210, location: "Jakarta", category: "elektronik", description: "Powerbank 20000mAh fast charging 22.5W dengan 3 port output. Baterai lithium polymer.", minOrder: 10, stock: 5600, seller: "Gadget Jakarta", sellerRating: 4.6, variants: ["Hitam", "Putih", "Biru"] },
+      { id: 16, name: "Set Sprei Karet King Size", price: 185000, originalPrice: 350000, image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=300&h=300&fit=crop", rating: 4.8, sold: 1456, location: "Solo", category: "rumah", description: "Set sprei karet king size dengan bahan katun Jepang 100%. Lembut dan sejuk dipakai.", minOrder: 5, stock: 3200, seller: "Textile Solo Center", sellerRating: 4.8, variants: ["Putih", "Krem", "Abu Muda"] },
+      { id: 17, name: "Sandal Slide Pria Anti Slip", price: 65000, originalPrice: 150000, image: "https://images.unsplash.com/photo-1603487742131-4160ec999306?w=300&h=300&fit=crop", rating: 4.6, sold: 6789, location: "Bandung", category: "fashion", description: "Sandal slide pria anti slip dengan sol EVA tebal. Nyaman dipakai seharian, ringan dan tahan lama.", minOrder: 12, stock: 15000, seller: "Bandung Shoes Center", sellerRating: 4.7, variants: ["39", "40", "41", "42", "43", "44", "Hitam", "Putih"], variantGroups: [{ name: "Ukuran", options: ["39", "40", "41", "42", "43", "44"] }, { name: "Warna", options: ["Hitam", "Putih"] }] },
+      { id: 18, name: "Kamera CCTV WiFi 1080P", price: 215000, originalPrice: 450000, image: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=300&h=300&fit=crop", rating: 4.4, sold: 876, location: "Jakarta", category: "elektronik", description: "Kamera CCTV WiFi 1080P HD dengan night vision dan 2-way audio. Bisa monitoring via smartphone.", minOrder: 5, stock: 2300, seller: "Security Jakarta", sellerRating: 4.5, variants: ["Putih", "Hitam"] },
+      { id: 19, name: "Teh Herbal Premium 20 Sachet", price: 75000, originalPrice: 150000, image: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300&h=300&fit=crop", rating: 4.9, sold: 7654, location: "Malang", category: "rumah", description: "Teh herbal premium 20 sachet dengan campuran jahe, temulawak, dan kunyit. Tanpa bahan pengawet.", minOrder: 10, stock: 18000, seller: "Herba Malang", sellerRating: 4.9, variants: ["Original", "Jahe", "Temulawak", "Kunyit"] },
+      { id: 20, name: "Tas Ransel Laptop 15.6 Inch", price: 165000, originalPrice: 320000, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300&h=300&fit=crop", rating: 4.7, sold: 4321, location: "Tangerang", category: "fashion", description: "Tas ransel laptop 15.6 inch dengan bahan polyester 900D waterproof. Dilengkapi port USB charging.", minOrder: 6, stock: 4500, seller: "Bag Store Tangerang", sellerRating: 4.7, variants: ["Hitam", "Abu-abu", "Navy"], variantGroups: [{ name: "Warna", options: ["Hitam", "Abu-abu", "Navy"] }] },
+      { id: 21, name: "Earbuds TWS ANC Premium", price: 185000, originalPrice: 400000, image: "https://images.unsplash.com/photo-1590658268037-6bf12f032f55?w=300&h=300&fit=crop", rating: 4.6, sold: 2567, location: "Jakarta", category: "elektronik", description: "Earbuds TWS dengan Active Noise Cancelling dan baterai 30 jam. Bluetooth 5.3, driver 13mm.", minOrder: 8, stock: 4200, seller: "Audio Jakarta Center", sellerRating: 4.6, variants: ["Hitam", "Putih", "Hijau"] },
+      { id: 22, name: "Piring Melamine Set 12 Pcs", price: 125000, originalPrice: 250000, image: "https://images.unsplash.com/photo-1603199506016-5f36e6d72b0c?w=300&h=300&fit=crop", rating: 4.5, sold: 3456, location: "Semarang", category: "rumah", description: "Piring melamine set 12 pcs tahan pecah dan ringan. Cocok untuk rumah makan dan restoran.", minOrder: 10, stock: 9500, seller: "Home Kitchen Semarang", sellerRating: 4.6, variants: ["Putih", "Motif Batik", "Motif Bunga"] },
+      { id: 23, name: "Kemeja Flannel Premium 1 Lusin", price: 198000, originalPrice: 420000, image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=300&fit=crop", rating: 4.8, sold: 2156, location: "Bandung", category: "fashion", description: "Kemeja flannel premium 1 lusin dengan bahan cotton flannel tebal. Nyaman dan hangat untuk cuaca dingin.", minOrder: 12, stock: 3800, seller: "Bandung Fashion Store", sellerRating: 4.8, variants: ["S", "M", "L", "XL", "XXL"] },
+      { id: 24, name: "Kipas Angin Orbit 16 Inch", price: 155000, originalPrice: 300000, image: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop", rating: 4.4, sold: 1234, location: "Surabaya", category: "elektronik", description: "Kipas angin orbit 16 inch dengan 3 speed dan oscillate. Motor copper tahan lama dan hemat listrik.", minOrder: 5, stock: 2100, seller: "Elektronik Surabaya", sellerRating: 4.5, variants: ["Putih", "Biru"] },
+      { id: 25, name: "Gorden Blackout 2 Panel", price: 115000, originalPrice: 250000, image: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=300&h=300&fit=crop", rating: 4.7, sold: 1890, location: "Solo", category: "rumah", description: "Gorden blackout 2 panel yang mampu menahan cahaya hingga 95%. Bahan tebal dan jatuh sempurna.", minOrder: 5, stock: 3400, seller: "Textile Solo Center", sellerRating: 4.7, variants: ["Abu Tua", "Navy", "Coklat", "Hitam"] },
+      { id: 26, name: "Daster Wanita 1 Paket 6 Pcs", price: 98000, originalPrice: 210000, image: "https://images.unsplash.com/photo-1616627577385-5c0c4dab91f7?w=300&h=300&fit=crop", rating: 4.9, sold: 8765, location: "Yogyakarta", category: "fashion", description: "Daster wanita 1 paket 6 pcs dengan bahan rayon premium. Nyaman untuk di rumah, motif cantik.", minOrder: 10, stock: 20000, seller: "Fashion Yogyakarta", sellerRating: 4.9, variants: ["S", "M", "L", "XL", "Motif Bunga", "Motif Polos", "Motif Geometri"], variantGroups: [{ name: "Ukuran", options: ["S", "M", "L", "XL"] }, { name: "Motif", options: ["Motif Bunga", "Motif Polos", "Motif Geometri"] }] },
+      { id: 27, name: "Mouse Gaming RGB 7200DPI", price: 89000, originalPrice: 200000, image: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=300&h=300&fit=crop", rating: 4.5, sold: 4320, location: "Jakarta", category: "elektronik", description: "Mouse gaming RGB 7200DPI dengan 7 tombol programmable. Sensor optical presisi tinggi.", minOrder: 10, stock: 6500, seller: "Gadget Jakarta", sellerRating: 4.5, variants: ["Hitam", "Putih"] },
+      { id: 28, name: "Teflon Anti Lengket 28cm", price: 85000, originalPrice: 180000, image: "https://images.unsplash.com/photo-1584990347449-a5d9f8dba27f?w=300&h=300&fit=crop", rating: 4.6, sold: 5678, location: "Medan", category: "rumah", description: "Teflon anti lengket 28cm dengan coating marble 5 lapis. Bahan aluminium tebal, distribusi panas merata.", minOrder: 10, stock: 8900, seller: "Home Kitchen Medan", sellerRating: 4.7, variants: ["28cm", "30cm", "32cm"] },
+      { id: 29, name: "Sarung Tangan Kulit Pria", price: 125000, originalPrice: 280000, image: "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=300&h=300&fit=crop", rating: 4.7, sold: 1987, location: "Yogyakarta", category: "fashion", description: "Sarung tangan kulit asli pria untuk riding. Dilengkapi pelindung buku jari dan ventilasi udara.", minOrder: 6, stock: 2900, seller: "Yogyakarta Leather", sellerRating: 4.8, variants: ["S", "M", "L", "XL"] },
+      { id: 30, name: "Charger USB-C 65W GaN", price: 145000, originalPrice: 320000, image: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=300&h=300&fit=crop", rating: 4.8, sold: 3456, location: "Tangerang", category: "elektronik", description: "Charger USB-C 65W GaN dengan 2 port USB-C dan 1 port USB-A. Compact dan fast charging.", minOrder: 8, stock: 5100, seller: "Gadget Tangerang", sellerRating: 4.8, variants: ["Putih", "Hitam"] }
+    ];
+
+    const categories = [
+      { name: "Fashion Pria", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z", color: "from-blue-500 to-blue-600" },
+      { name: "Fashion Wanita", icon: "M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z", color: "from-pink-500 to-pink-600" },
+      { name: "Elektronik", icon: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", color: "from-purple-500 to-purple-600" },
+      { name: "Rumah Tangga", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6", color: "from-orange-500 to-orange-600" },
+      { name: "Kecantikan", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z", color: "from-red-500 to-red-600" },
+      { name: "Kesehatan", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z", color: "from-green-500 to-green-600" },
+      { name: "Olahraga", icon: "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z", color: "from-cyan-500 to-cyan-600" },
+      { name: "Mainan", icon: "M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z", color: "from-yellow-500 to-yellow-600" }
+    ];
+
+    // ===== CITIES DATA & SHIPPING =====
+    const citiesData = [
+      { name: "Jakarta", lat: -6.2088, lng: 106.8456, island: "Jawa" },
+      { name: "Surabaya", lat: -7.2575, lng: 112.7521, island: "Jawa" },
+      { name: "Bandung", lat: -6.9175, lng: 107.6191, island: "Jawa" },
+      { name: "Semarang", lat: -6.9666, lng: 110.4196, island: "Jawa" },
+      { name: "Yogyakarta", lat: -7.7972, lng: 110.3688, island: "Jawa" },
+      { name: "Solo", lat: -7.5755, lng: 110.8243, island: "Jawa" },
+      { name: "Medan", lat: 3.5952, lng: 98.6722, island: "Sumatera" },
+      { name: "Palembang", lat: -2.9761, lng: 104.7754, island: "Sumatera" },
+      { name: "Pekanbaru", lat: 0.5071, lng: 101.4478, island: "Sumatera" },
+      { name: "Padang", lat: -0.9493, lng: 100.3543, island: "Sumatera" },
+      { name: "Lampung", lat: -5.4500, lng: 105.2667, island: "Sumatera" },
+      { name: "Makassar", lat: -5.1477, lng: 119.4327, island: "Sulawesi" },
+      { name: "Manado", lat: 1.4748, lng: 124.8421, island: "Sulawesi" },
+      { name: "Denpasar", lat: -8.6500, lng: 115.2167, island: "Bali" },
+      { name: "Balikpapan", lat: -1.2654, lng: 116.8311, island: "Kalimantan" },
+      { name: "Banjarmasin", lat: -3.3186, lng: 114.5944, island: "Kalimantan" },
+      { name: "Pontianak", lat: -0.0226, lng: 109.3471, island: "Kalimantan" },
+      { name: "Samarinda", lat: -0.4948, lng: 117.1436, island: "Kalimantan" },
+      { name: "Lombok", lat: -8.6500, lng: 116.3250, island: "NTB" },
+      { name: "Kupang", lat: -10.1772, lng: 123.5980, island: "NTT" },
+      { name: "Ambon", lat: -3.6954, lng: 128.1814, island: "Maluku" },
+      { name: "Jayapura", lat: -2.5916, lng: 140.6690, island: "Papua" },
+      { name: "Pekalongan", lat: -6.8886, lng: 109.6802, island: "Jawa" },
+      { name: "Malang", lat: -7.9666, lng: 112.6326, island: "Jawa" },
+      { name: "Tangerang", lat: -6.1783, lng: 106.6319, island: "Jawa" },
+      { name: "Bekasi", lat: -6.2349, lng: 106.9896, island: "Jawa" },
+      { name: "Depok", lat: -6.4025, lng: 106.7942, island: "Jawa" },
+      { name: "Bogor", lat: -6.5971, lng: 106.8060, island: "Jawa" },
+      { name: "Cirebon", lat: -6.7063, lng: 108.5570, island: "Jawa" },
+      { name: "Batu", lat: -7.8713, lng: 112.5236, island: "Jawa" }
+    ];
+
+    function haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function calculateShipping(fromCity, toCity) {
+      const from = citiesData.find(c => c.name === fromCity) || citiesData[0];
+      const to = citiesData.find(c => c.name === toCity) || citiesData[0];
+
+      if (fromCity === toCity) {
+        return { cost: 0, distance: 0, estimatedDays: "1-2 hari", courier: "Gratis Ongkir" };
+      }
+
+      const distance = haversine(from.lat, from.lng, to.lat, to.lng);
+      const sameIsland = from.island === to.island;
+
+      let cost, estimatedDays;
+      if (sameIsland) {
+        const extraKm = Math.min(distance, 800);
+        cost = 5000 + Math.ceil(extraKm / 50) * 2000;
+        estimatedDays = distance < 200 ? "1-2 hari" : distance < 500 ? "2-3 hari" : "3-4 hari";
+      } else {
+        const extraKm = Math.min(distance, 3000);
+        cost = 15000 + Math.ceil(extraKm / 100) * 3000;
+        estimatedDays = distance < 1000 ? "3-5 hari" : distance < 2000 ? "4-6 hari" : "5-8 hari";
+      }
+
+      cost = Math.min(cost, 80000);
+      return { cost, distance: Math.round(distance), estimatedDays, courier: "JNE / J&T / SiCepat" };
+    }
+
+    // ===== AUTH STATE MANAGEMENT =====
+    let currentUser = null;
+
+    function loadUser() {
+      const stored = localStorage.getItem('grosirpj_user');
+      if (stored) currentUser = JSON.parse(stored);
+      updateAuthUI();
+    }
+
+    function saveUser(user) {
+      currentUser = user;
+      if (user) {
+        localStorage.setItem('grosirpj_user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('grosirpj_user');
+      }
+      updateAuthUI();
+    }
+
+    function requireLogin() {
+      if (!currentUser) {
+        showToast('Silakan login terlebih dahulu');
+        setTimeout(() => { window.location.href = 'login-buyer.html'; }, 1000);
+        return false;
+      }
+      return true;
+    }
+
+    function logout() {
+      saveUser(null);
+      showToast('Berhasil keluar');
+    }
+
+    function updateAuthUI() {
+      const authArea = document.getElementById('authArea');
+      const sellerNavLink = document.getElementById('sellerNavLink');
+      if (currentUser) {
+        const initial = currentUser.name.charAt(0).toUpperCase();
+        const isSeller = currentUser.role === 'seller';
+
+        // Update seller nav link based on role
+        if (sellerNavLink) {
+          if (isSeller) {
+            sellerNavLink.href = 'seller-dashboard.html';
+            sellerNavLink.innerHTML = `
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+              <span class="text-xs sm:text-sm font-medium">Dashboard</span>
+            `;
+            sellerNavLink.classList.add('text-orange-600', 'hover:text-orange-700', 'hover:bg-orange-50');
+            sellerNavLink.classList.remove('text-gray-600', 'hover:text-emerald-600', 'hover:bg-emerald-50');
+          } else {
+            sellerNavLink.href = 'login-seller.html';
+            sellerNavLink.innerHTML = `
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span class="text-xs sm:text-sm font-medium">Jual</span>
+            `;
+            sellerNavLink.classList.remove('text-orange-600', 'hover:text-orange-700', 'hover:bg-orange-50');
+            sellerNavLink.classList.add('text-gray-600', 'hover:text-emerald-600', 'hover:bg-emerald-50');
+          }
+        }
+
+        authArea.innerHTML = `
+          <div class="flex items-center gap-2">
+            <div class="flex sm:flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+              <div class="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                <span class="text-white text-xs font-bold">${initial}</span>
+              </div>
+              <span class="hidden sm:inline text-sm font-medium text-emerald-700 max-w-[100px] truncate">${currentUser.name}</span>
+              <svg class="hidden sm:block w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span class="hidden sm:inline text-xs text-emerald-600">${currentUser.city}</span>
+            </div>
+            <button onclick="logout()" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Keluar">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </button>
+          </div>
+        `;
+      } else {
+        // Reset seller nav link when logged out
+        if (sellerNavLink) {
+          sellerNavLink.href = 'login-seller.html';
+          sellerNavLink.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            <span class="text-xs sm:text-sm font-medium">Jual</span>
+          `;
+          sellerNavLink.classList.remove('text-orange-600', 'hover:text-orange-700', 'hover:bg-orange-50');
+          sellerNavLink.classList.add('text-gray-600', 'hover:text-emerald-600', 'hover:bg-emerald-50');
+        }
+        authArea.innerHTML = `<a href="login-buyer.html" class="bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full px-4 md:px-6 py-2 transition-colors inline-block">Masuk</a>`;
+      }
+      // Re-render products and detail to update button states
+      renderProducts();
+      renderFlashSale();
+      if (currentDetailProduct) renderDetail();
+    }
+
+    // ===== AUTH REDIRECT =====
+    function redirectToLogin() {
+      window.location.href = 'login-buyer.html';
+    }
+
+    function redirectToSellerLogin() {
+      window.location.href = 'login-seller.html';
+    }
+
+    // ===== UTILITIES =====
+    function formatPrice(price) {
+      return 'Rp ' + price.toLocaleString('id-ID');
+    }
+
+    function formatSold(sold) {
+      return sold.toLocaleString('id-ID');
+    }
+
+    // ===== CART STATE =====
+    let cartItems = [];
+
+    function addToCart(product) {
+      if (!requireLogin()) return;
+
+      const existing = cartItems.find(item => item.id === product.id);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cartItems.push({ ...product, quantity: 1 });
+      }
+      updateCartUI();
+      showToast('Produk ditambahkan ke keranjang');
+    }
+
+    function removeFromCart(id) {
+      cartItems = cartItems.filter(item => item.id !== id);
+      updateCartUI();
+    }
+
+    function updateCartQuantity(id, delta) {
+      const item = cartItems.find(i => i.id === id);
+      if (item) {
+        item.quantity += delta;
+        if (item.quantity <= 0) {
+          removeFromCart(id);
+        } else {
+          updateCartUI();
+        }
+      }
+    }
+
+    function getCartTotal() {
+      return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    }
+
+    function getCartCount() {
+      return cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    }
+
+    function getCartShippingTotal() {
+      if (!currentUser) return 0;
+      return cartItems.reduce((sum, item) => {
+        const shipping = calculateShipping(item.location, currentUser.city);
+        return sum + shipping.cost;
+      }, 0);
+    }
+
+    function updateCartUI() {
+      const badge = document.getElementById('cartBadge');
+      const count = getCartCount();
+      badge.textContent = count;
+      badge.classList.toggle('hidden', count === 0);
+
+      const emptyEl = document.getElementById('cartEmpty');
+      const listEl = document.getElementById('cartItemsList');
+      const footerEl = document.getElementById('cartFooter');
+      const totalEl = document.getElementById('cartTotalPrice');
+      const subtotalEl = document.getElementById('cartSubtotalPrice');
+      const shippingTotalEl = document.getElementById('cartShippingTotal');
+
+      if (cartItems.length === 0) {
+        emptyEl.classList.remove('hidden');
+        listEl.classList.add('hidden');
+        footerEl.classList.add('hidden');
+      } else {
+        emptyEl.classList.add('hidden');
+        listEl.classList.remove('hidden');
+        footerEl.classList.remove('hidden');
+
+        const subtotal = getCartTotal();
+        const shippingTotal = getCartShippingTotal();
+        subtotalEl.textContent = formatPrice(subtotal);
+        shippingTotalEl.textContent = shippingTotal === 0 ? 'Gratis' : formatPrice(shippingTotal);
+        totalEl.textContent = formatPrice(subtotal + shippingTotal);
+
+        listEl.innerHTML = cartItems.map(item => {
+          const shipping = currentUser ? calculateShipping(item.location, currentUser.city) : { cost: 0 };
+          const shippingText = shipping.cost === 0 ? '<span class="text-emerald-500 text-xs">Gratis Ongkir</span>' : `<span class="text-gray-500 text-xs">Ongkir: ${formatPrice(shipping.cost)}</span>`;
+          return `
+          <div class="flex gap-4 pb-4 border-b border-gray-100">
+            <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover rounded-xl">
+            <div class="flex-1 min-w-0">
+              <h4 class="font-medium text-gray-900 text-sm line-clamp-2">${item.name}</h4>
+              <p class="text-emerald-600 font-bold mt-1">${formatPrice(item.price)}</p>
+              ${shippingText}
+              <div class="flex items-center gap-2 mt-2">
+                <button onclick="updateCartQuantity(${item.id}, -1)" class="h-8 w-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
+                  <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 12h14"/></svg>
+                </button>
+                <span class="w-8 text-center text-sm">${item.quantity}</span>
+                <button onclick="updateCartQuantity(${item.id}, 1)" class="h-8 w-8 flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
+                  <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+                </button>
+              </div>
+            </div>
+            <button onclick="removeFromCart(${item.id})" class="text-gray-400 hover:text-red-500 transition-colors self-start p-1">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            </button>
+          </div>
+        `}).join('');
+      }
+    }
+
+    // ===== CART SIDEBAR =====
+    function openCart() {
+      if (!requireLogin()) return;
+      document.getElementById('cartOverlay').classList.add('active');
+      document.getElementById('cartPanel').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCart() {
+      document.getElementById('cartOverlay').classList.remove('active');
+      document.getElementById('cartPanel').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    // ===== PRODUCT DETAIL =====
+    let currentDetailProduct = null;
+    let detailVariant = '';
+    let detailVariantSelections = {}; // { 'Ukuran': 'L', 'Warna': 'Hitam' }
+    let detailQuantity = 1;
+    let detailMinOrder = 1;
+    let detailStock = 1;
+    let detailTab = 'description';
+
+    function openDetail(product) {
+      currentDetailProduct = product;
+      detailVariant = product.variants ? product.variants[0] : '';
+      detailQuantity = product.minOrder || 1;
+      detailMinOrder = product.minOrder || 1;
+      detailStock = product.stock || 1;
+      detailTab = 'description';
+      // Initialize variant group selections (pick first option of each group)
+      detailVariantSelections = {};
+      if (product.variantGroups && product.variantGroups.length > 0) {
+        product.variantGroups.forEach(vg => {
+          if (vg.options && vg.options.length > 0) {
+            detailVariantSelections[vg.name] = vg.options[0];
+          }
+        });
+      }
+
+      renderDetail();
+      document.getElementById('detailOverlay').classList.add('active');
+      document.getElementById('detailPanel').classList.add('active');
+      document.getElementById('detailFooter').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDetail() {
+      document.getElementById('detailOverlay').classList.remove('active');
+      document.getElementById('detailPanel').classList.remove('active');
+      document.getElementById('detailFooter').classList.add('hidden');
+      document.body.style.overflow = '';
+      currentDetailProduct = null;
+    }
+
+    function renderDetail() {
+      if (!currentDetailProduct) return;
+      const p = currentDetailProduct;
+      const discount = p.discount || Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+      const productTotal = detailQuantity * p.price;
+
+      // Calculate shipping
+      let shippingSection = '';
+      if (currentUser) {
+        const shipping = calculateShipping(p.location, currentUser.city);
+        const sameCity = p.location === currentUser.city;
+        shippingSection = `
+          <div class="bg-gray-50 rounded-xl p-3 space-y-2">
+            <div class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              Estimasi Pengiriman
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Dari</span>
+              <span class="text-gray-800 font-medium">${p.location}</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Ke</span>
+              <span class="text-gray-800 font-medium flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${currentUser.city}
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Jarak</span>
+              <span class="text-gray-800 font-medium">${sameCity ? 'Kota yang sama' : shipping.distance + ' km'}</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Ongkos Kirim</span>
+              ${shipping.cost === 0
+                ? '<span class="text-emerald-600 font-bold text-sm">Gratis Ongkir</span>'
+                : `<span class="text-gray-800 font-medium">${formatPrice(shipping.cost)} (~${shipping.estimatedDays})</span>`
+              }
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Estimasi</span>
+              <span class="text-gray-800 font-medium">${shipping.estimatedDays}</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500">Kurir</span>
+              <span class="text-gray-800 font-medium">${shipping.courier}</span>
+            </div>
+          </div>
+        `;
+      } else {
+        shippingSection = `
+          <div class="bg-gray-50 rounded-xl p-4 text-center">
+            <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            <p class="text-sm text-gray-500 mb-2">Login untuk melihat estimasi ongkir</p>
+            <a href="login-buyer.html" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors inline-block">Login Sekarang</a>
+          </div>
+        `;
+      }
+
+      // Calculate total with shipping
+      let shippingCost = 0;
+      if (currentUser) {
+        const shipping = calculateShipping(p.location, currentUser.city);
+        shippingCost = shipping.cost;
+      }
+      const grandTotal = productTotal + shippingCost;
+
+      // Auth-aware button
+      const addToCartBtnHtml = currentUser
+        ? `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg> Tambah ke Keranjang`
+        : `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Login untuk Beli`;
+
+      document.getElementById('detailContent').innerHTML = `
+        <!-- Image -->
+        <div class="relative h-48 sm:h-56 md:h-64 bg-gray-100 overflow-hidden shrink-0">
+          <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover">
+          ${discount > 0 ? `<span class="absolute top-3 left-3 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded">${discount}%</span>` : ''}
+        </div>
+
+        <div class="p-4 space-y-4">
+          <!-- Product Name -->
+          <h2 class="font-display font-bold text-xl leading-tight">${p.name}</h2>
+
+          <!-- Price -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-emerald-600 font-bold text-2xl">${formatPrice(p.price)}</span>
+            ${p.originalPrice > p.price ? `
+              <span class="text-gray-400 line-through text-sm">${formatPrice(p.originalPrice)}</span>
+              <span class="bg-emerald-50 text-emerald-600 text-xs font-semibold px-2 py-0.5 rounded">-${discount}%</span>
+            ` : ''}
+          </div>
+
+          <!-- Rating / Sold / Location -->
+          <div class="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
+            <div class="flex items-center gap-1">
+              <svg class="h-4 w-4 fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span class="font-medium text-gray-700">${p.rating}</span>
+            </div>
+            <span class="text-gray-300">|</span>
+            <div class="flex items-center gap-1">
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              <span>${formatSold(p.sold)} terjual</span>
+            </div>
+            <span class="text-gray-300">|</span>
+            <div class="flex items-center gap-1">
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>${p.location}</span>
+            </div>
+          </div>
+
+          <hr class="border-gray-100">
+
+          <!-- Shipping Estimation -->
+          ${shippingSection}
+
+          <hr class="border-gray-100">
+
+          <!-- Seller Info -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-50">
+              <svg class="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="flex flex-col">
+              <span class="font-medium text-sm text-gray-800">${p.seller || 'Toko Official'}</span>
+              <div class="flex items-center gap-1 text-xs text-gray-500">
+                <svg class="h-3 w-3 fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>${p.sellerRating || 4.5}</span>
+              </div>
+            </div>
+          </div>
+
+          <hr class="border-gray-100">
+
+          <!-- Variants -->
+          ${p.variantGroups && p.variantGroups.length > 0 ? `
+            <div class="space-y-3">
+              ${p.variantGroups.map(vg => `
+                <div>
+                  <label class="text-sm font-semibold text-gray-700">${vg.name}: <span class="font-normal text-emerald-600">${detailVariantSelections[vg.name] || ''}</span></label>
+                  <div class="flex flex-wrap gap-2 mt-1.5">
+                    ${vg.options.map(v => `
+                      <button onclick="selectVariantGroup('${vg.name}', '${v}')" class="variant-btn px-3 py-1.5 text-sm border rounded-md transition-colors ${detailVariantSelections[vg.name] === v ? 'active' : 'text-gray-600 hover:text-gray-800 border-gray-200 hover:border-gray-300'}">
+                        ${v}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : p.variants && p.variants.length > 0 ? `
+            <div class="space-y-2">
+              <label class="text-sm font-semibold text-gray-700">Varian</label>
+              <div class="flex flex-wrap gap-2">
+                ${p.variants.map(v => `
+                  <button onclick="selectVariant('${v}')" class="variant-btn px-3 py-1.5 text-sm border rounded-md transition-colors ${detailVariant === v ? 'active' : 'text-gray-600 hover:text-gray-800 border-gray-200 hover:border-gray-300'}">
+                    ${v}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Quantity -->
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-gray-700">Jumlah</label>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center border rounded-lg overflow-hidden">
+                <button onclick="changeDetailQty(-1)" class="h-9 w-9 flex items-center justify-center hover:bg-gray-100 transition-colors ${detailQuantity <= detailMinOrder ? 'opacity-40 cursor-not-allowed' : ''}">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 12h14"/></svg>
+                </button>
+                <span class="w-12 text-center text-sm font-medium tabular-nums">${detailQuantity}</span>
+                <button onclick="changeDetailQty(1)" class="h-9 w-9 flex items-center justify-center hover:bg-gray-100 transition-colors ${detailQuantity >= detailStock ? 'opacity-40 cursor-not-allowed' : ''}">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+                </button>
+              </div>
+              <span class="text-xs text-gray-400">Min. pembelian ${detailMinOrder} pcs</span>
+            </div>
+          </div>
+
+          <!-- Stock Info -->
+          <div class="flex items-center gap-2 text-sm text-gray-500">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+            <span>Stok: ${detailStock.toLocaleString('id-ID')} pcs</span>
+          </div>
+
+          <hr class="border-gray-100">
+
+          <!-- Tabs -->
+          <div>
+            <div class="flex border-b border-gray-200">
+              <button onclick="switchDetailTab('description')" class="tab-btn flex-1 py-2 text-sm text-center transition-colors ${detailTab === 'description' ? 'active' : 'text-gray-500 hover:text-gray-700'}">
+                Deskripsi
+              </button>
+              <button onclick="switchDetailTab('shipping')" class="tab-btn flex-1 py-2 text-sm text-center transition-colors ${detailTab === 'shipping' ? 'active' : 'text-gray-500 hover:text-gray-700'}">
+                Info Pengiriman
+              </button>
+            </div>
+            <div class="mt-3">
+              ${detailTab === 'description' ? `
+                <p class="text-sm text-gray-600 leading-relaxed">${p.description || 'Tidak ada deskripsi untuk produk ini.'}</p>
+              ` : `
+                <div class="space-y-3">
+                  <div class="flex items-start gap-3">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 shrink-0 mt-0.5">
+                      <svg class="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-800">Gratis Ongkir</p>
+                      <p class="text-xs text-gray-500">Untuk pembelian di atas ${formatPrice(100000)}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 shrink-0 mt-0.5">
+                      <svg class="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-800">Garansi 100% Original</p>
+                      <p class="text-xs text-gray-500">Produk dijamin original dan berkualitas</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-50 shrink-0 mt-0.5">
+                      <svg class="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-800">Pengembalian 7 Hari</p>
+                      <p class="text-xs text-gray-500">Bisa dikembalikan dalam 7 hari setelah diterima</p>
+                    </div>
+                  </div>
+                </div>
+              `}
+            </div>
+          </div>
+
+          <hr class="border-gray-100">
+        </div>
+      `;
+
+      // Update footer
+      let priceBreakdown = `${detailQuantity} x ${formatPrice(p.price)}`;
+      if (shippingCost > 0) {
+        priceBreakdown += ` + ${formatPrice(shippingCost)} ongkir`;
+      }
+      document.getElementById('detailTotalPrice').textContent = formatPrice(grandTotal);
+      document.getElementById('detailPriceBreakdown').textContent = priceBreakdown;
+
+      // Update add-to-cart button
+      const addToCartBtn = document.getElementById('detailAddToCartBtn');
+      if (currentUser) {
+        addToCartBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg> Tambah ke Keranjang`;
+        addToCartBtn.className = 'flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2';
+      } else {
+        addToCartBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Login untuk Beli`;
+        addToCartBtn.className = 'flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2';
+      }
+    }
+
+    function selectVariant(v) {
+      detailVariant = v;
+      renderDetail();
+    }
+
+    function selectVariantGroup(groupName, option) {
+      detailVariantSelections[groupName] = option;
+      renderDetail();
+    }
+
+    function changeDetailQty(delta) {
+      const newQty = detailQuantity + delta;
+      if (newQty >= detailMinOrder && newQty <= detailStock) {
+        detailQuantity = newQty;
+        renderDetail();
+      }
+    }
+
+    function switchDetailTab(tab) {
+      detailTab = tab;
+      renderDetail();
+    }
+
+    function handleDetailAddToCart() {
+      if (!requireLogin()) return;
+      if (currentDetailProduct) {
+        addToCart(currentDetailProduct);
+      }
+    }
+
+    // ===== TOAST =====
+    function showToast(message) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast-item flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm';
+      toast.innerHTML = `
+        <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    // ===== RENDER FLASH SALE =====
+    function renderFlashSale() {
+      const container = document.getElementById('flashSaleContainer');
+      container.innerHTML = flashSaleProducts.map(p => `
+        <div class="flex-shrink-0 w-44 md:w-52 bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer group" onclick="openDetail(flashSaleProducts.find(x=>x.id===${p.id}))">
+          <div class="relative">
+            <img src="${p.image}" alt="${p.name}" class="w-full h-32 md:h-40 object-cover group-hover:scale-105 transition-transform duration-300">
+            <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">${p.discount}%</span>
+          </div>
+          <div class="p-3">
+            <h3 class="text-sm font-medium text-gray-800 line-clamp-2 mb-2 h-10">${p.name}</h3>
+            <p class="text-emerald-600 font-bold">${formatPrice(p.price)}</p>
+            <p class="text-xs text-gray-400 line-through">${formatPrice(p.originalPrice)}</p>
+            <div class="mt-2 bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div class="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full rounded-full" style="width: ${Math.min((p.sold / 5000) * 100, 90)}%"></div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">${formatSold(p.sold)} terjual</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ===== RENDER CATEGORIES =====
+    function renderCategories() {
+      const container = document.getElementById('categoriesContainer');
+      container.innerHTML = categories.map(cat => `
+        <a href="#" class="category-card flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-all hover:scale-105">
+          <div class="category-icon w-14 h-14 bg-gradient-to-br ${cat.color} rounded-2xl flex items-center justify-center shadow-lg transition-transform hover:scale-110 hover:rotate-3">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${cat.icon}"/>
+            </svg>
+          </div>
+          <span class="text-xs font-medium text-gray-700 text-center">${cat.name}</span>
+        </a>
+      `).join('');
+    }
+
+    // ===== RENDER PRODUCTS =====
+    let activeFilter = 'all';
+    let productsShown = 8;
+    const PRODUCTS_PER_LOAD = 8;
+
+    function renderProducts(resetCount) {
+      if (resetCount) productsShown = PRODUCTS_PER_LOAD;
+      const container = document.getElementById('productsContainer');
+      const filtered = activeFilter === 'all' ? products : products.filter(p => p.category === activeFilter);
+      const toShow = filtered.slice(0, productsShown);
+
+      container.innerHTML = toShow.map(p => {
+        const discount = p.discount || Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+        const quickAddOnclick = currentUser
+          ? `event.stopPropagation(); addToCart(products.find(x=>x.id===${p.id}))`
+          : `event.stopPropagation(); requireLogin()`;
+        const quickAddClass = currentUser
+          ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+          : 'bg-gray-400 text-white hover:bg-gray-500';
+
+        return `
+          <div class="product-card bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl cursor-pointer group" onclick="openDetail(products.find(x=>x.id===${p.id}))">
+            <div class="relative overflow-hidden">
+              <img src="${p.image}" alt="${p.name}" class="product-image w-full h-40 md:h-48 object-cover">
+              ${discount > 0 ? `<span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded">-${discount}%</span>` : ''}
+              <button class="absolute bottom-3 right-3 w-10 h-10 ${quickAddClass} rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg" onclick="${quickAddOnclick}">
+                ${currentUser
+                  ? '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 002 1.58h9.78a2 2 0 001.95-1.57l1.65-7.43H5.12"/></svg>'
+                  : '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'
+                }
+              </button>
+            </div>
+            <div class="p-3 md:p-4">
+              <h3 class="text-sm font-medium text-gray-800 line-clamp-2 mb-2 h-10">${p.name}</h3>
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base md:text-lg font-bold text-emerald-600">${formatPrice(p.price)}</span>
+              </div>
+              <div class="flex items-center justify-between text-xs text-gray-500">
+                <div class="flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span>${p.rating}</span>
+                </div>
+                <span>${formatSold(p.sold)} terjual</span>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">${p.location}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Update load more button visibility
+      const loadMoreContainer = document.getElementById('loadMoreContainer');
+      if (productsShown >= filtered.length) {
+        loadMoreContainer.style.display = 'none';
+      } else {
+        loadMoreContainer.style.display = 'block';
+      }
+    }
+
+    function loadMore() {
+      productsShown += PRODUCTS_PER_LOAD;
+      renderProducts(false);
+      // Smooth scroll to the newly added products
+      setTimeout(() => {
+        const container = document.getElementById('productsContainer');
+        const lastCard = container.lastElementChild;
+        if (lastCard) {
+          lastCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+
+    // ===== FILTER TABS =====
+    function setupFilterTabs() {
+      document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeFilter = btn.dataset.filter;
+          document.querySelectorAll('.filter-tab').forEach(b => {
+            b.classList.remove('bg-white', 'text-emerald-600', 'shadow-sm');
+            b.classList.add('text-gray-600');
+          });
+          btn.classList.add('bg-white', 'text-emerald-600', 'shadow-sm');
+          btn.classList.remove('text-gray-600');
+          renderProducts(true);
+        });
+      });
+    }
+
+    // ===== COUNTDOWN TIMER =====
+    let timerState = { hours: 8, minutes: 45, seconds: 30 };
+
+    function updateTimer() {
+      timerState.seconds--;
+      if (timerState.seconds < 0) { timerState.seconds = 59; timerState.minutes--; }
+      if (timerState.minutes < 0) { timerState.minutes = 59; timerState.hours--; }
+      if (timerState.hours < 0) { timerState.hours = 23; }
+
+      document.getElementById('timerHours').textContent = String(timerState.hours).padStart(2, '0');
+      document.getElementById('timerMinutes').textContent = String(timerState.minutes).padStart(2, '0');
+      document.getElementById('timerSeconds').textContent = String(timerState.seconds).padStart(2, '0');
+    }
+
+    // ===== NAVBAR SCROLL =====
+    function setupNavbarScroll() {
+      const navbar = document.getElementById('navbar');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+          navbar.classList.add('bg-white/80', 'backdrop-blur-md', 'shadow-md', 'border-b', 'border-gray-200/50');
+          navbar.classList.remove('bg-transparent');
+        } else {
+          navbar.classList.remove('bg-white/80', 'backdrop-blur-md', 'shadow-md', 'border-b', 'border-gray-200/50');
+          navbar.classList.add('bg-transparent');
+        }
+      }, { passive: true });
+    }
+
+    // ===== INTERSECTION OBSERVER =====
+    function setupRevealAnimations() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.reveal-section').forEach(el => observer.observe(el));
+    }
+
+    // ===== EVENT LISTENERS =====
+    function setupEvents() {
+      document.getElementById('cartBtn').addEventListener('click', openCart);
+      document.getElementById('detailAddToCartBtn').addEventListener('click', handleDetailAddToCart);
+
+      // Prevent clicks inside panels from closing them
+      document.getElementById('cartPanel').addEventListener('click', e => e.stopPropagation());
+      document.getElementById('detailPanel').addEventListener('click', e => e.stopPropagation());
+    }
+
+    // ===== INIT =====
+    function init() {
+      loadUser();
+      updateAuthUI();
+      renderFlashSale();
+      renderCategories();
+      renderProducts();
+      setupFilterTabs();
+      setupNavbarScroll();
+      setupRevealAnimations();
+      setupEvents();
+
+      // Start countdown timer
+      setInterval(updateTimer, 1000);
+    }
+
+    // Run on DOM ready
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
