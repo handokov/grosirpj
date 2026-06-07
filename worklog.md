@@ -56,3 +56,27 @@ Stage Summary:
 - All 11 API route files now call ensureDb() before any database query
 - This ensures database tables exist on Vercel's ephemeral /tmp filesystem before queries run
 - No other code changes were made; only import and ensureDb() call added
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix "The table main.User does not exist" database error on Vercel
+
+Work Log:
+- Analyzed the root cause: On Vercel, /tmp filesystem is ephemeral and starts empty on each serverless cold start
+- The old ensureDb() was only in the seed route and had incomplete raw SQL (missing foreign keys)
+- Other API routes didn't call ensureDb() at all, so they'd also fail on Vercel
+- Created proper ensureDb() function in src/lib/db.ts with complete SQL matching the Prisma schema
+- The new ensureDb() creates all 10 tables with proper foreign keys, unique constraints, and indexes
+- Uses CREATE TABLE IF NOT EXISTS for idempotency
+- Updated all 20 API route handlers across 11 files to call await ensureDb()
+- Updated seed route to use shared ensureDb() from db.ts
+- Tested locally: lint passes, seed API works, dev server running fine
+- Committed fix locally but couldn't push to GitHub (PAT token expired)
+
+Stage Summary:
+- Root cause: Vercel's ephemeral /tmp filesystem starts empty on each cold start
+- Fix: Auto-create tables via raw SQL before any query
+- All 11 API route files updated (20 handler functions total)
+- src/lib/db.ts now exports ensureDb() with complete table creation SQL
+- Local commit: 7e1fffa "fix: add ensureDb() to auto-create tables on Vercel ephemeral filesystem"
+- Needs manual push to GitHub for Vercel deployment
