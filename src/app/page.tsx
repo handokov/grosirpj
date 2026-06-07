@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
+import { useWishlistStore } from '@/store/wishlist';
+import { useNotificationStore } from '@/store/notification';
 import { CATEGORIES, formatPrice } from '@/lib/constants';
 import { calculateShipping } from '@/lib/shipping';
 
@@ -197,6 +199,7 @@ function CategorySection() {
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileSearch, setMobileSearch] = useState('');
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const user = useAuthStore((s) => s.user);
   const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
@@ -210,11 +213,28 @@ function Navbar() {
   const openChat = useUIStore((s) => s.openChat);
   const setSearchQuery = useUIStore((s) => s.setSearchQuery);
 
+  const wishlistCount = useWishlistStore((s) => s.items.length);
+  const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
+
+  const unreadNotifs = useNotificationStore((s) => s.unreadCount);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+  const markAsRead = useNotificationStore((s) => s.markAsRead);
+  const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
+
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
   }, []);
+
+  // Fetch wishlist & notifications when user logs in
+  useEffect(() => {
+    if (user) {
+      fetchWishlist(user.id);
+      fetchNotifications(user.id);
+    }
+  }, [user, fetchWishlist, fetchNotifications]);
 
   const handleSearch = () => {
     if (mobileSearch.trim()) {
@@ -276,12 +296,74 @@ function Navbar() {
               <span className="text-sm font-medium">Jual</span>
             </button>
 
+            {/* Wishlist Button */}
+            <button className="relative p-2 text-gray-600 hover:text-red-500 transition-colors" title="Wishlist">
+              <Heart className="w-6 h-6" />
+              {user && wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{wishlistCount}</span>
+              )}
+            </button>
+
             <button onClick={() => { if (user) openCart(); else setLoginModalOpen(true); }} className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors">
               <ShoppingCart className="w-6 h-6" />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{cartCount}</span>
               )}
             </button>
+
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors"
+                onClick={() => {
+                  if (!user) { setLoginModalOpen(true); return; }
+                  setNotifOpen(!notifOpen);
+                }}
+                title="Notifikasi"
+              >
+                <Bell className="w-6 h-6" />
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{unreadNotifs}</span>
+                )}
+              </button>
+              {notifOpen && user && (
+                <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-96 overflow-hidden">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                    <h3 className="font-semibold text-sm text-gray-800">Notifikasi</h3>
+                    {unreadNotifs > 0 && (
+                      <button
+                        className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                        onClick={() => markAllAsRead(user.id)}
+                      >
+                        Tandai semua dibaca
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center text-gray-400 text-sm">Belum ada notifikasi</div>
+                    ) : (
+                      notifications.slice(0, 10).map((notif) => (
+                        <button
+                          key={notif.id}
+                          className={`w-full text-left p-3 hover:bg-gray-50 border-b border-gray-50 transition-colors ${!notif.read ? 'bg-emerald-50/50' : ''}`}
+                          onClick={() => { if (!notif.read) markAsRead(notif.id); }}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!notif.read ? 'bg-emerald-500' : 'bg-transparent'}`} />
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{notif.title}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{notif.message}</p>
+                              <p className="text-[10px] text-gray-400 mt-1">{new Date(notif.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {user && (
               <>

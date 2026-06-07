@@ -63,6 +63,8 @@ const MAKANAN_IMGS = [
 
 async function seedDatabase() {
   // Delete all existing data in reverse dependency order
+  await db.$executeRawUnsafe('DELETE FROM Notification');
+  await db.$executeRawUnsafe('DELETE FROM Wishlist');
   await db.$executeRawUnsafe('DELETE FROM VariantOption');
   await db.$executeRawUnsafe('DELETE FROM VariantGroup');
   await db.$executeRawUnsafe('DELETE FROM OrderItem');
@@ -897,6 +899,22 @@ async function seedDatabase() {
   for (const chatData of chatsData) {
     const chat = await db.chat.create({ data: chatData });
     createdChats.push(chat);
+  }
+
+  // =====================
+  // 7. CREATE NOTIFICATIONS (6 notifications)
+  // =====================
+  const notificationsData = [
+    { userId: buyer1.id, title: 'Pesanan Dikirim', message: 'Pesanan #ORD-001 dari CV Garment Prima sedang dalam pengiriman', type: 'order', read: false },
+    { userId: buyer1.id, title: 'Flash Sale Dimulai!', message: 'Jangan lewatkan diskon hingga 70% untuk produk pilihan', type: 'promo', read: false },
+    { userId: buyer1.id, title: 'Pesan Baru', message: 'CV Garment Prima mengirim pesan baru', type: 'chat', read: true },
+    { userId: buyer2.id, title: 'Pesanan Selesai', message: 'Pesanan dari Elektronik Surabaya telah diterima', type: 'order', read: false },
+    { userId: buyer2.id, title: 'Selamat Datang!', message: 'Terima kasih telah bergabung di GrosirPJ. Selamat berbelanja!', type: 'info', read: true },
+    { userId: seller1.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Siti Aminah', type: 'order', read: false },
+  ];
+
+  for (const notifData of notificationsData) {
+    await db.notification.create({ data: notifData });
   }
 
   // =====================

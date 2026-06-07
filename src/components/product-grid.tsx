@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Star, MapPin, ShoppingCart, ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
+import { Star, MapPin, ShoppingCart, ChevronDown, Search, SlidersHorizontal, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { useUIStore } from '@/store/ui';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
+import { useWishlistStore } from '@/store/wishlist';
 import { CATEGORIES, formatPrice } from '@/lib/constants';
 import { toast } from 'sonner';
 
@@ -85,6 +86,8 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
   const addItem = useCartStore((s) => s.addItem);
   const user = useAuthStore((s) => s.user);
   const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
+  const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
+  const isWishlisted = useWishlistStore((s) => s.isWishlisted);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -144,6 +147,16 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
       selectedVariants,
     });
     toast.success('Ditambahkan ke keranjang');
+  };
+
+  const handleToggleWishlist = async (e: React.MouseEvent, productId: string) => {
+    e.stopPropagation();
+    if (!user) {
+      setLoginModalOpen(true);
+      return;
+    }
+    const added = await toggleWishlist(user.id, productId);
+    toast.success(added ? 'Ditambahkan ke wishlist' : 'Dihapus dari wishlist');
   };
 
   const handleMobileSearch = () => {
@@ -264,6 +277,13 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                       -{product.discount}%
                     </span>
                   )}
+                  <button
+                    className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm"
+                    onClick={(e) => handleToggleWishlist(e, product.id)}
+                    aria-label="Tambah ke wishlist"
+                  >
+                    <Heart className={`w-4 h-4 ${isWishlisted(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+                  </button>
                   <button
                     className="absolute bottom-3 right-3 w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-emerald-600 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg"
                     onClick={(e) => handleQuickAdd(e, product)}

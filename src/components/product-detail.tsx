@@ -16,11 +16,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useUIStore } from '@/store/ui';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
+import { useWishlistStore } from '@/store/wishlist';
 import { calculateShipping, formatShippingInfo } from '@/lib/shipping';
 import { formatPrice } from '@/lib/constants';
 import {
   Star, MapPin, Minus, Plus, Truck, Shield, RotateCcw,
-  ChevronLeft, ChevronRight, Store, Package, Lock, MessageCircle, Users,
+  ChevronLeft, ChevronRight, Store, Package, Lock, MessageCircle, Users, Heart,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -70,12 +71,17 @@ export function ProductDetail() {
   const addItem = useCartStore((s) => s.addItem);
   const user = useAuthStore((s) => s.user);
   const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
+  const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
+  const isWishlisted = useWishlistStore((s) => s.isWishlisted);
 
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   // Fetch product detail
   useEffect(() => {
@@ -182,6 +188,53 @@ export function ProductDetail() {
     }
   };
 
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      setLoginModalOpen(true);
+      return;
+    }
+    if (!product) return;
+    const added = await toggleWishlist(user.id, product.id);
+    toast.success(added ? 'Ditambahkan ke wishlist' : 'Dihapus dari wishlist');
+  };
+
+  const handleSubmitReview = async () => {
+    if (!user || !product) return;
+    if (reviewRating < 1 || reviewRating > 5) {
+      toast.error('Rating harus antara 1-5');
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: product.id,
+          userId: user.id,
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Gagal mengirim ulasan');
+        return;
+      }
+      toast.success('Ulasan berhasil dikirim!');
+      setReviewComment('');
+      setReviewRating(5);
+      // Refresh product to show new review
+      const refreshRes = await fetch(`/api/products/${product.id}`);
+      const refreshed = await refreshRes.json();
+      if (refreshRes.ok) setProduct(refreshed);
+    } catch {
+      toast.error('Gagal mengirim ulasan');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   return (
     <Sheet open={productDetailOpen} onOpenChange={(open) => { if (!open) closeProductDetail(); }}>
       <SheetContent side="right" className="w-full sm:max-w-lg md:max-w-2xl p-0 flex flex-col gap-0 overflow-hidden">
@@ -216,6 +269,13 @@ export function ProductDetail() {
                     -{product.discount}%
                   </Badge>
                 )}
+                <button
+                  className="absolute top-3 right-3 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm"
+                  onClick={handleToggleWishlist}
+                  aria-label="Tambah ke wishlist"
+                >
+                  <Heart className={`w-5 h-5 ${isWishlisted(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+                </button>
                 {images.length > 1 && (
                   <>
                     <Button
@@ -459,6 +519,40 @@ export function ProductDetail() {
                     </div>
                   </TabsContent>
                   <TabsContent value="reviews" className="mt-3">
+                    {/* Review Submission Form */}
+                    {user && (
+                      <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
+                        <h4 className="text-sm font-semibold text-gray-700">Tulis Ulasan</h4>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setReviewRating(i + 1)}
+                              className="p-0.5"
+                              aria-label={`Rating ${i + 1}`}
+                            >
+                              <Star className={`w-6 h-6 cursor-pointer transition-colors ${i < reviewRating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                            </button>
+                          ))}
+                          <span className="text-sm text-gray-500 ml-2">{reviewRating}/5</span>
+                        </div>
+                        <textarea
+                          placeholder="Bagikan pengalaman Anda tentang produk ini..."
+                          value={reviewComment}
+                          onChange={(e) => setReviewComment(e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                          rows={3}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={handleSubmitReview}
+                          disabled={submittingReview}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
+                        >
+                          {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
+                        </Button>
+                      </div>
+                    )}
                     {product.reviews && product.reviews.length > 0 ? (
                       <div className="space-y-4">
                         {product.reviews.map((review) => (

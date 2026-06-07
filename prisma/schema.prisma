@@ -26,10 +26,12 @@ model User {
 
   products        Product[]
   reviews         Review[]
-  sentChats       Chat[]    @relation("SentChats")
-  receivedChats   Chat[]    @relation("ReceivedChats")
-  buyerOrders     Order[]   @relation("BuyerOrders")
-  sellerOrders    Order[]   @relation("SellerOrders")
+  sentChats       Chat[]        @relation("SentChats")
+  receivedChats   Chat[]        @relation("ReceivedChats")
+  buyerOrders     Order[]       @relation("BuyerOrders")
+  sellerOrders    Order[]       @relation("SellerOrders")
+  wishlist        Wishlist[]
+  notifications   Notification[]
 }
 
 model Product {
@@ -55,6 +57,7 @@ model Product {
   variantGroups  VariantGroup[]
   orderItems     OrderItem[]
   reviews        Review[]
+  wishlist       Wishlist[]
 
   @@index([category])
   @@index([sellerId])
@@ -143,4 +146,32 @@ model Chat {
 
   @@index([senderId, receiverId])
   @@index([receiverId, read])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("info") // info, order, chat, promo
+  read      Boolean  @default(false)
+  link      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }
