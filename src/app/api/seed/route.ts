@@ -2,23 +2,63 @@ import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { execSync } from 'child_process';
 
-// On Vercel, we need to push the Prisma schema to /tmp on first cold start
-let vercelDbInitialized = false;
+// Ensure database tables exist - works on both local and Vercel
+let dbInitialized = false;
 
-async function ensureVercelDb() {
-  if (process.env.VERCEL && !vercelDbInitialized) {
+async function ensureDb() {
+  if (dbInitialized) return;
+
+  try {
+    // Try a simple query to check if tables exist
+    await db.user.count();
+    dbInitialized = true;
+  } catch {
+    // Tables don't exist - push the schema
     try {
-      // Push schema to the /tmp database
-      execSync('npx prisma db push --skip-generate', {
+      const dbUrl = process.env.VERCEL ? 'file:/tmp/dev.db' : process.env.DATABASE_URL;
+      execSync('npx prisma db push --skip-generate --accept-data-loss', {
         stdio: 'pipe',
         env: {
           ...process.env,
-          DATABASE_URL: 'file:/tmp/dev.db',
+          DATABASE_URL: dbUrl,
         },
       });
-      vercelDbInitialized = true;
+      dbInitialized = true;
+      console.log('Database schema pushed successfully');
     } catch (error) {
-      console.error('Failed to initialize Vercel DB:', error);
+      console.error('Failed to push database schema:', error);
+      // Try creating tables with raw SQL as fallback
+      try {
+        await db.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS User (
+            id TEXT PRIMARY KEY,
+            email TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            password TEXT NOT NULL,
+            phone TEXT NOT NULL DEFAULT '',
+            city TEXT NOT NULL DEFAULT 'Jakarta',
+            address TEXT NOT NULL DEFAULT '',
+            role TEXT NOT NULL DEFAULT 'buyer',
+            storeName TEXT,
+            storeDescription TEXT,
+            createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS Product (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', price INTEGER NOT NULL, originalPrice INTEGER NOT NULL DEFAULT 0, category TEXT NOT NULL, images TEXT NOT NULL DEFAULT '[]', minOrder INTEGER NOT NULL DEFAULT 1, stock INTEGER NOT NULL DEFAULT 0, location TEXT NOT NULL DEFAULT 'Jakarta', active BOOLEAN NOT NULL DEFAULT true, sold INTEGER NOT NULL DEFAULT 0, rating REAL NOT NULL DEFAULT 0, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, sellerId TEXT NOT NULL)`);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS VariantGroup (id TEXT PRIMARY KEY, name TEXT NOT NULL, "order" INTEGER NOT NULL DEFAULT 0, productId TEXT NOT NULL)`);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS VariantOption (id TEXT PRIMARY KEY, value TEXT NOT NULL, variantGroupId TEXT NOT NULL)`);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "Order" (id TEXT PRIMARY KEY, buyerId TEXT NOT NULL, sellerId TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', totalAmount INTEGER NOT NULL, shippingCost INTEGER NOT NULL DEFAULT 0, shippingAddress TEXT NOT NULL DEFAULT '', paymentMethod TEXT NOT NULL DEFAULT 'cod', createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS OrderItem (id TEXT PRIMARY KEY, orderId TEXT NOT NULL, productId TEXT NOT NULL, productName TEXT NOT NULL, quantity INTEGER NOT NULL, price INTEGER NOT NULL, variants TEXT NOT NULL DEFAULT '{}')`);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS Review (id TEXT PRIMARY KEY, productId TEXT NOT NULL, userId TEXT NOT NULL, rating INTEGER NOT NULL, comment TEXT NOT NULL DEFAULT '', createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(productId, userId))`);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS Chat (id TEXT PRIMARY KEY, senderId TEXT NOT NULL, receiverId TEXT NOT NULL, message TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT false, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS Wishlist (id TEXT PRIMARY KEY, userId TEXT NOT NULL, productId TEXT NOT NULL, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(userId, productId))`);
+        await db.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS Notification (id TEXT PRIMARY KEY, userId TEXT NOT NULL, title TEXT NOT NULL, message TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'info', read BOOLEAN NOT NULL DEFAULT false, link TEXT NOT NULL DEFAULT '', createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
+        dbInitialized = true;
+        console.log('Database tables created with raw SQL');
+      } catch (rawError) {
+        console.error('Failed to create tables with raw SQL:', rawError);
+      }
     }
   }
 }
@@ -966,7 +1006,7 @@ async function seedDatabase() {
 
 export async function POST() {
   try {
-    await ensureVercelDb();
+    await ensureDb();
     const result = await seedDatabase();
     return NextResponse.json({ success: true, message: 'Database seeded successfully', data: result });
   } catch (error) {
@@ -980,7 +1020,7 @@ export async function POST() {
 
 export async function GET() {
   try {
-    await ensureVercelDb();
+    await ensureDb();
     const result = await seedDatabase();
     return NextResponse.json({ success: true, message: 'Database seeded successfully', data: result });
   } catch (error) {
