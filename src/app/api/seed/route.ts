@@ -1,5 +1,27 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { execSync } from 'child_process';
+
+// On Vercel, we need to push the Prisma schema to /tmp on first cold start
+let vercelDbInitialized = false;
+
+async function ensureVercelDb() {
+  if (process.env.VERCEL && !vercelDbInitialized) {
+    try {
+      // Push schema to the /tmp database
+      execSync('npx prisma db push --skip-generate', {
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          DATABASE_URL: 'file:/tmp/dev.db',
+        },
+      });
+      vercelDbInitialized = true;
+    } catch (error) {
+      console.error('Failed to initialize Vercel DB:', error);
+    }
+  }
+}
 
 function simpleHash(str: string): string {
   let hash = 0;
@@ -944,6 +966,7 @@ async function seedDatabase() {
 
 export async function POST() {
   try {
+    await ensureVercelDb();
     const result = await seedDatabase();
     return NextResponse.json({ success: true, message: 'Database seeded successfully', data: result });
   } catch (error) {
@@ -957,6 +980,7 @@ export async function POST() {
 
 export async function GET() {
   try {
+    await ensureVercelDb();
     const result = await seedDatabase();
     return NextResponse.json({ success: true, message: 'Database seeded successfully', data: result });
   } catch (error) {
