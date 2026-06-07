@@ -31,24 +31,50 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env*.local
 
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-local-*
-.claude
-.z-ai-config
+
+# logs
 *.log
 dev.log
 dev.out.log
+server.log
+
+# AI/Dev environment files
+.claude
+.z-ai-config
+.zscripts/
+agent-ctx/
+skills/
+local-*
 test
 prompt
 
-server.log
-# Skills directory
-/skills/
+# Database files
+db/*.db
+db/*.db-journal
+
+# Upload directory
+upload/
+
+# Old static HTML files (replaced by Next.js)
+grosirpj.html
+login-buyer.html
+login-seller.html
+seller-dashboard.html
+
+# Mini services (separate deployment)
+mini-services/
+
+# Examples
+examples/
+
+# Download temp
+download/
