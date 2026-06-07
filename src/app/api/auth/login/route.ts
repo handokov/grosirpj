@@ -1,15 +1,15 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
-// Simple hash function (must match register)
+// Simple hash function (must match seed)
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+    hash |= 0;
   }
-  return Math.abs(hash).toString(36) + str.length.toString(36);
+  return Math.abs(hash).toString(36);
 }
 
 export async function POST(request: Request) {
@@ -45,6 +45,9 @@ export async function POST(request: Request) {
       email: user.email,
       city: user.city,
       role: user.role,
+      phone: user.phone,
+      storeName: user.storeName,
+      storeDescription: user.storeDescription,
     });
   } catch (error) {
     console.error('Login error:', error);

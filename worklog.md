@@ -1,101 +1,85 @@
-# Worklog - Task 1: Fix Seller Auth Redirects and Add Role System
+# GrosirPJ Marketplace - Worklog
 
-## Summary
-Fixed the seller authentication flow so that sellers are properly redirected to `seller-dashboard.html` instead of `index.html`, and added a `role` field throughout the entire stack (DB, API, auth store, UI).
+---
+Task ID: 1
+Agent: Main Orchestrator
+Task: Update Prisma schema with all models
 
-## Changes Made
+Work Log:
+- Created comprehensive Prisma schema with 8 models: User, Product, VariantGroup, VariantOption, Order, OrderItem, Review, Chat
+- Added proper relations, indexes, and cascade deletes
+- Ran `bun run db:push` to sync schema to SQLite database
 
-### TASK 1: Fix login-seller.html redirects
-- **File**: `/home/z/my-project/login-seller.html`
-- Changed 4 occurrences of `window.location.href = 'index.html'` to `window.location.href = 'seller-dashboard.html'`:
-  - Line 887: After found seller login
-  - Line 903: After demo seller login
-  - Line 974: After seller registration
-  - Line 1024: Check session - already logged in as seller
+Stage Summary:
+- Database schema fully updated with all marketplace models
+- SQLite database at `/home/z/my-project/db/custom.db`
 
-### TASK 2: Fix login-buyer.html - role field
-- **File**: `/home/z/my-project/login-buyer.html`
-- Verified all 4 places already have `role: 'buyer'`:
-  - Line 796: Login handler (found user)
-  - Line 805: Login handler (demo user)
-  - Line 851: Register handler (users list)
-  - Line 855: Register handler (session save)
-- No changes needed.
+---
+Task ID: 2
+Agent: Subagent (full-stack-developer)
+Task: Create seed API route with comprehensive demo data
 
-### TASK 3: Add role check to seller-dashboard.html
-- **File**: `/home/z/my-project/seller-dashboard.html`
-- Added role check at the beginning of `init()` function:
-  ```javascript
-  const user = loadSellerInfo();
-  if (!user || user.role !== 'seller') {
-    window.location.href = 'login-seller.html';
-    return;
-  }
-  ```
+Work Log:
+- Created `/src/app/api/seed/route.ts` with GET and POST handlers
+- Seeds 4 users (2 sellers, 2 buyers), 30 products with variant groups, 7 orders, 12 reviews, 8 chat messages
+- Fixed hash function to be consistent across seed and auth routes
 
-### TASK 4: Add role field to Prisma schema and update API routes
-- **File**: `/home/z/my-project/prisma/schema.prisma`
-  - Added `role String @default("buyer")` to User model
-  - Ran `bun run db:push` to sync schema
+Stage Summary:
+- Seed API at `/api/seed` returns comprehensive demo data
+- Demo accounts: seller1@grosirpj.id/password123, buyer@grosirpj.id/password123
 
-- **File**: `/home/z/my-project/src/app/api/auth/register/route.ts`
-  - Accept `role` from request body (defaults to "buyer")
-  - Include `role` in `db.user.create` data
-  - Include `role` in response JSON
+---
+Task ID: 3-a
+Agent: Subagent (full-stack-developer)
+Task: Create products API routes
 
-- **File**: `/home/z/my-project/src/app/api/auth/login/route.ts`
-  - Include `role` in response JSON (from `user.role`)
+Work Log:
+- Created `/src/app/api/products/route.ts` with GET (search/filter/paginate) and POST (create with variants)
+- Created `/src/app/api/products/[id]/route.ts` with GET (detail), PUT (update), DELETE
 
-- **File**: `/home/z/my-project/src/app/api/auth/me/route.ts`
-  - Added `role: true` to the `select` clause
-  - Role is now included in the response automatically
+Stage Summary:
+- Products API fully functional with search, filter, sort, pagination, and variant groups support
 
-### TASK 5: Update auth store to include role and sellerMode
-- **File**: `/home/z/my-project/src/store/auth.ts`
-  - Added `role: string` to `AuthUser` interface
-  - Added `sellerMode: boolean` to `AuthStore` interface (defaults to `false`)
-  - Added `setSellerMode: (mode: boolean) => void` to `AuthStore` interface
-  - In `login` method: after setting user, if `data.role === 'seller'`, set `sellerMode: true`
-  - In `register` method: same logic as login
-  - In `init` method: after loading user from DB, if `data.user.role === 'seller'`, set `sellerMode: true`
-  - In `logout` method: also set `sellerMode: false`
+---
+Task ID: 3-b
+Agent: Subagent (full-stack-developer)
+Task: Create orders, reviews, and chat API routes
 
-### TASK 6: Update Next.js page.tsx to use auth store sellerMode
-- **File**: `/home/z/my-project/src/app/page.tsx`
-  - Replaced `const [sellerMode, setSellerMode] = useState(false)` with:
-    - `const sellerMode = useAuthStore((s) => s.sellerMode)`
-    - `const setSellerMode = useAuthStore((s) => s.setSellerMode)`
-  - Updated "Jual" button click handler: when user is not logged in, also stores `grosirpj_pending_seller` flag in localStorage
-  - Added useEffect: after login, if user is a seller and pending seller flag exists, auto-set sellerMode to true
+Work Log:
+- Created `/src/app/api/orders/route.ts` and `/src/app/api/orders/[id]/route.ts`
+- Created `/src/app/api/reviews/route.ts`
+- Created `/src/app/api/chat/route.ts`
 
-### TASK 7: Sync public HTML files
-- Copied updated files to `/home/z/my-project/public/`:
-  - `login-seller.html`
-  - `login-buyer.html`
-  - `seller-dashboard.html`
-  - `grosirpj.html`
+Stage Summary:
+- All API routes working: orders (create per seller, status updates), reviews (one per user per product), chat (conversations + messages)
 
-### TASK 8: Fix grosirpj.html for role-based nav display
-- **File**: `/home/z/my-project/grosirpj.html`
-  - Wrapped "Jual" button in a `<div id="sellerNavBtn">` container for dynamic updates
-  - Updated `updateAuthUI()` function to dynamically change the nav button:
-    - If `currentUser.role === 'seller'`: Show "Dashboard Seller" link (styled with emerald colors) that redirects to `seller-dashboard.html`
-    - Otherwise: Show "Jual" button (original behavior)
+---
+Task ID: 4-8
+Agent: Subagent (full-stack-developer)
+Task: Rebuild complete GrosirPJ frontend
 
-## Verification
-- `bun run lint` passed with no errors
-- Dev server is running on port 3000
-- All schema changes pushed to database successfully
+Work Log:
+- Rebuilt `src/app/page.tsx` as single-page orchestrator
+- Created 9 component files: product-grid, product-detail, cart-sidebar, checkout-flow, order-history, chat-panel, seller-dashboard, auth-modal, footer
+- Updated stores: auth.ts (with phone/storeName), cart.ts (with selectedVariants), ui.ts (panel visibility + filters)
+- All components fetch data from API routes
+- Multi-variant group selection in product detail
+- Checkout creates separate orders per seller
+- Seller dashboard with product CRUD, variant groups, order management, recharts analytics
 
-## Browser Testing Results
-- ✅ Seller registration: `login-seller.html` → register → redirects to `seller-dashboard.html`
-- ✅ Seller login: `login-seller.html` → login → redirects to `seller-dashboard.html`
-- ✅ Seller dashboard shows "Selamat Datang, [Name]!" correctly
-- ✅ Dashboard protection: accessing `seller-dashboard.html` without login redirects to `login-seller.html`
-- ✅ Buyer login: `login-buyer.html` → login → redirects to `index.html`
-- ✅ Main page `grosirpj.html`: Shows "Dashboard Seller" link for seller accounts, "Jual" for buyer/guest
-- ✅ Main page shows "Keluar" (logout) when logged in, "Masuk" when not
+Stage Summary:
+- Complete marketplace frontend with all features working
+- Browser verification passed: homepage, product detail, login, cart, sticky footer all functional
 
-## Post-subagent fix
-- Updated `auth-modal.tsx` to register as seller when `grosirpj_pending_seller` flag is set
-- Updated dialog description to show seller-specific messaging when pending seller flag is active
+---
+Task ID: 9
+Agent: Main Orchestrator
+Task: Fix minor issues from browser verification
+
+Work Log:
+- Increased product grid limit from 20 to 30 to show all products
+- Verified auth modal already has DialogTitle (accessibility OK)
+- Verified hash functions consistent across seed and auth routes
+
+Stage Summary:
+- All minor issues resolved, marketplace fully functional

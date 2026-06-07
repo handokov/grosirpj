@@ -6,6 +6,9 @@ export interface AuthUser {
   email: string;
   city: string;
   role: string;
+  phone?: string;
+  storeName?: string;
+  storeDescription?: string;
 }
 
 interface AuthStore {
@@ -17,7 +20,7 @@ interface AuthStore {
   setSellerMode: (mode: boolean) => void;
   setUser: (user: AuthUser | null) => void;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string, city: string, role?: string) => Promise<boolean>;
+  register: (data: { name: string; email: string; password: string; city: string; role?: string; phone?: string; storeName?: string; storeDescription?: string }) => Promise<boolean>;
   logout: () => void;
   init: () => Promise<void>;
 }
@@ -29,7 +32,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   sellerMode: false,
 
   setLoginModalOpen: (open) => set({ loginModalOpen: open }),
-
   setSellerMode: (mode) => set({ sellerMode: mode }),
 
   setUser: (user) => {
@@ -49,41 +51,30 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Login gagal');
-      }
+      if (!res.ok) throw new Error(data.error || 'Login gagal');
       get().setUser(data);
-      if (data.role === 'seller') {
-        set({ sellerMode: true });
-      }
+      if (data.role === 'seller') set({ sellerMode: true });
       set({ loginModalOpen: false });
       return true;
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch {
       return false;
     }
   },
 
-  register: async (name, email, password, city, role) => {
+  register: async (registerData) => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, city, role }),
+        body: JSON.stringify(registerData),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Registrasi gagal');
-      }
-      // Auto login after register
+      if (!res.ok) throw new Error(data.error || 'Registrasi gagal');
       get().setUser(data);
-      if (data.role === 'seller') {
-        set({ sellerMode: true });
-      }
+      if (data.role === 'seller') set({ sellerMode: true });
       set({ loginModalOpen: false });
       return true;
-    } catch (error) {
-      console.error('Register error:', error);
+    } catch {
       return false;
     }
   },
@@ -98,15 +89,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const stored = localStorage.getItem('grosirpj_user');
       if (stored) {
         const user = JSON.parse(stored);
-        // Verify user still exists in DB
         const res = await fetch(`/api/auth/me?userId=${user.id}`);
         const data = await res.json();
         if (data.user) {
-          set({
-            user: data.user,
-            loading: false,
-            sellerMode: data.user.role === 'seller',
-          });
+          set({ user: data.user, loading: false, sellerMode: data.user.role === 'seller' });
         } else {
           localStorage.removeItem('grosirpj_user');
           set({ user: null, loading: false, sellerMode: false });

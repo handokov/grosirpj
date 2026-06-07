@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,12 +11,136 @@ datasource db {
 }
 
 model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String
+  password        String
+  phone           String    @default("")
+  city            String    @default("Jakarta")
+  address         String    @default("")
+  role            String    @default("buyer") // "buyer" | "seller"
+  storeName       String?   // seller only
+  storeDescription String?  // seller only
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  products        Product[]
+  reviews         Review[]
+  sentChats       Chat[]    @relation("SentChats")
+  receivedChats   Chat[]    @relation("ReceivedChats")
+  buyerOrders     Order[]   @relation("BuyerOrders")
+  sellerOrders    Order[]   @relation("SellerOrders")
+}
+
+model Product {
+  id             String        @id @default(cuid())
+  name           String
+  description    String        @default("")
+  price          Int
+  originalPrice  Int           @default(0)
+  category       String
+  images         String        @default("[]") // JSON array of URLs
+  minOrder       Int           @default(1)
+  stock          Int           @default(0)
+  location       String        @default("Jakarta")
+  active         Boolean       @default(true)
+  sold           Int           @default(0)
+  rating         Float         @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  sellerId       String
+  seller         User          @relation(fields: [sellerId], references: [id])
+
+  variantGroups  VariantGroup[]
+  orderItems     OrderItem[]
+  reviews        Review[]
+
+  @@index([category])
+  @@index([sellerId])
+  @@index([active])
+}
+
+model VariantGroup {
+  id          String         @id @default(cuid())
+  name        String         // e.g. "Ukuran", "Warna"
+  order       Int            @default(0)
+  productId   String
+  product     Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  options     VariantOption[]
+
+  @@index([productId])
+}
+
+model VariantOption {
+  id             String       @id @default(cuid())
+  value          String       // e.g. "L", "Merah"
+  variantGroupId String
+  variantGroup   VariantGroup @relation(fields: [variantGroupId], references: [id], onDelete: Cascade)
+
+  @@index([variantGroupId])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  buyerId         String
+  buyer           User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User        @relation("SellerOrders", fields: [sellerId], references: [id])
+  status          String      @default("pending") // pending, paid, shipped, delivered, cancelled
+  totalAmount     Int
+  shippingCost    Int         @default(0)
+  shippingAddress String      @default("")
+  paymentMethod   String      @default("cod") // cod, transfer, ewallet
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           OrderItem[]
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  productName String
+  quantity    Int
+  price       Int
+  variants    String   @default("{}") // JSON: { "Ukuran": "L", "Warna": "Merah" }
+
+  @@index([orderId])
+}
+
+model Review {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  city      String   @default("Jakarta")
-  role      String   @default("buyer")
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int      // 1-5
+  comment   String   @default("")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@unique([productId, userId]) // one review per user per product
+  @@index([productId])
+}
+
+model Chat {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     User     @relation("SentChats", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("ReceivedChats", fields: [receiverId], references: [id])
+  message    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, read])
 }

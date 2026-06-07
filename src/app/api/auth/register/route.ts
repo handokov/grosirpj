@@ -2,21 +2,21 @@ import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { createId } from '@paralleldrive/cuid2';
 
-// Simple hash function (for production, use bcrypt)
+// Simple hash function (must match seed/login)
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+    hash |= 0;
   }
-  return Math.abs(hash).toString(36) + str.length.toString(36);
+  return Math.abs(hash).toString(36);
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, city, role } = body;
+    const { name, email, password, city, role, phone, storeName, storeDescription, address } = body;
 
     if (!name || !email || !password || !city) {
       return NextResponse.json(
@@ -44,6 +44,10 @@ export async function POST(request: Request) {
         password: simpleHash(password),
         city,
         role: userRole,
+        phone: phone || '',
+        address: address || '',
+        storeName: userRole === 'seller' ? (storeName || name) : null,
+        storeDescription: userRole === 'seller' ? (storeDescription || null) : null,
       },
     });
 
@@ -53,6 +57,9 @@ export async function POST(request: Request) {
       email: user.email,
       city: user.city,
       role: user.role,
+      phone: user.phone,
+      storeName: user.storeName,
+      storeDescription: user.storeDescription,
     }, { status: 201 });
   } catch (error) {
     console.error('Register error:', error);
