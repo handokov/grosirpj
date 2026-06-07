@@ -62,17 +62,23 @@ const MAKANAN_IMGS = [
 ];
 
 async function seedDatabase() {
-  // Delete all existing data in reverse dependency order
-  await db.$executeRawUnsafe('DELETE FROM Notification');
-  await db.$executeRawUnsafe('DELETE FROM Wishlist');
-  await db.$executeRawUnsafe('DELETE FROM VariantOption');
-  await db.$executeRawUnsafe('DELETE FROM VariantGroup');
-  await db.$executeRawUnsafe('DELETE FROM OrderItem');
-  await db.$executeRawUnsafe('DELETE FROM Review');
-  await db.$executeRawUnsafe('DELETE FROM Chat');
-  await db.$executeRawUnsafe('DELETE FROM "Order"');
-  await db.$executeRawUnsafe('DELETE FROM Product');
-  await db.$executeRawUnsafe('DELETE FROM User');
+  // Check if already seeded
+  const existingUsers = await db.user.count();
+  if (existingUsers > 0) {
+    return { message: 'Database already seeded', users: existingUsers };
+  }
+
+  // Delete all existing data in reverse dependency order (safety for re-seed)
+  try { await db.$executeRawUnsafe('DELETE FROM Notification'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM Wishlist'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM VariantOption'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM VariantGroup'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM OrderItem'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM Review'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM Chat'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM "Order"'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM Product'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM User'); } catch {}
 
   // =====================
   // 1. CREATE USERS
