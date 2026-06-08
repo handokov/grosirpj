@@ -135,7 +135,7 @@ export function AuthModal() {
     }}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white">
+        <div className="bg-[#00A651] p-6 text-white">
           <DialogHeader>
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
@@ -145,7 +145,7 @@ export function AuthModal() {
                 GrosirPJ
               </DialogTitle>
             </div>
-            <DialogDescription className="text-emerald-100">
+            <DialogDescription className="text-green-100">
               {mode === 'login'
                 ? isSeller
                   ? 'Masuk ke akun seller untuk mulai berjualan'
@@ -161,8 +161,8 @@ export function AuthModal() {
           {/* Tab Switcher */}
           <Tabs value={mode} onValueChange={(v) => switchMode(v as 'login' | 'register')} className="w-full">
             <TabsList className="w-full mb-6 bg-gray-100 p-1 rounded-full h-auto">
-              <TabsTrigger value="login" className="flex-1 py-2 rounded-full data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm">Masuk</TabsTrigger>
-              <TabsTrigger value="register" className="flex-1 py-2 rounded-full data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm">Daftar</TabsTrigger>
+              <TabsTrigger value="login" className="flex-1 py-2 rounded-full data-[state=active]:bg-white data-[state=active]:text-[#00A651] data-[state=active]:shadow-sm">Masuk</TabsTrigger>
+              <TabsTrigger value="register" className="flex-1 py-2 rounded-full data-[state=active]:bg-white data-[state=active]:text-[#00A651] data-[state=active]:shadow-sm">Daftar</TabsTrigger>
             </TabsList>
 
             {/* Error Message */}
@@ -217,13 +217,13 @@ export function AuthModal() {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-6 rounded-xl"
+                  className="w-full bg-[#00A651] hover:bg-[#008F46] text-white font-semibold py-6 rounded-xl"
                   disabled={loading}
                 >
                   {loading ? 'Memproses...' : 'Masuk'}
                   {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
                 </Button>
-                <div className="bg-emerald-50 rounded-xl p-3 text-xs text-emerald-700 space-y-1">
+                <div className="bg-green-50 rounded-xl p-3 text-xs text-[#00A651] space-y-1">
                   <p className="font-semibold">Demo Accounts:</p>
                   <p>Buyer: buyer@grosirpj.id / password123</p>
                   <p>Seller: seller1@grosirpj.id / password123</p>
@@ -322,7 +322,7 @@ export function AuthModal() {
                 {/* Seller Toggle */}
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <div className="flex items-center gap-3">
-                    <Store className="w-5 h-5 text-emerald-500" />
+                    <Store className="w-5 h-5 text-[#00A651]" />
                     <div>
                       <p className="text-sm font-medium text-gray-800">Daftar sebagai Seller</p>
                       <p className="text-xs text-gray-500">Mulai berjualan di GrosirPJ</p>
@@ -333,7 +333,7 @@ export function AuthModal() {
 
                 {/* Seller-only fields */}
                 {isSeller && (
-                  <div className="space-y-4 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                  <div className="space-y-4 p-4 bg-green-50 rounded-xl border border-green-200">
                     <div className="space-y-2">
                       <Label htmlFor="reg-store-name" className="text-sm font-medium text-gray-700">Nama Toko *</Label>
                       <Input
@@ -362,7 +362,7 @@ export function AuthModal() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-6 rounded-xl"
+                  className="w-full bg-[#00A651] hover:bg-[#008F46] text-white font-semibold py-6 rounded-xl"
                   disabled={loading}
                 >
                   {loading ? 'Memproses...' : 'Daftar'}

@@ -80,3 +80,30 @@ Stage Summary:
 - src/lib/db.ts now exports ensureDb() with complete table creation SQL
 - Local commit: 7e1fffa "fix: add ensureDb() to auto-create tables on Vercel ephemeral filesystem"
 - Needs manual push to GitHub for Vercel deployment
+---
+Task ID: 2
+Agent: main-agent
+Task: Redesign GrosirPJ to Shopee-like style (green header #00A651, yellow accents #FFC107, banner hero, 10 quick nav icons)
+
+Work Log:
+- Analyzed user's uploaded screenshots using VLM to understand exact design requirements
+- Redesigned page.tsx completely:
+  - Navbar: solid green (#00A651) header bar, yellow (#FFC107) search button, white text/icons
+  - Hero: product image collage on green background with yellow "Selengkapnya" CTA
+  - Quick Nav: 10 horizontal scroll icons (Flash Sale, Gratis Ongkir, Voucher, Belanja, etc.)
+  - Flash Sale: green background matching header with countdown timer
+  - Why Choose Us: updated color scheme
+  - Promo Banners: updated to use green/yellow theme
+- Updated globals.css: removed old animations, updated scrollbar to green, simplified custom styles
+- Updated product-grid.tsx: changed emerald-500 to #00A651, discount badges to #FFC107, rounded-lg cards
+- Updated footer.tsx: changed to #1a1a2e dark background, green/yellow accents
+- Updated auth-modal.tsx: changed header to #00A651, buttons to #00A651, demo info to green
+- Fixed duplicate curly brace lint errors in auth-modal.tsx
+- All lint checks pass
+- Verified with Agent Browser: all 8 design checks pass
+
+Stage Summary:
+- Complete visual redesign from minimalist emerald theme to Shopee-like green/yellow theme
+- Color scheme: #00A651 (primary green), #FFC107 (accent yellow), #1a1a2e (dark footer)
+- Key layout changes: full green header, product collage hero, 10 quick nav icons, horizontal flash sale
+- All components updated to match new color scheme
