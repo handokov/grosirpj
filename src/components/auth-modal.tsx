@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { useAuthStore } from '@/store/auth';
 import { getCityNames } from '@/lib/shipping';
-import { Zap, Mail, Lock, User, MapPin, ArrowRight, AlertCircle, Store, Phone } from 'lucide-react';
+import { Zap, Mail, Lock, User, MapPin, ArrowRight, AlertCircle, Store, Phone, Eye, EyeOff } from 'lucide-react';
 
 // Helper to check seller intent from localStorage
 function checkSellerIntent(): boolean {
@@ -43,11 +43,13 @@ export function AuthModal() {
   // Login fields
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   // Register fields
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [regCity, setRegCity] = useState('Jakarta');
   const [regPhone, setRegPhone] = useState('');
   const [isSeller, setIsSeller] = useState(initialSellerIntent);
@@ -195,13 +197,22 @@ export function AuthModal() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       id="login-password"
-                      type="password"
+                      type={showLoginPassword ? 'text' : 'password'}
                       placeholder="Masukkan password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      className="pl-10 rounded-xl"
+                      className="pl-10 pr-10 rounded-xl"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      tabIndex={-1}
+                      aria-label={showLoginPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    >
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <Button
@@ -259,14 +270,23 @@ export function AuthModal() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       id="reg-password"
-                      type="password"
+                      type={showRegPassword ? 'text' : 'password'}
                       placeholder="Minimal 6 karakter"
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
-                      className="pl-10 rounded-xl"
+                      className="pl-10 pr-10 rounded-xl"
                       required
                       minLength={6}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      tabIndex={-1}
+                      aria-label={showRegPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    >
+                      {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <div className="space-y-2">
