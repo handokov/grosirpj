@@ -79,9 +79,6 @@ export function ProductDetail() {
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
-  const [submittingReview, setSubmittingReview] = useState(false);
 
   // Fetch product detail
   useEffect(() => {
@@ -196,43 +193,6 @@ export function ProductDetail() {
     if (!product) return;
     const added = await toggleWishlist(user.id, product.id);
     toast.success(added ? 'Ditambahkan ke wishlist' : 'Dihapus dari wishlist');
-  };
-
-  const handleSubmitReview = async () => {
-    if (!user || !product) return;
-    if (reviewRating < 1 || reviewRating > 5) {
-      toast.error('Rating harus antara 1-5');
-      return;
-    }
-    setSubmittingReview(true);
-    try {
-      const res = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: product.id,
-          userId: user.id,
-          rating: reviewRating,
-          comment: reviewComment,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || 'Gagal mengirim ulasan');
-        return;
-      }
-      toast.success('Ulasan berhasil dikirim!');
-      setReviewComment('');
-      setReviewRating(5);
-      // Refresh product to show new review
-      const refreshRes = await fetch(`/api/products/${product.id}`);
-      const refreshed = await refreshRes.json();
-      if (refreshRes.ok) setProduct(refreshed);
-    } catch {
-      toast.error('Gagal mengirim ulasan');
-    } finally {
-      setSubmittingReview(false);
-    }
   };
 
   return (
@@ -519,40 +479,7 @@ export function ProductDetail() {
                     </div>
                   </TabsContent>
                   <TabsContent value="reviews" className="mt-3">
-                    {/* Review Submission Form */}
-                    {user && (
-                      <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
-                        <h4 className="text-sm font-semibold text-gray-700">Tulis Ulasan</h4>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setReviewRating(i + 1)}
-                              className="p-0.5"
-                              aria-label={`Rating ${i + 1}`}
-                            >
-                              <Star className={`w-6 h-6 cursor-pointer transition-colors ${i < reviewRating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
-                            </button>
-                          ))}
-                          <span className="text-sm text-gray-500 ml-2">{reviewRating}/5</span>
-                        </div>
-                        <textarea
-                          placeholder="Bagikan pengalaman Anda tentang produk ini..."
-                          value={reviewComment}
-                          onChange={(e) => setReviewComment(e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                          rows={3}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={handleSubmitReview}
-                          disabled={submittingReview}
-                          className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
-                        >
-                          {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
-                        </Button>
-                      </div>
-                    )}
+                    {/* Reviews are only submitted from Order History after delivery */}
                     {product.reviews && product.reviews.length > 0 ? (
                       <div className="space-y-4">
                         {product.reviews.map((review) => (
@@ -578,6 +505,7 @@ export function ProductDetail() {
                       <div className="text-center py-6 text-gray-400">
                         <Star className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                         <p className="text-sm">Belum ada ulasan untuk produk ini</p>
+                        <p className="text-xs text-gray-300 mt-1">Ulasan hanya bisa diberikan setelah pesanan diterima</p>
                       </div>
                     )}
                   </TabsContent>

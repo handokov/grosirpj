@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/reviews - Create a review
+// POST /api/reviews - Create a review (only for buyers with delivered order)
 export async function POST(request: Request) {
   try {
     await ensureDb();
@@ -67,6 +67,26 @@ export async function POST(request: Request) {
       return Response.json(
         { error: 'Produk tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Verify the user has a DELIVERED order containing this product
+    const deliveredOrder = await db.order.findFirst({
+      where: {
+        buyerId: userId,
+        status: 'delivered',
+        items: {
+          some: {
+            productId,
+          },
+        },
+      },
+    });
+
+    if (!deliveredOrder) {
+      return Response.json(
+        { error: 'Hanya pembeli yang sudah menerima pesanan yang bisa memberikan ulasan' },
+        { status: 403 }
       );
     }
 

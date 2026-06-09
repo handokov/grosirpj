@@ -14,9 +14,10 @@ import { Separator } from '@/components/ui/separator';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { formatPrice, getStatusInfo } from '@/lib/constants';
-import { Package, MapPin, CreditCard, ChevronDown, ChevronUp, Clock, ShoppingBag, Banknote } from 'lucide-react';
+import { Package, MapPin, CreditCard, ChevronDown, ChevronUp, Clock, ShoppingBag, Banknote, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaymentDialog } from '@/components/payment-dialog';
+import { toast } from 'sonner';
 
 interface OrderItem {
   id: string;
@@ -55,6 +56,10 @@ export function OrderHistory() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [reviewItem, setReviewItem] = useState<{ orderId: string; productId: string; productName: string } | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     if (!user) return;
@@ -71,6 +76,36 @@ export function OrderHistory() {
       setLoading(false);
     }
   }, [user]);
+
+  const handleSubmitReview = async () => {
+    if (!user || !reviewItem) return;
+    setSubmittingReview(true);
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: reviewItem.productId,
+          userId: user.id,
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Ulasan berhasil dikirim!');
+        setReviewItem(null);
+        setReviewRating(5);
+        setReviewComment('');
+      } else {
+        toast.error(data.error || 'Gagal mengirim ulasan');
+      }
+    } catch {
+      toast.error('Gagal mengirim ulasan');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   useEffect(() => {
     if (orderHistoryOpen && user) {
@@ -255,6 +290,35 @@ export function OrderHistory() {
                               Bayar Sekarang
                             </Button>
                           )}
+
+                          {/* Review Button for Delivered Orders */}
+                          {order.status === 'delivered' && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <p className="text-xs text-gray-500 mb-2">Bagikan pengalaman Anda:</p>
+                              <div className="space-y-2">
+                                {order.items.map((item) => (
+                                  <Button
+                                    key={item.id}
+                                    variant="outline"
+                                    className="w-full justify-start text-sm rounded-xl border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setReviewItem({
+                                        orderId: order.id,
+                                        productId: item.productId,
+                                        productName: item.productName,
+                                      });
+                                      setReviewRating(5);
+                                      setReviewComment('');
+                                    }}
+                                  >
+                                    <Star className="w-4 h-4 text-amber-400 mr-2" />
+                                    Ulas: {item.productName}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -273,6 +337,59 @@ export function OrderHistory() {
         order={paymentOrder}
         onPaymentConfirmed={handlePaymentConfirmed}
       />
+
+      {/* Review Dialog */}
+      {reviewItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setReviewItem(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Beri Ulasan</h3>
+              <p className="text-sm text-gray-500">{reviewItem.productName}</p>
+            </div>
+
+            {/* Star Rating */}
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setReviewRating(star)}
+                  className="p-1 hover:scale-110 transition-transform"
+                >
+                  <Star className={`w-8 h-8 ${star <= reviewRating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                </button>
+              ))}
+              <span className="ml-2 text-sm text-gray-500">{reviewRating}/5</span>
+            </div>
+
+            {/* Comment */}
+            <textarea
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="Bagikan pengalaman Anda tentang produk ini..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 resize-none"
+              rows={3}
+            />
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-xl"
+                onClick={() => setReviewItem(null)}
+              >
+                Batal
+              </Button>
+              <Button
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
+                onClick={handleSubmitReview}
+                disabled={submittingReview}
+              >
+                {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
