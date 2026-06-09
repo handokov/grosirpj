@@ -71,6 +71,10 @@ async function seedDatabase(force = false) {
   }
 
   // Delete all existing data in reverse dependency order (safety for re-seed)
+  try { await db.$executeRawUnsafe('DELETE FROM SearchHistory'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM ProductView'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM CartItem'); } catch {}
+  try { await db.$executeRawUnsafe('DELETE FROM UserAddress'); } catch {}
   try { await db.$executeRawUnsafe('DELETE FROM Notification'); } catch {}
   try { await db.$executeRawUnsafe('DELETE FROM Wishlist'); } catch {}
   try { await db.$executeRawUnsafe('DELETE FROM VariantOption'); } catch {}
@@ -93,9 +97,15 @@ async function seedDatabase(force = false) {
       phone: '021-5551234',
       city: 'Jakarta',
       address: 'Jl. Tanah Abang Blok A No. 12, Jakarta Pusat, DKI Jakarta 10150',
+      province: 'DKI Jakarta',
+      postalCode: '10150',
+      gender: '',
       role: 'seller',
       storeName: 'CV Garment Prima',
       storeDescription: 'Supplier fashion grosir terpercaya sejak 2015',
+      bankName: 'BCA',
+      bankAccount: '1234567890',
+      bankHolder: 'CV Garment Prima',
     },
   });
 
@@ -107,9 +117,15 @@ async function seedDatabase(force = false) {
       phone: '031-7779876',
       city: 'Surabaya',
       address: 'Jl. Genteng Kali No. 45, Surabaya, Jawa Timur 60275',
+      province: 'Jawa Timur',
+      postalCode: '60275',
+      gender: '',
       role: 'seller',
       storeName: 'Elektronik Surabaya',
       storeDescription: 'Pusat grosir elektronik terlengkap',
+      bankName: 'Mandiri',
+      bankAccount: '0987654321',
+      bankHolder: 'Elektronik Surabaya',
     },
   });
 
@@ -118,9 +134,13 @@ async function seedDatabase(force = false) {
       email: 'buyer@grosirpj.id',
       name: 'Budi Santoso',
       password: simpleHash('password123'),
-      phone: '022-3334455',
+      phone: '0812-3456-7890',
       city: 'Bandung',
       address: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135',
+      province: 'Jawa Barat',
+      postalCode: '40135',
+      gender: 'pria',
+      dateOfBirth: '1990-05-15',
       role: 'buyer',
     },
   });
@@ -130,10 +150,66 @@ async function seedDatabase(force = false) {
       email: 'buyer2@grosirpj.id',
       name: 'Siti Aminah',
       password: simpleHash('password123'),
-      phone: '0274-556677',
+      phone: '0878-9012-3456',
       city: 'Yogyakarta',
       address: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271',
+      province: 'DI Yogyakarta',
+      postalCode: '55271',
+      gender: 'wanita',
+      dateOfBirth: '1995-08-22',
       role: 'buyer',
+    },
+  });
+
+  const buyer3 = await db.user.create({
+    data: {
+      email: 'buyer3@grosirpj.id',
+      name: 'Dewi Lestari',
+      password: simpleHash('password123'),
+      phone: '0856-7890-1234',
+      city: 'Semarang',
+      address: 'Jl. Pandanaran No. 10, Semarang, Jawa Tengah 50134',
+      province: 'Jawa Tengah',
+      postalCode: '50134',
+      gender: 'wanita',
+      dateOfBirth: '1992-11-03',
+      role: 'buyer',
+    },
+  });
+
+  const buyer4 = await db.user.create({
+    data: {
+      email: 'buyer4@grosirpj.id',
+      name: 'Ahmad Rizki',
+      password: simpleHash('password123'),
+      phone: '0813-5678-9012',
+      city: 'Medan',
+      address: 'Jl. Gatot Subroto No. 55, Medan, Sumatera Utara 20112',
+      province: 'Sumatera Utara',
+      postalCode: '20112',
+      gender: 'pria',
+      dateOfBirth: '1988-03-18',
+      role: 'buyer',
+    },
+  });
+
+  const seller3 = await db.user.create({
+    data: {
+      email: 'seller3@grosirpj.id',
+      name: 'Batik Solo Collection',
+      password: simpleHash('password123'),
+      phone: '0271-667788',
+      city: 'Solo',
+      address: 'Jl. Slamet Riyadi No. 200, Solo, Jawa Tengah 57141',
+      province: 'Jawa Tengah',
+      postalCode: '57141',
+      gender: '',
+      role: 'seller',
+      storeName: 'Batik Solo Collection',
+      storeDescription: 'Koleksi batik tulis dan cap asli Solo',
+      bankName: 'BRI',
+      bankAccount: '1122334455',
+      bankHolder: 'Batik Solo Collection',
     },
   });
 
@@ -931,10 +1007,83 @@ async function seedDatabase(force = false) {
   }
 
   // =====================
+  // 8. CREATE USER ADDRESSES
+  // =====================
+  const addressesData = [
+    { userId: buyer1.id, label: 'Rumah', recipient: 'Budi Santoso', phone: '0812-3456-7890', address: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135', city: 'Bandung', province: 'Jawa Barat', postalCode: '40135', isDefault: true },
+    { userId: buyer1.id, label: 'Kantor', recipient: 'Budi Santoso', phone: '022-4455667', address: 'Jl. Asia Afrika No. 15, Bandung, Jawa Barat 40261', city: 'Bandung', province: 'Jawa Barat', postalCode: '40261', isDefault: false },
+    { userId: buyer2.id, label: 'Rumah', recipient: 'Siti Aminah', phone: '0878-9012-3456', address: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271', city: 'Yogyakarta', province: 'DI Yogyakarta', postalCode: '55271', isDefault: true },
+    { userId: buyer3.id, label: 'Rumah', recipient: 'Dewi Lestari', phone: '0856-7890-1234', address: 'Jl. Pandanaran No. 10, Semarang, Jawa Tengah 50134', city: 'Semarang', province: 'Jawa Tengah', postalCode: '50134', isDefault: true },
+    { userId: buyer4.id, label: 'Rumah', recipient: 'Ahmad Rizki', phone: '0813-5678-9012', address: 'Jl. Gatot Subroto No. 55, Medan, Sumatera Utara 20112', city: 'Medan', province: 'Sumatera Utara', postalCode: '20112', isDefault: true },
+    { userId: seller1.id, label: 'Gudang', recipient: 'CV Garment Prima', phone: '021-5551234', address: 'Jl. Tanah Abang Blok A No. 12, Jakarta Pusat, DKI Jakarta 10150', city: 'Jakarta', province: 'DKI Jakarta', postalCode: '10150', isDefault: true },
+    { userId: seller2.id, label: 'Toko', recipient: 'Elektronik Surabaya', phone: '031-7779876', address: 'Jl. Genteng Kali No. 45, Surabaya, Jawa Timur 60275', city: 'Surabaya', province: 'Jawa Timur', postalCode: '60275', isDefault: true },
+  ];
+
+  for (const addrData of addressesData) {
+    await db.userAddress.create({ data: addrData });
+  }
+
+  // =====================
+  // 9. CREATE CART ITEMS
+  // =====================
+  const cartItemsData = [
+    { userId: buyer1.id, productId: seller1Products[1].id, quantity: 6, variants: JSON.stringify({ Ukuran: 'L', Motif: 'Parang' }) },
+    { userId: buyer1.id, productId: seller2Products[0].id, quantity: 3, variants: JSON.stringify({ Warna: 'Hitam' }) },
+    { userId: buyer2.id, productId: seller1Products[4].id, quantity: 2, variants: JSON.stringify({ Ukuran: 'M', Warna: 'Sage' }) },
+    { userId: buyer3.id, productId: seller1Products[0].id, quantity: 24, variants: JSON.stringify({ Ukuran: 'L', Warna: 'Hitam' }) },
+    { userId: buyer3.id, productId: seller2Products[2].id, quantity: 1, variants: JSON.stringify({ Warna: 'Hitam' }) },
+  ];
+
+  for (const cartData of cartItemsData) {
+    await db.cartItem.create({ data: cartData });
+  }
+
+  // =====================
+  // 10. CREATE PRODUCT VIEWS (history produk yang dilihat)
+  // =====================
+  const productViewsData = [
+    { userId: buyer1.id, productId: seller1Products[0].id, viewCount: 5, lastViewed: new Date(Date.now() - 1000 * 60 * 30) },
+    { userId: buyer1.id, productId: seller1Products[1].id, viewCount: 3, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 2) },
+    { userId: buyer1.id, productId: seller2Products[0].id, viewCount: 2, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 5) },
+    { userId: buyer1.id, productId: seller2Products[2].id, viewCount: 1, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 24) },
+    { userId: buyer2.id, productId: seller1Products[4].id, viewCount: 4, lastViewed: new Date(Date.now() - 1000 * 60 * 15) },
+    { userId: buyer2.id, productId: seller1Products[3].id, viewCount: 2, lastViewed: new Date(Date.now() - 1000 * 60 * 60) },
+    { userId: buyer2.id, productId: seller2Products[1].id, viewCount: 3, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 3) },
+    { userId: buyer3.id, productId: seller1Products[0].id, viewCount: 7, lastViewed: new Date(Date.now() - 1000 * 60 * 5) },
+    { userId: buyer3.id, productId: seller2Products[2].id, viewCount: 2, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 8) },
+    { userId: buyer4.id, productId: seller1Products[2].id, viewCount: 1, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 48) },
+    { userId: buyer4.id, productId: seller2Products[3].id, viewCount: 1, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 72) },
+  ];
+
+  for (const viewData of productViewsData) {
+    await db.productView.create({ data: viewData });
+  }
+
+  // =====================
+  // 11. CREATE SEARCH HISTORY
+  // =====================
+  const searchHistoryData = [
+    { userId: buyer1.id, query: 'kaos polos grosir' },
+    { userId: buyer1.id, query: 'batik pria' },
+    { userId: buyer1.id, query: 'earbuds bluetooth' },
+    { userId: buyer2.id, query: 'hoodie oversize' },
+    { userId: buyer2.id, query: 'gaun muslimah' },
+    { userId: buyer2.id, query: 'speaker portable' },
+    { userId: buyer3.id, query: 'kaos polos' },
+    { userId: buyer3.id, query: 'powerbank fast charging' },
+    { userId: buyer4.id, query: 'celana jeans' },
+    { userId: buyer4.id, query: 'smartwatch sport' },
+  ];
+
+  for (const searchData of searchHistoryData) {
+    await db.searchHistory.create({ data: searchData });
+  }
+
+  // =====================
   // RETURN COUNTS
   // =====================
   return {
-    users: { sellers: 2, buyers: 2, total: 4 },
+    users: { sellers: 3, buyers: 4, total: 7 },
     products: {
       total: createdProducts.length,
       withVariants: productsData.filter((p) => p.variants.length > 0).length,
@@ -946,6 +1095,10 @@ async function seedDatabase(force = false) {
     orders: createdOrders.length,
     reviews: createdReviews.length,
     chats: createdChats.length,
+    addresses: addressesData.length,
+    cartItems: cartItemsData.length,
+    productViews: productViewsData.length,
+    searchHistory: searchHistoryData.length,
   };
 }
 

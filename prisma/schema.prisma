@@ -11,27 +11,58 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  name            String
-  password        String
-  phone           String    @default("")
-  city            String    @default("Jakarta")
-  address         String    @default("")
-  role            String    @default("buyer") // "buyer" | "seller"
-  storeName       String?   // seller only
-  storeDescription String?  // seller only
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
+  password         String
+  phone            String    @default("")
+  city             String    @default("Jakarta")
+  address          String    @default("")
+  province         String    @default("")
+  postalCode       String    @default("")
+  avatar           String    @default("")  // URL foto profil
+  gender           String    @default("")  // "pria" | "wanita" | ""
+  dateOfBirth      String    @default("")  // format YYYY-MM-DD
+  role             String    @default("buyer") // "buyer" | "seller"
+  storeName        String?   // seller only
+  storeDescription String?   // seller only
+  storeAvatar      String?   // seller only - URL foto toko
+  bankName         String?   // seller only - nama bank untuk pembayaran
+  bankAccount      String?   // seller only - nomor rekening
+  bankHolder       String?   // seller only - nama pemilik rekening
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  products        Product[]
-  reviews         Review[]
-  sentChats       Chat[]        @relation("SentChats")
-  receivedChats   Chat[]        @relation("ReceivedChats")
-  buyerOrders     Order[]       @relation("BuyerOrders")
-  sellerOrders    Order[]       @relation("SellerOrders")
-  wishlist        Wishlist[]
-  notifications   Notification[]
+  products         Product[]
+  reviews          Review[]
+  sentChats        Chat[]        @relation("SentChats")
+  receivedChats    Chat[]        @relation("ReceivedChats")
+  buyerOrders      Order[]       @relation("BuyerOrders")
+  sellerOrders     Order[]       @relation("SellerOrders")
+  wishlist         Wishlist[]
+  notifications    Notification[]
+  addresses        UserAddress[]
+  cartItems        CartItem[]
+  productViews     ProductView[]
+  searchHistory    SearchHistory[]
+}
+
+model UserAddress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label       String   // "Rumah", "Kantor", "Gudang", etc.
+  recipient   String   // Nama penerima
+  phone       String   // No. telp penerima
+  address     String   // Alamat lengkap
+  city        String
+  province    String   @default("")
+  postalCode  String   @default("")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Product {
@@ -48,6 +79,7 @@ model Product {
   active         Boolean       @default(true)
   sold           Int           @default(0)
   rating         Float         @default(0)
+  weight         Int           @default(500)  // gram, untuk hitung ongkir
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -58,6 +90,8 @@ model Product {
   orderItems     OrderItem[]
   reviews        Review[]
   wishlist       Wishlist[]
+  cartItems      CartItem[]
+  productViews   ProductView[]
 
   @@index([category])
   @@index([sellerId])
@@ -96,6 +130,7 @@ model Order {
   shippingCost    Int         @default(0)
   shippingAddress String      @default("")
   paymentMethod   String      @default("cod") // cod, transfer, ewallet
+  notes           String      @default("")    // Catatan dari buyer
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -167,11 +202,53 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   message   String
-  type      String   @default("info") // info, order, chat, promo
+  type      String   @default("info") // info, order, chat, promo, new_order, payment, shipping
   read      Boolean  @default(false)
   link      String   @default("")
   createdAt DateTime @default(now())
 
   @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  variants  String   @default("{}") // JSON: { "Ukuran": "L", "Warna": "Merah" }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId, variants]) // satu entry per kombinasi user+produk+varian
+  @@index([userId])
+  @@index([productId])
+}
+
+model ProductView {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  viewCount Int      @default(1)
+  lastViewed DateTime @default(now())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, productId]) // satu record per user per produk
+  @@index([userId, lastViewed])
+  @@index([productId])
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  createdAt DateTime @default(now())
+
   @@index([userId, createdAt])
 }
