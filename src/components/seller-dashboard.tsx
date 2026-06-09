@@ -32,6 +32,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useAuthStore } from '@/store/auth';
+import { useUIStore } from '@/store/ui';
+import { ChatPanel } from '@/components/chat-panel';
 import { formatPrice, getStatusInfo, CATEGORIES, PAYMENT_METHODS } from '@/lib/constants';
 import { calculateShipping, getCityNames } from '@/lib/shipping';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
@@ -108,6 +110,7 @@ const SIDEBAR_ITEMS = [
 
 export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const user = useAuthStore((s) => s.user);
+  const openChat = useUIStore((s) => s.openChat);
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,7 +177,12 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       setActiveTab('products');
       resetForm();
       setShowForm(true);
-    } else if (tabId === 'chat' || tabId === 'notifications' || tabId === 'promotions') {
+    } else if (tabId === 'chat') {
+      // Open chat panel for seller
+      openChat();
+      setSidebarOpen(false);
+      return;
+    } else if (tabId === 'notifications' || tabId === 'promotions') {
       // These are placeholder sections - just show a toast
       toast.info('Fitur segera hadir!');
       return;
@@ -507,9 +515,9 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                 />
               </div>
               <button
-                onClick={() => setActiveTab('beranda')}
+                onClick={onBack}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Beranda"
+                title="Kembali ke Dashboard Utama"
               >
                 <Home className="w-5 h-5 text-gray-500" />
               </button>
@@ -593,7 +601,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                   <ClipboardList className="w-5 h-5" /> Lihat Pesanan
                 </Button>
                 <Button
-                  onClick={() => toast.info('Fitur chat segera hadir!')}
+                  onClick={() => openChat()}
                   className="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl h-12 flex items-center justify-center gap-2"
                 >
                   <MessageCircle className="w-5 h-5" /> Cek Chat
@@ -1037,6 +1045,9 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
           </div>
         </footer>
       </div>
+
+      {/* Chat Panel */}
+      <ChatPanel />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>

@@ -79,3 +79,33 @@ Stage Summary:
 - Profile photo is clickable for sellers → opens seller dashboard
 - Seller dashboard completely redesigned to match Vercel with sidebar navigation, comprehensive stats, tips, missions
 - Lint passes, dev server running without errors
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Make home icon navigate to main dashboard, and make chat feature functional with role-based routing
+
+Work Log:
+- Analyzed user request: Home icon should go back to main GrosirPJ front page, chat should work for sellers (with buyers) and buyers (with sellers)
+- Read current seller-dashboard.tsx, chat-panel.tsx, ui.ts store, and auth.ts store
+- Changed Home icon in seller dashboard header from `setActiveTab('beranda')` to `onBack()` to navigate to main front page
+- Updated title tooltip from "Beranda" to "Kembali ke Dashboard Utama"
+- Imported useUIStore and ChatPanel in seller-dashboard.tsx
+- Added openChat() from useUIStore in SellerDashboard component
+- Changed "Chat Pembeli" sidebar item from toast.info('Fitur segera hadir!') to openChat()
+- Changed "Cek Chat" button in Beranda tab from toast.info to openChat()
+- Added <ChatPanel /> component inside seller dashboard JSX
+- Updated ChatPanel to be role-aware:
+  - Added sellerMode detection from auth store
+  - Title shows "Chat Pembeli" for sellers, "Chat" for buyers
+  - Description adapts: "Percakapan dengan pembeli" vs "Percakapan dengan seller"
+  - Empty state text: "Chat dari pembeli akan muncul di sini" vs "Chat seller dari halaman produk untuk mulai percakapan"
+  - Partner fallback label: "Pembeli" vs "Seller"
+- Lint passes, verified with agent browser - all features working correctly
+
+Stage Summary:
+- Home icon in seller dashboard now navigates back to main GrosirPJ front page (calls onBack)
+- Chat feature is now fully functional for sellers - opens chat panel with conversations
+- Chat is role-aware: shows "Chat Pembeli" for sellers, "Chat" for buyers
+- "Cek Chat" button and "Chat Pembeli" sidebar item both open the chat panel
+- Chat panel shows appropriate labels based on user role

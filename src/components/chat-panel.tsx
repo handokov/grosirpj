@@ -42,7 +42,10 @@ export function ChatPanel() {
   const closeChat = useUIStore((s) => s.closeChat);
 
   const user = useAuthStore((s) => s.user);
+  const sellerMode = useAuthStore((s) => s.sellerMode);
   const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
+
+  const isSeller = user?.role === 'seller' || sellerMode;
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -153,13 +156,13 @@ export function ChatPanel() {
       <SheetContent side="right" className="w-full sm:w-96 md:max-w-lg p-0 flex flex-col gap-0 overflow-hidden">
         <SheetHeader className="p-4 border-b border-gray-100">
           <SheetTitle className="text-lg font-display flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-emerald-500" /> Chat
+            <MessageCircle className="w-5 h-5 text-emerald-500" /> {isSeller ? 'Chat Pembeli' : 'Chat'}
             {totalUnread > 0 && (
               <Badge className="bg-red-500 text-white text-xs">{totalUnread}</Badge>
             )}
           </SheetTitle>
           <SheetDescription>
-            {activePartner ? 'Percakapan dengan seller' : 'Pilih percakapan'}
+            {activePartner ? (isSeller ? 'Percakapan dengan pembeli' : 'Percakapan dengan seller') : 'Pilih percakapan'}
           </SheetDescription>
         </SheetHeader>
 
@@ -189,7 +192,7 @@ export function ChatPanel() {
                   <div>
                     <p className="text-sm font-medium text-gray-800">
                       {conversations.find(c => c.partner.id === activePartner)?.partner?.storeName ||
-                       conversations.find(c => c.partner.id === activePartner)?.partner?.name || 'Seller'}
+                       conversations.find(c => c.partner.id === activePartner)?.partner?.name || (isSeller ? 'Pembeli' : 'Seller')}
                     </p>
                   </div>
                 </div>
@@ -241,7 +244,7 @@ export function ChatPanel() {
                   <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                     <MessageCircle className="w-12 h-12 text-gray-300 mb-4" />
                     <h3 className="font-semibold text-gray-800 mb-1">Belum Ada Chat</h3>
-                    <p className="text-sm text-gray-400">Chat seller dari halaman produk untuk mulai percakapan</p>
+                    <p className="text-sm text-gray-400">{isSeller ? 'Chat dari pembeli akan muncul di sini' : 'Chat seller dari halaman produk untuk mulai percakapan'}</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-100">
