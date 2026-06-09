@@ -582,15 +582,9 @@ function Navbar() {
                       </span>
                     </button>
                   )}
-                  {/* Profile - clickable for sellers to go to dashboard */}
+                  {/* Profile */}
                   <button
-                    onClick={() => {
-                      if (user.role === 'seller') {
-                        setSellerMode(true);
-                      }
-                    }}
-                    className={`hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/20 rounded-full ${user.role === 'seller' ? 'cursor-pointer hover:bg-white/20 transition-colors' : 'cursor-default'}`}
-                    title={user.role === 'seller' ? 'Buka Dashboard Seller' : undefined}
+                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/20 rounded-full cursor-default"
                   >
                     <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center">
                       <span className="text-gray-800 text-xs font-bold">{user.name.charAt(0).toUpperCase()}</span>

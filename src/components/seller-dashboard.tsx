@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
+import { useNotificationStore } from '@/store/notification';
 import { ChatPanel } from '@/components/chat-panel';
 import { formatPrice, getStatusInfo, CATEGORIES, PAYMENT_METHODS } from '@/lib/constants';
 import { calculateShipping, getCityNames } from '@/lib/shipping';
@@ -111,6 +112,14 @@ const SIDEBAR_ITEMS = [
 export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const user = useAuthStore((s) => s.user);
   const openChat = useUIStore((s) => s.openChat);
+
+  // Notification state
+  const [notifOpen, setNotifOpen] = useState(false);
+  const unreadNotifs = useNotificationStore((s) => s.unreadCount);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+  const markAsRead = useNotificationStore((s) => s.markAsRead);
+  const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,6 +169,11 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
     if (user) loadData();
   }, [user, fetchProducts, fetchOrders]);
 
+  // Fetch notifications when user is available
+  useEffect(() => {
+    if (user) fetchNotifications(user.id);
+  }, [user, fetchNotifications]);
+
   // Stats
   const totalProducts = products.length;
   const activeProducts = products.filter(p => p.active).length;
@@ -182,8 +196,12 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       openChat();
       setSidebarOpen(false);
       return;
-    } else if (tabId === 'notifications' || tabId === 'promotions') {
-      // These are placeholder sections - just show a toast
+    } else if (tabId === 'notifications') {
+      setNotifOpen(true);
+      setSidebarOpen(false);
+      return;
+    } else if (tabId === 'promotions') {
+      // Placeholder section - just show a toast
       toast.info('Fitur segera hadir!');
       return;
     } else {
@@ -421,7 +439,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
           const isActive = activeTab === item.id || (item.id === 'addProduct' && activeTab === 'products' && showForm);
           const badgeCount = item.showBadge === 'orders' ? pendingOrders
             : item.showBadge === 'chat' ? 2
-            : item.showBadge === 'notifications' ? 3 : 0;
+            : item.showBadge === 'notifications' ? unreadNotifs : 0;
 
           return (
             <button
@@ -521,10 +539,77 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
               >
                 <Home className="w-5 h-5 text-gray-500" />
               </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" title="Notifikasi">
+              <button
+                onClick={() => setNotifOpen(!notifOpen)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
+                title="Notifikasi"
+              >
                 <Bell className="w-5 h-5 text-gray-500" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white">
+                    {unreadNotifs > 99 ? '99+' : unreadNotifs}
+                  </span>
+                )}
               </button>
+              {/* Notification Dropdown */}
+              {notifOpen && (
+                <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[480px] overflow-hidden">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                    <h3 className="font-bold text-gray-900">Notifikasi</h3>
+                    {unreadNotifs > 0 && (
+                      <button
+                        className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                        onClick={() => { if (user) markAllAsRead(user.id); }}
+                      >
+                        Tandai semua dibaca
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <Bell className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                        <p className="text-gray-400 text-sm">Belum ada notifikasi</p>
+                      </div>
+                    ) : (
+                      notifications.slice(0, 20).map((notif) => (
+                        <button
+                          key={notif.id}
+                          className={`w-full text-left p-4 hover:bg-gray-50 border-b border-gray-50 transition-colors ${!notif.read ? 'bg-emerald-50/40' : ''}`}
+                          onClick={() => {
+                            if (!notif.read) markAsRead(notif.id);
+                            if (notif.type === 'order' || notif.type === 'new_order') {
+                              setActiveTab('orders');
+                              setNotifOpen(false);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${!notif.read ? 'bg-red-500' : 'bg-transparent'}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 line-clamp-1">{notif.title}</p>
+                              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.message}</p>
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                {new Date(notif.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  {notifications.length > 0 && (
+                    <div className="p-3 border-t border-gray-100 text-center">
+                      <button
+                        onClick={() => { setActiveTab('orders'); setNotifOpen(false); }}
+                        className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+                      >
+                        Lihat Semua Pesanan
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 text-xs hidden sm:flex">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1"></span>Online
               </Badge>

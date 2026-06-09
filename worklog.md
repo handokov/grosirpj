@@ -109,3 +109,43 @@ Stage Summary:
 - Chat is role-aware: shows "Chat Pembeli" for sellers, "Chat" for buyers
 - "Cek Chat" button and "Chat Pembeli" sidebar item both open the chat panel
 - Chat panel shows appropriate labels based on user role
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Add red circle notification badge with count on bell icon, create notification dropdown panel, revert seller photo auto-navigate
+
+Work Log:
+- Analyzed uploaded image showing notification panel with order details sliding from the right
+- User said "tidak jadi langsung ke dashboard seller" - reverting the seller photo click auto-navigate feature
+- Updated seller-dashboard.tsx:
+  - Imported useNotificationStore for notification data
+  - Added notifOpen state for controlling notification dropdown visibility
+  - Connected to notification store: unreadNotifs, notifications, fetchNotifications, markAsRead, markAllAsRead
+  - Added useEffect to fetch notifications when user is available
+  - Changed bell icon from simple red dot to proper red circle badge with unread count number
+  - Badge shows actual count (1, 2, 3, etc.) or "99+" for large numbers
+  - Added notification dropdown panel that appears when bell is clicked
+  - Panel shows notification items with title, message, timestamp, and read/unread indicators
+  - Unread items have red dot indicator and emerald-50 background
+  - "Tandai semua dibaca" button to mark all as read
+  - "Lihat Semua Pesanan" link at bottom to navigate to orders tab
+  - Clicking order-type notifications navigates to orders tab
+  - Updated sidebar "Notifikasi" badge to use real unreadNotifs count instead of hardcoded 3
+  - Changed sidebar "Notifikasi" click to open notification dropdown instead of toast
+- Updated page.tsx:
+  - Reverted seller profile photo click behavior - removed auto-navigate to seller dashboard
+  - Profile button is now cursor-default with no onClick handler
+- Updated seed data:
+  - Added more notifications for seller1 (4 total: 3 "Pesanan Baru" + 1 "Pembayaran Diterima")
+  - Added notifications for seller2 (2 total)
+  - Used "new_order" type for new order notifications
+- Verified with agent browser: all features working correctly
+
+Stage Summary:
+- Bell icon shows red circle with actual notification count (1, 2, 3, etc.)
+- Notification dropdown panel opens from the right side when bell is clicked
+- Panel shows list of notifications with titles like "Pesanan Baru" and "Pembayaran Diterima"
+- Seller profile photo no longer auto-navigates to seller dashboard (reverted per user request)
+- Store icon remains the way to access seller dashboard
+- Sidebar "Notifikasi" badge shows real unread count

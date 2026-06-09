@@ -61,11 +61,13 @@ const MAKANAN_IMGS = [
   'https://images.unsplash.com/photo-1559056199-641a0ac8b55e',
 ];
 
-async function seedDatabase() {
-  // Check if already seeded
-  const existingUsers = await db.user.count();
-  if (existingUsers > 0) {
-    return { message: 'Database already seeded', users: existingUsers };
+async function seedDatabase(force = false) {
+  // Check if already seeded (skip unless force=true)
+  if (!force) {
+    const existingUsers = await db.user.count();
+    if (existingUsers > 0) {
+      return { message: 'Database already seeded', users: existingUsers };
+    }
   }
 
   // Delete all existing data in reverse dependency order (safety for re-seed)
@@ -916,7 +918,12 @@ async function seedDatabase() {
     { userId: buyer1.id, title: 'Pesan Baru', message: 'CV Garment Prima mengirim pesan baru', type: 'chat', read: true },
     { userId: buyer2.id, title: 'Pesanan Selesai', message: 'Pesanan dari Elektronik Surabaya telah diterima', type: 'order', read: false },
     { userId: buyer2.id, title: 'Selamat Datang!', message: 'Terima kasih telah bergabung di GrosirPJ. Selamat berbelanja!', type: 'info', read: true },
-    { userId: seller1.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Siti Aminah', type: 'order', read: false },
+    { userId: seller1.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Siti Aminah', type: 'new_order', read: false },
+    { userId: seller1.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Budi Santoso', type: 'new_order', read: false },
+    { userId: seller1.id, title: 'Pembayaran Diterima', message: 'Pembayaran dari Siti Aminah telah diterima. Segera proses pesanan!', type: 'order', read: false },
+    { userId: seller1.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Dewi Lestari', type: 'new_order', read: false },
+    { userId: seller2.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Siti Aminah', type: 'new_order', read: false },
+    { userId: seller2.id, title: 'Pembayaran Diterima', message: 'Pembayaran dari Budi Santoso telah diterima', type: 'order', read: false },
   ];
 
   for (const notifData of notificationsData) {
@@ -942,10 +949,12 @@ async function seedDatabase() {
   };
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     await ensureDb();
-    const result = await seedDatabase();
+    const { searchParams } = new URL(request.url);
+    const force = searchParams.get('force') === 'true';
+    const result = await seedDatabase(force);
     return NextResponse.json({ success: true, message: 'Database seeded successfully', data: result });
   } catch (error) {
     console.error('Seed error:', error);
@@ -956,10 +965,12 @@ export async function POST() {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await ensureDb();
-    const result = await seedDatabase();
+    const { searchParams } = new URL(request.url);
+    const force = searchParams.get('force') === 'true';
+    const result = await seedDatabase(force);
     return NextResponse.json({ success: true, message: 'Database seeded successfully', data: result });
   } catch (error) {
     console.error('Seed error:', error);
