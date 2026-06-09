@@ -171,10 +171,7 @@ export function ChatPanel() {
     };
   }, [chatOpen, user, activePartner, fetchMessages, fetchConversations]);
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // No auto-scroll — let user manually scroll to read messages
 
   const handleSelectPartner = (partnerId: string) => {
     setActivePartner(partnerId);
