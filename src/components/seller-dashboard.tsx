@@ -139,6 +139,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const [form, setForm] = useState({ ...INITIAL_FORM, location: user?.city || 'Jakarta' });
   const [variantGroups, setVariantGroups] = useState<VariantGroupData[]>([]);
   const [imageInput, setImageInput] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -235,6 +236,66 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       setForm(prev => ({ ...prev, images: [...prev.images, url] }));
       setImageInput('');
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const remaining = 5 - form.images.length;
+    const filesToUpload = Array.from(files).slice(0, remaining);
+
+    if (filesToUpload.length === 0) {
+      toast.error('Maksimal 5 gambar per produk');
+      return;
+    }
+
+    setUploadingImage(true);
+    let uploaded = 0;
+
+    for (const file of filesToUpload) {
+      try {
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+          toast.error(`${file.name}: Format tidak didukung (JPG, PNG, WebP, GIF)`);
+          continue;
+        }
+
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`${file.name}: File terlalu besar (maks 5MB)`);
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'grosirpj/products');
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setForm(prev => ({ ...prev, images: [...prev.images, data.url] }));
+          uploaded++;
+        } else {
+          const data = await res.json();
+          toast.error(`${file.name}: ${data.error || 'Upload gagal'}`);
+        }
+      } catch {
+        toast.error(`${file.name}: Gagal mengupload`);
+      }
+    }
+
+    if (uploaded > 0) {
+      toast.success(`${uploaded} gambar berhasil diupload`);
+    }
+    setUploadingImage(false);
+    // Reset file input
+    e.target.value = '';
   };
 
   const handleRemoveImage = (idx: number) => {
@@ -934,10 +995,40 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                       {/* Images */}
                       <div>
                         <Label className="flex items-center gap-2 mb-2 text-sm font-semibold text-gray-700"><ImagePlus className="w-4 h-4 text-emerald-500" /> Gambar Produk (maks 5)</Label>
-                        <div className="flex gap-2 mb-3">
-                          <Input placeholder="Paste URL gambar..." value={imageInput} onChange={(e) => setImageInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddImage(); } }} className="rounded-xl flex-1" />
-                          <Button type="button" variant="outline" onClick={handleAddImage} disabled={form.images.length >= 5} className="rounded-xl px-4 border-emerald-300 text-emerald-600 hover:bg-emerald-50"><Upload className="w-4 h-4" /></Button>
+                        
+                        {/* Upload from device */}
+                        <div className="mb-3">
+                          <label className={`flex items-center justify-center gap-2 w-full h-20 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${uploadingImage ? 'border-gray-300 bg-gray-50 cursor-wait' : 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 hover:border-emerald-400'}`}>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              multiple
+                              onChange={handleImageUpload}
+                              disabled={uploadingImage || form.images.length >= 5}
+                              className="hidden"
+                            />
+                            {uploadingImage ? (
+                              <>
+                                <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                                <span className="text-sm text-emerald-600 font-medium">Mengupload...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-5 h-5 text-emerald-500" />
+                                <span className="text-sm text-emerald-600 font-medium">Upload dari perangkat</span>
+                                <span className="text-xs text-emerald-400">(JPG, PNG, WebP, GIF — maks 5MB)</span>
+                              </>
+                            )}
+                          </label>
                         </div>
+
+                        {/* Or paste URL */}
+                        <div className="flex gap-2 mb-3">
+                          <Input placeholder="Atau paste URL gambar..." value={imageInput} onChange={(e) => setImageInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddImage(); } }} className="rounded-xl flex-1" />
+                          <Button type="button" variant="outline" onClick={handleAddImage} disabled={form.images.length >= 5} className="rounded-xl px-4 border-emerald-300 text-emerald-600 hover:bg-emerald-50"><Plus className="w-4 h-4" /></Button>
+                        </div>
+
+                        {/* Image preview grid */}
                         <div className="grid grid-cols-5 gap-2">
                           {form.images.map((img, idx) => (
                             <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
@@ -946,10 +1037,17 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                               {idx === 0 && <span className="absolute bottom-1 left-1 bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">Utama</span>}
                             </div>
                           ))}
-                          {form.images.length < 5 && (
-                            <div className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-emerald-400 hover:text-emerald-500 transition-colors cursor-pointer" onClick={() => { }}>
+                          {form.images.length < 5 && !uploadingImage && (
+                            <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-emerald-400 hover:text-emerald-500 transition-colors cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                multiple
+                                onChange={handleImageUpload}
+                                className="hidden"
+                              />
                               <Plus className="w-5 h-5" /><span className="text-[10px] mt-1">Tambah</span>
-                            </div>
+                            </label>
                           )}
                         </div>
                       </div>
