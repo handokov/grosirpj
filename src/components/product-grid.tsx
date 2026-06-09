@@ -171,19 +171,19 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
     : products.filter((p) => p.discount >= 40).slice(0, 6);
 
   return (
-    <section id="products" className="py-10 bg-gray-50">
+    <section id="products" className="py-16 bg-gradient-to-b from-white to-[#f0fdf4]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex flex-col gap-6 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900">Produk Terlaris</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 font-display">Produk Terlaris</h2>
               <p className="text-gray-500 mt-1">{totalProducts} produk tersedia</p>
             </div>
             <div className="flex items-center gap-3">
               {/* Sort Dropdown */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] rounded-lg bg-white border-gray-200">
+                <SelectTrigger className="w-[180px] rounded-xl bg-white border-gray-200">
                   <SlidersHorizontal className="w-4 h-4 mr-2 text-gray-400" />
                   <SelectValue />
                 </SelectTrigger>
@@ -208,7 +208,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                 className="pl-10 rounded-xl bg-white"
               />
             </div>
-            <Button onClick={handleMobileSearch} className="bg-[#00A651] hover:bg-[#008F46] text-white rounded-lg px-4">
+            <Button onClick={handleMobileSearch} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl px-4">
               <Search className="w-4 h-4" />
             </Button>
           </div>
@@ -220,7 +220,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                 key={tab.key}
                 className={`px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-all ${
                   activeCategory === tab.key
-                    ? 'bg-[#00A651] text-white shadow-md'
+                    ? 'bg-emerald-500 text-white shadow-md'
                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                 }`}
                 onClick={() => setActiveCategory(tab.key)}
@@ -253,16 +253,16 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Produk tidak ditemukan</h3>
             <p className="text-gray-500 mb-4">Coba ubah filter atau kata kunci pencarian</p>
-            <Button variant="outline" onClick={() => { setActiveCategory('all'); setSearchQuery(''); }} className="border-[#00A651] text-[#00A651] hover:bg-green-50 rounded-lg">
+            <Button variant="outline" onClick={() => { setActiveCategory('all'); setSearchQuery(''); }} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 rounded-xl">
               Reset Filter
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
             {products.map((product) => (
               <div
                 key={product.id}
-                className="product-card bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg cursor-pointer group border border-gray-100"
+                className="product-card bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl cursor-pointer group"
                 onClick={() => openProductDetail(product.id)}
               >
                 <div className="relative overflow-hidden">
@@ -273,7 +273,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                     loading="lazy"
                   />
                   {product.discount > 0 && (
-                    <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
                       -{product.discount}%
                     </span>
                   )}
@@ -285,17 +285,17 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                     <Heart className={`w-4 h-4 ${isWishlisted(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
                   </button>
                   <button
-                    className="absolute bottom-2 right-2 w-8 h-8 bg-[#00A651] text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-[#008F46] transition-all transform translate-y-2 group-hover:translate-y-0 shadow-md"
+                    className="absolute bottom-3 right-3 w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-emerald-600 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg"
                     onClick={(e) => handleQuickAdd(e, product)}
                     aria-label="Tambah ke keranjang"
                   >
-                    <ShoppingCart className="w-4 h-4" />
+                    <ShoppingCart className="w-5 h-5" />
                   </button>
                 </div>
                 <div className="p-3 md:p-4">
                   <h3 className="text-sm font-medium text-gray-800 line-clamp-2 mb-2 h-10">{product.name}</h3>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base md:text-lg font-bold text-[#00A651]">{formatPrice(product.price)}</span>
+                    <span className="text-base md:text-lg font-bold text-emerald-600">{formatPrice(product.price)}</span>
                   </div>
                   {product.originalPrice > product.price && (
                     <span className="text-xs text-gray-400 line-through">{formatPrice(product.originalPrice)}</span>
@@ -322,7 +322,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
           <div className="text-center mt-10">
             <Button
               variant="outline"
-              className="px-8 py-4 bg-white text-[#00A651] font-semibold rounded-lg border-2 border-[#00A651] hover:bg-green-50 transition-all inline-flex items-center gap-2"
+              className="px-8 py-6 bg-white text-emerald-600 font-semibold rounded-2xl border-2 border-emerald-500 hover:bg-emerald-50 transition-all inline-flex items-center gap-2"
               onClick={() => setCurrentPage(currentPage + 1)}
             >
               Lihat Lebih Banyak ({totalProducts - products.length} produk lagi) <ChevronDown className="w-5 h-5" />
