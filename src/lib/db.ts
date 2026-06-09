@@ -1,25 +1,26 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaLibSql } from '@prisma/adapter-libsql'
-import { createClient } from '@libsql/client'
+import { PrismaLibSQL } from '@prisma/adapter-libsql'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
 function createPrismaClient() {
+  // Use TURSO_DATABASE_URL for Turso connection if available (runtime),
+  // fall back to DATABASE_URL (which Prisma CLI also uses for db push etc.)
+  const tursoUrl = process.env.TURSO_DATABASE_URL || ''
   const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db'
-  const isTurso = databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://')
+  const isTurso = tursoUrl.startsWith('libsql://') || tursoUrl.startsWith('https://') || databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://')
 
   if (isTurso) {
     // Turso / libSQL connection
+    // PrismaLibSQL in v6 is a FACTORY that takes config, not a client instance
+    const url = tursoUrl || databaseUrl
     const authToken = process.env.TURSO_AUTH_TOKEN || ''
 
-    const libsql = createClient({
-      url: databaseUrl,
-      authToken,
-    })
+    console.log(`[db] Connecting to Turso: ${url.substring(0, 30)}...`)
 
-    const adapter = new PrismaLibSql(libsql)
+    const adapter = new PrismaLibSQL({ url, authToken })
 
     return new PrismaClient({
       adapter,
@@ -33,6 +34,8 @@ function createPrismaClient() {
     if (process.env.VERCEL && resolvedUrl.startsWith('file:./')) {
       resolvedUrl = `file:///tmp/${resolvedUrl.replace('file:./', '')}`
     }
+
+    console.log(`[db] Connecting to local SQLite: ${resolvedUrl.substring(0, 40)}`)
 
     return new PrismaClient({
       log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
@@ -65,8 +68,9 @@ let dbEnsurePromise: Promise<void> | null = null;
  */
 export async function ensureDb(): Promise<void> {
   // If using Turso, skip ensureDb - data is persisted
+  const tursoUrl = process.env.TURSO_DATABASE_URL || ''
   const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db'
-  const isTurso = databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://')
+  const isTurso = tursoUrl.startsWith('libsql://') || tursoUrl.startsWith('https://') || databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://')
   if (isTurso) return
 
   if (dbTablesEnsured) return;

@@ -5,10 +5,15 @@ export async function GET() {
   const debug: Record<string, unknown> = {};
 
   try {
+    const databaseUrl = process.env.DATABASE_URL || 'not set';
+    const isTurso = databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://');
+
     debug.env = {
       VERCEL: process.env.VERCEL || 'not set',
-      DATABASE_URL: process.env.DATABASE_URL || 'not set',
+      DATABASE_URL_prefix: databaseUrl.substring(0, 30) + '...',
       NODE_ENV: process.env.NODE_ENV || 'not set',
+      TURSO_AUTH_TOKEN_set: !!process.env.TURSO_AUTH_TOKEN,
+      isTurso,
     };
 
     // Try to ensure tables exist
