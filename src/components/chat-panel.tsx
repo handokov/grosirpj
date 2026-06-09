@@ -171,7 +171,15 @@ export function ChatPanel() {
     };
   }, [chatOpen, user, activePartner, fetchMessages, fetchConversations]);
 
-    // No auto-scroll — let user manually scroll to read messages
+  // Scroll to bottom ONLY when opening a conversation (not on every polling update)
+  useEffect(() => {
+    if (activePartner) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [activePartner]);
 
   const handleSelectPartner = (partnerId: string) => {
     setActivePartner(partnerId);
