@@ -1,57 +1,74 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaLibSql } from '@prisma/adapter-libsql'
+import { createClient } from '@libsql/client'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// ============================================================
-// Database URL Resolution for Vercel Serverless
-// ============================================================
-function getDatabaseUrl() {
-  const defaultUrl = process.env.DATABASE_URL || 'file:./dev.db';
+function createPrismaClient() {
+  const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db'
+  const isTurso = databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://')
 
-  // If running on Vercel and DATABASE_URL is a relative path, redirect to /tmp
-  if (process.env.VERCEL && defaultUrl.startsWith('file:./')) {
-    // Use triple-slash for absolute path in SQLite URI format
-    return `file:///tmp/${defaultUrl.replace('file:./', '')}`;
-  }
+  if (isTurso) {
+    // Turso / libSQL connection
+    const authToken = process.env.TURSO_AUTH_TOKEN || ''
 
-  return defaultUrl;
-}
+    const libsql = createClient({
+      url: databaseUrl,
+      authToken,
+    })
 
-// On Vercel, we MUST set process.env.DATABASE_URL at runtime
-// because Prisma reads from env vars during query execution,
-// not just at client initialization time.
-const resolvedUrl = getDatabaseUrl();
-if (process.env.VERCEL) {
-  process.env.DATABASE_URL = resolvedUrl;
-}
+    const adapter = new PrismaLibSql(libsql)
 
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
-    datasources: {
-      db: {
-        url: resolvedUrl,
+    return new PrismaClient({
+      adapter,
+      log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
+    })
+  } else {
+    // Local SQLite connection
+    let resolvedUrl = databaseUrl
+
+    // If running on Vercel and DATABASE_URL is a relative path, redirect to /tmp
+    if (process.env.VERCEL && resolvedUrl.startsWith('file:./')) {
+      resolvedUrl = `file:///tmp/${resolvedUrl.replace('file:./', '')}`
+    }
+
+    return new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
+      datasources: {
+        db: {
+          url: resolvedUrl,
+        },
       },
-    },
-  })
+    })
+  }
+}
+
+export const db = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 
 // ============================================================
 // Database Table Initialization (for Vercel /tmp ephemeral DB)
+// Only used when NOT using Turso (local SQLite on Vercel)
 // ============================================================
 let dbTablesEnsured = false;
 let dbEnsurePromise: Promise<void> | null = null;
 
 /**
- * Ensures all database tables exist. On Vercel, the /tmp database is
- * ephemeral and starts empty on each cold start, so we need to create
- * tables AND seed demo data before any query.
+ * Ensures all database tables exist. On Vercel with local SQLite, the /tmp
+ * database is ephemeral and starts empty on each cold start, so we need to
+ * create tables AND seed demo data before any query.
+ *
+ * When using Turso, this function is a no-op since Turso persists data.
  */
 export async function ensureDb(): Promise<void> {
+  // If using Turso, skip ensureDb - data is persisted
+  const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db'
+  const isTurso = databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://')
+  if (isTurso) return
+
   if (dbTablesEnsured) return;
 
   // Deduplicate concurrent calls
@@ -211,6 +228,8 @@ async function createTablesAndSeedIfNeeded(): Promise<void> {
           "shippingCost" INTEGER NOT NULL DEFAULT 0,
           "shippingAddress" TEXT NOT NULL DEFAULT '',
           "paymentMethod" TEXT NOT NULL DEFAULT 'cod',
+          "paymentProof" TEXT NOT NULL DEFAULT '',
+          "paidAt" DATETIME,
           "notes" TEXT NOT NULL DEFAULT '',
           "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -549,7 +568,7 @@ async function seedDemoData(): Promise<void> {
   // 2. CREATE PRODUCTS (30 total)
   // =====================
   const productsData = [
-    // ===== SELLER 1 - CV Garment Prima (17 products) =====
+    // ===== SELLER 1 - CV Garment Prima =====
     {
       name: 'Kaos Polos Premium Cotton Combed 30s',
       description: 'Kaos polos premium berbahan cotton combed 30s, nyaman dipakai sehari-hari. Tersedia dalam berbagai ukuran dan warna. Cocok untuk reseller dan sablon.',
@@ -708,8 +727,6 @@ async function seedDemoData(): Promise<void> {
         { name: 'Ukuran', order: 0, options: ['M', 'L', 'XL', 'XXL'] },
       ],
     },
-
-    // KESEHATAN (2 products from seller1)
     {
       name: 'Masker Medis 3 Ply Box 50pcs',
       description: 'Masker medis 3 ply untuk perlindungan harian. Bahan non-woven yang lembut dan nyaman.',
@@ -746,8 +763,6 @@ async function seedDemoData(): Promise<void> {
       sellerId: seller1.id,
       variants: [],
     },
-
-    // KECANTIKAN (2 products from seller1)
     {
       name: 'Serum Vitamin C untuk Wajah',
       description: 'Serum vitamin C konsentrasi tinggi untuk mencerahkan wajah. Mengandung niacinamide dan hyaluronic acid.',
@@ -786,8 +801,6 @@ async function seedDemoData(): Promise<void> {
         { name: 'Tipe Kulit', order: 0, options: ['Berminyak', 'Kering', 'Normal', 'Sensitif'] },
       ],
     },
-
-    // MAKANAN (2 products from seller1)
     {
       name: 'Kopi Arabica Gayo Premium 1kg',
       description: 'Kopi arabica Gayo premium dari dataran tinggi Aceh. Roasting medium dengan rasa fruity dan nutty.',
@@ -827,8 +840,6 @@ async function seedDemoData(): Promise<void> {
         { name: 'Rasa', order: 0, options: ['Pedas Original', 'BBQ', 'Keju', 'Balado'] },
       ],
     },
-
-    // MAINAN (1 product from seller1)
     {
       name: 'Boneka Plush Bear 50cm',
       description: 'Boneka plush bear lembut dan menggemaskan berukuran 50cm. Bahan super soft yang aman untuk anak-anak.',
@@ -848,8 +859,6 @@ async function seedDemoData(): Promise<void> {
         { name: 'Warna', order: 0, options: ['Coklat', 'Putih', 'Pink', 'Abu-abu'] },
       ],
     },
-
-    // OLAHRAGA (2 products from seller1)
     {
       name: 'Sepatu Running Olahraga Unisex',
       description: 'Sepatu running olahraga unisex dengan teknologi cushion yang nyaman. Sol karet anti-slip.',
@@ -890,7 +899,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
 
-    // ===== SELLER 2 - Elektronik Surabaya (13 products) =====
+    // ===== SELLER 2 - Elektronik Surabaya =====
     {
       name: 'TWS Earbuds Bluetooth 5.3',
       description: 'TWS earbuds dengan Bluetooth 5.3 untuk koneksi stabil dan cepat. Bass yang powerful dan suara jernih.',
@@ -1006,8 +1015,6 @@ async function seedDemoData(): Promise<void> {
         { name: 'Port', order: 0, options: ['1 USB-C', '2 USB-C', '1C+1A', '2C+1A'] },
       ],
     },
-
-    // RUMAH TANGGA (3 products from seller2)
     {
       name: 'Lampu LED Strip 5m RGB Remote',
       description: 'Lampu LED strip sepanjang 5 meter dengan kontrol remote dan 16 juta warna.',
@@ -1063,8 +1070,6 @@ async function seedDemoData(): Promise<void> {
         { name: 'Warna', order: 0, options: ['Putih', 'Kayu Natural', 'Hitam'] },
       ],
     },
-
-    // MAINAN (2 products from seller2)
     {
       name: 'Set Balok Building Blocks 500pcs',
       description: 'Set balok building blocks 500pcs untuk kreativitas anak-anak. Bahan plastik ABS aman dan berkualitas.',
@@ -1101,8 +1106,6 @@ async function seedDemoData(): Promise<void> {
         { name: 'Warna', order: 0, options: ['Merah', 'Biru', 'Hitam', 'Putih'] },
       ],
     },
-
-    // OLAHRAGA (1 product from seller2)
     {
       name: 'Resistance Band Set 5 Level',
       description: 'Resistance band set 5 level ketebalan untuk latihan dari pemula hingga lanjutan.',
@@ -1116,21 +1119,19 @@ async function seedDemoData(): Promise<void> {
       active: true,
       sold: 1350,
       rating: 4.5,
-      weight: 400,
+      weight: 300,
       sellerId: seller2.id,
       variants: [],
     },
-
-    // MAKANAN (1 product from seller2)
     {
       name: 'Sambal Bawang Crispy Jar 250ml',
-      description: 'Sambal bawang crispy homemade dalam jar 250ml. Pedasnya nampol tapi nagih!',
+      description: 'Sambal bawang crispy dalam jar 250ml. Renyah dan pedas, cocok untuk lauk atau oleh-oleh.',
       price: 25000,
       originalPrice: 35000,
       category: 'makanan',
       images: JSON.stringify([img(MAKANAN_IMGS[0])]),
       minOrder: 24,
-      stock: 500,
+      stock: 800,
       location: 'Surabaya',
       active: true,
       sold: 3800,
@@ -1143,215 +1144,192 @@ async function seedDemoData(): Promise<void> {
     },
   ];
 
-  const createdProducts: { id: string; name: string; sellerId: string; price: number; category: string }[] = [];
-
-  for (const pData of productsData) {
-    const { variants, ...productFields } = pData;
+  // =====================
+  // 3. INSERT PRODUCTS WITH VARIANTS
+  // =====================
+  for (const p of productsData) {
+    const { variants, ...productFields } = p;
     const product = await db.product.create({
-      data: {
-        ...productFields,
-        variantGroups: {
-          create: variants.map((v: { name: string; order: number; options: string[] }) => ({
+      data: productFields as any,
+    });
+
+    if (variants && variants.length > 0) {
+      for (const v of variants) {
+        const variantGroup = await db.variantGroup.create({
+          data: {
             name: v.name,
             order: v.order,
-            options: { create: v.options.map((opt: string) => ({ value: opt })) },
+            productId: product.id,
+          },
+        });
+
+        await db.variantOption.createMany({
+          data: v.options.map((option: string) => ({
+            value: option,
+            variantGroupId: variantGroup.id,
           })),
-        },
+        });
+      }
+    }
+  }
+
+  // =====================
+  // 4. CREATE CHAT DATA
+  // =====================
+  await db.chat.createMany({
+    data: [
+      {
+        senderId: buyer1.id,
+        receiverId: seller1.id,
+        message: 'Halo, apakah kaos polos tersedia warna navy ukuran XL?',
+        read: true,
       },
+      {
+        senderId: seller1.id,
+        receiverId: buyer1.id,
+        message: 'Halo! Ya tersedia, kak. Stok masih banyak. Minimum order 12 pcs ya.',
+        read: true,
+      },
+      {
+        senderId: buyer1.id,
+        receiverId: seller1.id,
+        message: 'Oke, saya mau order 24 pcs. Bisa diskon ga?',
+        read: true,
+      },
+      {
+        senderId: seller1.id,
+        receiverId: buyer1.id,
+        message: 'Bisa dong, untuk 24 pcs saya kasih harga Rp 32.000/pcs ya. Mau lanjut?',
+        read: false,
+      },
+      {
+        senderId: buyer2.id,
+        receiverId: seller2.id,
+        message: 'Mas, charger GaN 33W yang 1C+1A ada stok?',
+        read: true,
+      },
+      {
+        senderId: seller2.id,
+        receiverId: buyer2.id,
+        message: 'Ada kak, stok masih 50 pcs. Langsung order aja ya!',
+        read: true,
+      },
+      {
+        senderId: buyer2.id,
+        receiverId: seller2.id,
+        message: 'Sip, saya order 12 pcs ya. Kirim ke Yogyakarta bisa?',
+        read: false,
+      },
+    ],
+  });
+
+  // =====================
+  // 5. CREATE NOTIFICATIONS
+  // =====================
+  await db.notification.createMany({
+    data: [
+      {
+        userId: seller1.id,
+        title: 'Pesanan Baru',
+        message: 'Anda menerima pesanan baru dari Budi Santoso',
+        type: 'new_order',
+        read: false,
+      },
+      {
+        userId: seller1.id,
+        title: 'Pembayaran Diterima',
+        message: 'Pembayaran untuk pesanan #ORD-001 telah diterima',
+        type: 'payment',
+        read: true,
+      },
+      {
+        userId: seller2.id,
+        title: 'Chat Baru',
+        message: 'Anda menerima pesan baru dari Siti Aminah',
+        type: 'chat',
+        read: false,
+      },
+      {
+        userId: buyer1.id,
+        title: 'Pesanan Dikirim',
+        message: 'Pesanan #ORD-001 telah dikirim oleh CV Garment Prima',
+        type: 'shipping',
+        read: false,
+      },
+      {
+        userId: buyer1.id,
+        title: 'Promo Flash Sale',
+        message: 'Flash Sale mulai pukul 12.00! Diskon hingga 90%',
+        type: 'promo',
+        read: true,
+      },
+    ],
+  });
+
+  // =====================
+  // 6. CREATE WISHLIST
+  // =====================
+  const topProducts = await db.product.findMany({ take: 5, orderBy: { sold: 'desc' } });
+  await db.wishlist.createMany({
+    data: topProducts.map((p) => ({
+      userId: buyer1.id,
+      productId: p.id,
+    })),
+  });
+
+  // =====================
+  // 7. CREATE ORDERS
+  // =====================
+  const product1 = await db.product.findFirst({ where: { name: 'Kaos Polos Premium Cotton Combed 30s' } });
+  const product2 = await db.product.findFirst({ where: { name: 'Kabel USB-C Fast Charging 1.5m' } });
+  const product3 = await db.product.findFirst({ where: { name: 'Sambal Bawang Crispy Jar 250ml' } });
+
+  if (product1 && product2 && product3) {
+    await db.order.createMany({
+      data: [
+        {
+          buyerId: buyer1.id,
+          sellerId: seller1.id,
+          status: 'delivered',
+          totalAmount: 768000,
+          shippingCost: 25000,
+          shippingAddress: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135',
+          paymentMethod: 'transfer',
+          paidAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+          notes: 'Tolong packing yang rapi ya',
+        },
+        {
+          buyerId: buyer2.id,
+          sellerId: seller2.id,
+          status: 'shipped',
+          totalAmount: 660000,
+          shippingCost: 30000,
+          shippingAddress: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271',
+          paymentMethod: 'transfer',
+          paidAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        },
+        {
+          buyerId: buyer1.id,
+          sellerId: seller2.id,
+          status: 'pending',
+          totalAmount: 165000,
+          shippingAddress: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135',
+          paymentMethod: 'cod',
+        },
+      ],
     });
-    createdProducts.push({ id: product.id, name: product.name, sellerId: product.sellerId, price: product.price, category: product.category });
-  }
 
-  // =====================
-  // 3. CREATE ORDERS (7 orders)
-  // =====================
-  const seller1Products = createdProducts.filter(p => p.sellerId === seller1.id);
-  const seller2Products = createdProducts.filter(p => p.sellerId === seller2.id);
-
-  const ordersData = [
-    {
-      buyerId: buyer1.id, sellerId: seller1.id, status: 'delivered', totalAmount: 420000, shippingCost: 15000,
-      shippingAddress: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135', paymentMethod: 'transfer', notes: '',
-      items: [{ productId: seller1Products[0].id, productName: seller1Products[0].name, quantity: 12, price: 35000, variants: JSON.stringify({ Ukuran: 'L', Warna: 'Hitam' }) }],
-    },
-    {
-      buyerId: buyer1.id, sellerId: seller2.id, status: 'shipped', totalAmount: 370000, shippingCost: 20000,
-      shippingAddress: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135', paymentMethod: 'ewallet', notes: 'Tolong pakai bubble wrap',
-      items: [
-        { productId: seller2Products[0].id, productName: seller2Products[0].name, quantity: 3, price: 75000, variants: JSON.stringify({ Warna: 'Hitam' }) },
-        { productId: seller2Products[3].id, productName: seller2Products[3].name, quantity: 1, price: 145000, variants: JSON.stringify({ 'Warna Strap': 'Hitam' }) },
-      ],
-    },
-    {
-      buyerId: buyer2.id, sellerId: seller1.id, status: 'paid', totalAmount: 510000, shippingCost: 18000,
-      shippingAddress: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271', paymentMethod: 'transfer', notes: '',
-      items: [{ productId: seller1Products[1].id, productName: seller1Products[1].name, quantity: 6, price: 85000, variants: JSON.stringify({ Ukuran: 'L', Motif: 'Parang' }) }],
-    },
-    {
-      buyerId: buyer2.id, sellerId: seller2.id, status: 'delivered', totalAmount: 245000, shippingCost: 22000,
-      shippingAddress: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271', paymentMethod: 'cod', notes: '',
-      items: [
-        { productId: seller2Products[1].id, productName: seller2Products[1].name, quantity: 2, price: 95000, variants: JSON.stringify({ Warna: 'Hitam' }) },
-        { productId: seller2Products[5].id, productName: seller2Products[5].name, quantity: 1, price: 55000, variants: JSON.stringify({ Port: '1C+1A' }) },
-      ],
-    },
-    {
-      buyerId: buyer1.id, sellerId: seller1.id, status: 'pending', totalAmount: 285000, shippingCost: 15000,
-      shippingAddress: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135', paymentMethod: 'ewallet', notes: 'Ukuran L warna Hitam ya',
-      items: [{ productId: seller1Products[4].id, productName: seller1Products[4].name, quantity: 3, price: 95000, variants: JSON.stringify({ Ukuran: 'L', Warna: 'Hitam' }) }],
-    },
-    {
-      buyerId: buyer2.id, sellerId: seller1.id, status: 'cancelled', totalAmount: 135000, shippingCost: 18000,
-      shippingAddress: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271', paymentMethod: 'transfer', notes: 'Batal karena salah pesan',
-      items: [{ productId: seller1Products[9].id, productName: seller1Products[9].name, quantity: 1, price: 135000, variants: JSON.stringify({ Ukuran: 'S', Warna: 'Maroon' }) }],
-    },
-    {
-      buyerId: buyer1.id, sellerId: seller2.id, status: 'shipped', totalAmount: 200000, shippingCost: 20000,
-      shippingAddress: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135', paymentMethod: 'transfer', notes: '',
-      items: [
-        { productId: seller2Products[2].id, productName: seller2Products[2].name, quantity: 1, price: 110000, variants: JSON.stringify({ Warna: 'Hitam' }) },
-        { productId: seller2Products[4].id, productName: seller2Products[4].name, quantity: 5, price: 18000, variants: JSON.stringify({ Tipe: 'USB-C to USB-C', Panjang: '1.5m' }) },
-      ],
-    },
-  ];
-
-  for (const orderData of ordersData) {
-    const { items, ...orderFields } = orderData;
-    await db.order.create({ data: { ...orderFields, items: { create: items } } });
-  }
-
-  // =====================
-  // 4. CREATE REVIEWS
-  // =====================
-  const reviewsData = [
-    { productId: seller1Products[0].id, userId: buyer1.id, rating: 5, comment: 'Kaos nyaman banget, bahan adem dan tidak panas. Sudah langganan beli disini. Packing juga rapi.' },
-    { productId: seller1Products[0].id, userId: buyer2.id, rating: 4, comment: 'Bahan bagus, tapi ukurannya agak besar dari yang saya kira. Overall puas dengan kualitasnya.' },
-    { productId: seller1Products[1].id, userId: buyer2.id, rating: 5, comment: 'Batiknya cantik banget! Motifnya detail dan bahan halus. Cocok untuk acara formal.' },
-    { productId: seller1Products[2].id, userId: buyer1.id, rating: 4, comment: 'Jeans nyaman dan stretchy. Potongannya pas. Cuma warnanya agak beda sedikit dari foto.' },
-    { productId: seller1Products[3].id, userId: buyer2.id, rating: 5, comment: 'Gaunnya elegan banget, bahannya jatuh dan tidak menerawang. Puas banget!' },
-    { productId: seller1Products[4].id, userId: buyer1.id, rating: 5, comment: 'Hoodie-nya tebal dan hangat, bahan fleece berkualitas. Warna sage-nya cantik banget.' },
-    { productId: seller1Products[8].id, userId: buyer1.id, rating: 4, comment: 'Vitamin C-nya bagus, saya minum rutin dan badan jadi lebih fit.' },
-    { productId: seller1Products[10].id, userId: buyer2.id, rating: 5, comment: 'Serum vitamin C-nya luar biasa! Kulit saya jadi lebih cerah setelah 2 minggu pemakaian.' },
-    { productId: seller2Products[0].id, userId: buyer1.id, rating: 4, comment: 'TWS-nya bagus untuk harga segini. Bass-nya oke dan koneksi bluetooth stabil.' },
-    { productId: seller2Products[1].id, userId: buyer2.id, rating: 5, comment: 'Speaker-nya kenceng banget untuk ukuran portable. Bass-nya nendang!' },
-    { productId: seller2Products[2].id, userId: buyer1.id, rating: 5, comment: 'Powerbank kualitas terbaik! Fast charging beneran works.' },
-    { productId: seller2Products[6].id, userId: buyer2.id, rating: 4, comment: 'LED strip-nya terang dan warnanya variatif. Remote-nya juga responsif.' },
-  ];
-
-  for (const reviewData of reviewsData) {
-    await db.review.create({ data: reviewData });
-  }
-
-  // =====================
-  // 5. CREATE CHATS
-  // =====================
-  const chatsData = [
-    { senderId: buyer1.id, receiverId: seller1.id, message: 'Halo kak, kaos polos ini apakah ready stock semua warna?', read: true },
-    { senderId: seller1.id, receiverId: buyer1.id, message: 'Halo! Ready stock kak. Warna hitam, putih, dan navy paling banyak stoknya.', read: true },
-    { senderId: buyer1.id, receiverId: seller1.id, message: 'Kalau beli 12 pcs bisa dapat harga berapa ya? Apakah masih bisa nego?', read: true },
-    { senderId: seller1.id, receiverId: buyer1.id, message: 'Untuk 12 pcs harga sudah yang tertera kak. 24 pcs bisa diskon!', read: false },
-    { senderId: buyer2.id, receiverId: seller2.id, message: 'Mas, TWS earbuds ini garansi berapa lama?', read: true },
-    { senderId: seller2.id, receiverId: buyer2.id, message: 'Garansi 6 bulan kak, klaim garansi langsung ke kami.', read: false },
-    { senderId: buyer2.id, receiverId: seller2.id, message: 'Oke siap mas. Saya mau order 10 pcs TWS warna hitam.', read: false },
-    { senderId: seller1.id, receiverId: buyer2.id, message: 'Kak, gaun muslimah motif hijau sage sudah restock ya. Mau cek di katalog kami?', read: false },
-  ];
-
-  for (const chatData of chatsData) {
-    await db.chat.create({ data: chatData });
-  }
-
-  // =====================
-  // 6. CREATE NOTIFICATIONS
-  // =====================
-  const notificationsData = [
-    { userId: buyer1.id, title: 'Pesanan Dikirim', message: 'Pesanan #ORD-001 dari CV Garment Prima sedang dalam pengiriman', type: 'order', read: false, link: '' },
-    { userId: buyer1.id, title: 'Flash Sale Dimulai!', message: 'Jangan lewatkan diskon hingga 70% untuk produk pilihan', type: 'promo', read: false, link: '' },
-    { userId: buyer1.id, title: 'Pesan Baru', message: 'CV Garment Prima mengirim pesan baru', type: 'chat', read: true, link: '' },
-    { userId: buyer2.id, title: 'Pesanan Selesai', message: 'Pesanan dari Elektronik Surabaya telah diterima', type: 'order', read: false, link: '' },
-    { userId: buyer2.id, title: 'Selamat Datang!', message: 'Terima kasih telah bergabung di GrosirPJ. Selamat berbelanja!', type: 'info', read: true, link: '' },
-    { userId: seller1.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Siti Aminah', type: 'new_order', read: false, link: '' },
-    { userId: seller1.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Budi Santoso', type: 'new_order', read: false, link: '' },
-    { userId: seller1.id, title: 'Pembayaran Diterima', message: 'Pembayaran dari Siti Aminah telah diterima. Segera proses pesanan!', type: 'order', read: false, link: '' },
-    { userId: seller1.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Dewi Lestari', type: 'new_order', read: false, link: '' },
-    { userId: seller2.id, title: 'Pesanan Baru', message: 'Anda mendapat pesanan baru dari Siti Aminah', type: 'new_order', read: false, link: '' },
-    { userId: seller2.id, title: 'Pembayaran Diterima', message: 'Pembayaran dari Budi Santoso telah diterima', type: 'order', read: false, link: '' },
-  ];
-
-  for (const notifData of notificationsData) {
-    await db.notification.create({ data: notifData });
-  }
-
-  // =====================
-  // 7. CREATE USER ADDRESSES
-  // =====================
-  const addressesData = [
-    { userId: buyer1.id, label: 'Rumah', recipient: 'Budi Santoso', phone: '0812-3456-7890', address: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135', city: 'Bandung', province: 'Jawa Barat', postalCode: '40135', isDefault: true },
-    { userId: buyer1.id, label: 'Kantor', recipient: 'Budi Santoso', phone: '022-4455667', address: 'Jl. Asia Afrika No. 15, Bandung, Jawa Barat 40261', city: 'Bandung', province: 'Jawa Barat', postalCode: '40261', isDefault: false },
-    { userId: buyer2.id, label: 'Rumah', recipient: 'Siti Aminah', phone: '0878-9012-3456', address: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271', city: 'Yogyakarta', province: 'DI Yogyakarta', postalCode: '55271', isDefault: true },
-    { userId: buyer3.id, label: 'Rumah', recipient: 'Dewi Lestari', phone: '0856-7890-1234', address: 'Jl. Pandanaran No. 10, Semarang, Jawa Tengah 50134', city: 'Semarang', province: 'Jawa Tengah', postalCode: '50134', isDefault: true },
-    { userId: buyer4.id, label: 'Rumah', recipient: 'Ahmad Rizki', phone: '0813-5678-9012', address: 'Jl. Gatot Subroto No. 55, Medan, Sumatera Utara 20112', city: 'Medan', province: 'Sumatera Utara', postalCode: '20112', isDefault: true },
-    { userId: seller1.id, label: 'Gudang', recipient: 'CV Garment Prima', phone: '021-5551234', address: 'Jl. Tanah Abang Blok A No. 12, Jakarta Pusat, DKI Jakarta 10150', city: 'Jakarta', province: 'DKI Jakarta', postalCode: '10150', isDefault: true },
-    { userId: seller2.id, label: 'Toko', recipient: 'Elektronik Surabaya', phone: '031-7779876', address: 'Jl. Genteng Kali No. 45, Surabaya, Jawa Timur 60275', city: 'Surabaya', province: 'Jawa Timur', postalCode: '60275', isDefault: true },
-  ];
-
-  for (const addrData of addressesData) {
-    await db.userAddress.create({ data: addrData });
-  }
-
-  // =====================
-  // 8. CREATE CART ITEMS
-  // =====================
-  const cartItemsData = [
-    { userId: buyer1.id, productId: seller1Products[1].id, quantity: 6, variants: JSON.stringify({ Ukuran: 'L', Motif: 'Parang' }) },
-    { userId: buyer1.id, productId: seller2Products[0].id, quantity: 3, variants: JSON.stringify({ Warna: 'Hitam' }) },
-    { userId: buyer2.id, productId: seller1Products[4].id, quantity: 2, variants: JSON.stringify({ Ukuran: 'M', Warna: 'Sage' }) },
-    { userId: buyer3.id, productId: seller1Products[0].id, quantity: 24, variants: JSON.stringify({ Ukuran: 'L', Warna: 'Hitam' }) },
-    { userId: buyer3.id, productId: seller2Products[2].id, quantity: 1, variants: JSON.stringify({ Warna: 'Hitam' }) },
-  ];
-
-  for (const cartData of cartItemsData) {
-    await db.cartItem.create({ data: cartData });
-  }
-
-  // =====================
-  // 9. CREATE PRODUCT VIEWS
-  // =====================
-  const productViewsData = [
-    { userId: buyer1.id, productId: seller1Products[0].id, viewCount: 5, lastViewed: new Date(Date.now() - 1000 * 60 * 30) },
-    { userId: buyer1.id, productId: seller1Products[1].id, viewCount: 3, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-    { userId: buyer1.id, productId: seller2Products[0].id, viewCount: 2, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 5) },
-    { userId: buyer1.id, productId: seller2Products[2].id, viewCount: 1, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 24) },
-    { userId: buyer2.id, productId: seller1Products[4].id, viewCount: 4, lastViewed: new Date(Date.now() - 1000 * 60 * 15) },
-    { userId: buyer2.id, productId: seller1Products[3].id, viewCount: 2, lastViewed: new Date(Date.now() - 1000 * 60 * 60) },
-    { userId: buyer2.id, productId: seller2Products[1].id, viewCount: 3, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 3) },
-    { userId: buyer3.id, productId: seller1Products[0].id, viewCount: 7, lastViewed: new Date(Date.now() - 1000 * 60 * 5) },
-    { userId: buyer3.id, productId: seller2Products[2].id, viewCount: 2, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 8) },
-    { userId: buyer4.id, productId: seller1Products[2].id, viewCount: 1, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 48) },
-    { userId: buyer4.id, productId: seller2Products[3].id, viewCount: 1, lastViewed: new Date(Date.now() - 1000 * 60 * 60 * 72) },
-  ];
-
-  for (const viewData of productViewsData) {
-    await db.productView.create({ data: viewData });
-  }
-
-  // =====================
-  // 10. CREATE SEARCH HISTORY
-  // =====================
-  const searchHistoryData = [
-    { userId: buyer1.id, query: 'kaos polos grosir' },
-    { userId: buyer1.id, query: 'batik pria' },
-    { userId: buyer1.id, query: 'earbuds bluetooth' },
-    { userId: buyer2.id, query: 'hoodie oversize' },
-    { userId: buyer2.id, query: 'gaun muslimah' },
-    { userId: buyer2.id, query: 'speaker portable' },
-    { userId: buyer3.id, query: 'kaos polos' },
-    { userId: buyer3.id, query: 'powerbank fast charging' },
-    { userId: buyer4.id, query: 'celana jeans' },
-    { userId: buyer4.id, query: 'smartwatch sport' },
-  ];
-
-  for (const searchData of searchHistoryData) {
-    await db.searchHistory.create({ data: searchData });
+    // Order Items
+    const orders = await db.order.findMany({ take: 3, orderBy: { createdAt: 'desc' } });
+    if (orders.length >= 3) {
+      await db.orderItem.createMany({
+        data: [
+          { orderId: orders[2].id, productId: product1.id, productName: product1.name, quantity: 24, price: 32000, variants: '{"Ukuran":"XL","Warna":"Navy"}' },
+          { orderId: orders[1].id, productId: product2.id, productName: product2.name, quantity: 12, price: 55000, variants: '{"Tipe":"USB-C to USB-C","Panjang":"1.5m"}' },
+          { orderId: orders[0].id, productId: product3.id, productName: product3.name, quantity: 6, price: 25000, variants: '{"Level Pedas":"Extra Pedas"}' },
+        ],
+      });
+    }
   }
 
   console.log('[ensureDb] Demo data seeded successfully');
