@@ -31,18 +31,18 @@ import { AuthModal } from '@/components/auth-modal';
 import { SellerDashboard } from '@/components/seller-dashboard';
 import { Footer } from '@/components/footer';
 
-// ===== QUICK NAV ICONS (Shopee-style) =====
+// ===== QUICK NAV ICONS (Shopee-style with vibrant solid colors) =====
 const QUICK_NAV_ITEMS = [
-  { key: 'flash-sale', label: 'Flash Sale', icon: Flame, color: '#EF4444', bg: '#FEE2E2' },
-  { key: 'gratis-ongkir', label: 'Gratis Ongkir', icon: Truck, color: '#10B981', bg: '#D1FAE5' },
-  { key: 'voucher', label: 'Voucher', icon: Ticket, color: '#F59E0B', bg: '#FEF3C7' },
-  { key: 'belanja', label: 'Belanja', icon: ShoppingBag, color: '#3B82F6', bg: '#DBEAFE' },
-  { key: 'produk-baru', label: 'Produk Baru', icon: Sparkles, color: '#8B5CF6', bg: '#EDE9FE' },
-  { key: 'bayar-tempat', label: 'Bayar Tempat', icon: Wallet, color: '#F59E0B', bg: '#FEF3C7' },
-  { key: 'official', label: 'Official Store', icon: Award, color: '#EC4899', bg: '#FCE7F3' },
-  { key: 'garansi', label: 'Garansi', icon: Shield, color: '#14B8A6', bg: '#CCFBF1' },
-  { key: 'top-up', label: 'Top Up', icon: Smartphone, color: '#6366F1', bg: '#E0E7FF' },
-  { key: 'wishlist', label: 'Wishlist', icon: Heart, color: '#EF4444', bg: '#FEE2E2' },
+  { key: 'flash-sale', label: 'Flash Sale', icon: Flame, color: '#FFFFFF', bg: '#EF4444' },
+  { key: 'gratis-ongkir', label: 'Gratis Ongkir', icon: Truck, color: '#FFFFFF', bg: '#10B981' },
+  { key: 'voucher', label: 'Voucher', icon: Ticket, color: '#FFFFFF', bg: '#F59E0B' },
+  { key: 'belanja', label: 'Belanja', icon: ShoppingBag, color: '#FFFFFF', bg: '#3B82F6' },
+  { key: 'produk-baru', label: 'Produk Baru', icon: Sparkles, color: '#FFFFFF', bg: '#8B5CF6' },
+  { key: 'bayar-tempat', label: 'Bayar Tempat', icon: Wallet, color: '#FFFFFF', bg: '#F97316' },
+  { key: 'official', label: 'Official Store', icon: Award, color: '#FFFFFF', bg: '#EC4899' },
+  { key: 'garansi', label: 'Garansi', icon: Shield, color: '#FFFFFF', bg: '#14B8A6' },
+  { key: 'top-up', label: 'Top Up', icon: Smartphone, color: '#FFFFFF', bg: '#6366F1' },
+  { key: 'wishlist', label: 'Wishlist', icon: Heart, color: '#FFFFFF', bg: '#EF4444' },
 ];
 
 // ===== FLASH SALE COUNTDOWN =====
@@ -73,9 +73,9 @@ function FlashSaleTimer() {
           { val: time.seconds, label: 'Detik' },
         ].map((item, idx) => (
           <div key={item.label} className="flex items-center gap-1.5">
-            <div className="bg-white/20 px-2.5 py-1.5 rounded text-center min-w-[40px]">
+            <div className="bg-[#004D40] px-2.5 py-1.5 rounded text-center min-w-[40px]">
               <span className="text-lg font-bold text-white">{item.val.toString().padStart(2, '0')}</span>
-              <p className="text-[10px] text-white/60">{item.label}</p>
+              <p className="text-[10px] text-white/70">{item.label}</p>
             </div>
             {idx < 2 && <span className="text-white/60 font-bold">:</span>}
           </div>
@@ -147,7 +147,7 @@ function FlashSaleSection() {
                   className="w-full h-32 md:h-36 object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                 />
-                <span className="absolute top-1 left-1 bg-[#FFC107] text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
+                <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                   -{product.discount}%
                 </span>
               </div>
@@ -203,7 +203,7 @@ function QuickNavSection() {
               >
                 <item.icon className="w-6 h-6" style={{ color: item.color }} />
               </div>
-              <span className="text-[11px] font-medium text-gray-700 text-center leading-tight">{item.label}</span>
+              <span className="text-[11px] font-medium text-gray-800 text-center leading-tight">{item.label}</span>
             </button>
           ))}
         </div>
@@ -447,7 +447,7 @@ function Navbar() {
   );
 }
 
-// ===== HERO BANNER (Shopee-style) =====
+// ===== HERO BANNER (Shopee-style - clean product collage) =====
 function HeroBanner() {
   return (
     <section className="pt-[108px] md:pt-[64px] bg-[#00A651] pb-8">
@@ -461,33 +461,22 @@ function HeroBanner() {
             <img src="https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=400&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
           </div>
           {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#00A651]/90 via-[#00A651]/60 to-transparent" />
-          {/* Content */}
-          <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FFC107] rounded-full mb-4 w-fit">
-              <Flame className="w-4 h-4 text-red-600" />
-              <span className="text-sm font-semibold text-black">Flash Sale Hari Ini</span>
-            </div>
-            <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-3">
-              Belanja Grosir{' '}
-              <span className="text-[#FFC107]">Mudah & Murah</span>
-            </h1>
-            <p className="text-white/80 text-sm md:text-base mb-6 max-w-md">
-              Temukan ribuan produk grosir berkualitas dengan harga terbaik. Gratis ongkir & pengiriman cepat!
-            </p>
-            <div className="flex gap-3">
-              <Button
-                className="bg-[#FFC107] hover:bg-[#FFB300] text-black font-semibold rounded px-6 py-2.5 transition-colors"
-                onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                Selengkapnya <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#00A651]/80 via-[#00A651]/40 to-transparent" />
+          {/* Simple CTA button only */}
+          <div className="absolute bottom-6 left-6 md:left-12">
+            <Button
+              className="bg-[#FFC107] hover:bg-[#FFB300] text-black font-semibold rounded px-6 py-2.5 transition-colors shadow-lg"
+              onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Selengkapnya <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
           </div>
           {/* Pagination dots */}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
             <div className="w-2 h-2 rounded-full bg-white/40" />
             <div className="w-2 h-2 rounded-full bg-white" />
+            <div className="w-2 h-2 rounded-full bg-white/40" />
+            <div className="w-2 h-2 rounded-full bg-white/40" />
             <div className="w-2 h-2 rounded-full bg-white/40" />
           </div>
         </div>

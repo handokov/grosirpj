@@ -273,7 +273,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                     loading="lazy"
                   />
                   {product.discount > 0 && (
-                    <span className="absolute top-1 left-1 bg-[#FFC107] text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                       -{product.discount}%
                     </span>
                   )}
