@@ -220,3 +220,44 @@ Stage Summary:
 - All 4 missing tables added: UserAddress, CartItem, ProductView, SearchHistory
 - All missing columns added to existing tables: User (9 cols), Product (1 col), Order (1 col)
 - Products will now show up correctly on Vercel deployment
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Fix chat input to WhatsApp-style (Shift+Enter for new line, Enter to send, max 5 visible lines) and add demo credentials hint for Vercel users
+
+Work Log:
+- Read chat-panel.tsx, chat API route, auth store, and product API routes
+- Analyzed the issue: chat input was a single-line `<Input>` that couldn't support multi-line text
+- Identified that Vercel users couldn't see chat messages because they didn't know which demo accounts had conversations
+- Completely rewrote chat-panel.tsx with WhatsApp-style design:
+  - Replaced `<Input>` with auto-resizing `<textarea>` (min 1 line, max 5 lines visible, scroll beyond 5)
+  - Enter sends message, Shift+Enter creates new line (WhatsApp behavior)
+  - Added emoji button placeholder, attachment button, and green round send button
+  - Changed message bubble design: own messages → emerald-100 bg (right-aligned), received → white bg (left-aligned)
+  - Added double checkmark (✓✓) for read messages, single for unread
+  - Added "Online" status under partner name
+  - Changed message area background to WhatsApp-style chat wallpaper pattern
+  - Added "Anda: " prefix for own messages in conversation list
+  - Changed unread badge to emerald-500 (WhatsApp green) with rounded-full style
+  - Made avatar larger (w-12 h-12) in conversation list
+- Added demo account credentials display:
+  - When user is not logged in and opens chat → shows demo accounts with icons
+  - When logged in but no conversations → shows demo account info at bottom
+  - Shows email and label for each demo account (buyer@grosirpj.id, seller1@grosirpj.id)
+- Verified with agent browser:
+  - Chat panel opens correctly
+  - Conversations show for logged-in buyer user
+  - Message thread displays all messages with correct bubble styling
+  - WhatsApp-style input with emoji, attachment, and send buttons visible
+  - Messages send successfully when clicking send button
+- Lint passes, no errors
+
+Stage Summary:
+- Chat input is now WhatsApp-style with textarea that auto-resizes (up to 5 lines visible, then scrolls)
+- Enter sends, Shift+Enter creates new line
+- Added emoji button, attachment button, and round green send button
+- Message bubbles redesigned: emerald-100 for sent, white for received
+- Double checkmark for read receipts
+- Demo account credentials shown when user is not logged in or has no conversations
+- All chat functionality verified working via agent browser
