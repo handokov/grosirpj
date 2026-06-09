@@ -130,6 +130,8 @@ model Order {
   shippingCost    Int         @default(0)
   shippingAddress String      @default("")
   paymentMethod   String      @default("cod") // cod, transfer, ewallet
+  paymentProof    String      @default("")    // Catatan/bukti pembayaran dari buyer
+  paidAt          DateTime?                    // Waktu pembayaran dikonfirmasi
   notes           String      @default("")    // Catatan dari buyer
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

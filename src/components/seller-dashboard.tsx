@@ -7,6 +7,7 @@ import {
   Upload, Eye, BarChart3, ShoppingBag, Star, ArrowRight, AlertCircle, CheckCircle,
   Home, ClipboardList, MessageCircle, Bell, Megaphone, Clock, Truck,
   RotateCcw, Download, TrendingUp, Target, Newspaper, Menu, Search,
+  CreditCard, Banknote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,6 +74,8 @@ interface SellerOrder {
   totalAmount: number;
   shippingAddress: string;
   paymentMethod: string;
+  paymentProof: string;
+  paidAt: string | null;
   createdAt: string;
   items: { id: string; productName: string; quantity: number; price: number; variants: string }[];
   buyer: { id: string; name: string; email: string; city?: string };
@@ -1044,14 +1047,32 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                             </div>
                           ))}
                         </div>
+                        {/* Payment method & proof */}
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <CreditCard className="w-3 h-3" />
+                            {order.paymentMethod === 'cod' ? 'COD' : order.paymentMethod === 'transfer' ? 'Transfer Bank' : 'E-Wallet'}
+                          </span>
+                          {order.paymentProof && (
+                            <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              <Banknote className="w-3 h-3" />
+                              {order.paymentProof.length > 40 ? order.paymentProof.slice(0, 40) + '...' : order.paymentProof}
+                            </span>
+                          )}
+                          {order.paidAt && (
+                            <span className="text-gray-400">Dibayar: {new Date(order.paidAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                          )}
+                        </div>
                         <Separator />
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
                           <div className="flex gap-2">
                             {order.status === 'pending' && (
                               <>
+                                {order.paymentProof && (
+                                  <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => handleUpdateOrderStatus(order.id, 'paid')}>✓ Konfirmasi Bayar</Button>
+                                )}
                                 <Button size="sm" variant="outline" className="rounded-lg text-xs border-red-300 text-red-500 hover:bg-red-50" onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}>Tolak</Button>
-                                <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => handleUpdateOrderStatus(order.id, 'paid')}>Konfirmasi Bayar</Button>
                               </>
                             )}
                             {order.status === 'paid' && (

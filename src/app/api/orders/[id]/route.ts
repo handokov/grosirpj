@@ -39,6 +39,9 @@ export async function GET(
             storeName: true,
             phone: true,
             city: true,
+            bankName: true,
+            bankAccount: true,
+            bankHolder: true,
           },
         },
       },
@@ -70,7 +73,7 @@ export async function PATCH(
     await ensureDb();
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
+    const { status, paymentProof } = body;
 
     if (!status) {
       return Response.json(
@@ -109,9 +112,18 @@ export async function PATCH(
       );
     }
 
+    // Build update data
+    const updateData: Record<string, unknown> = { status };
+    if (paymentProof) {
+      updateData.paymentProof = paymentProof;
+    }
+    if (status === 'paid') {
+      updateData.paidAt = new Date();
+    }
+
     const updatedOrder = await db.order.update({
       where: { id },
-      data: { status },
+      data: updateData,
       include: {
         items: true,
         buyer: {

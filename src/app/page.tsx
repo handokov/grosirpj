@@ -500,11 +500,21 @@ function Navbar() {
               <button
                 onClick={() => { if (user) openCart(); else setLoginModalOpen(true); }}
                 className="relative p-2 text-white/90 hover:text-white transition-colors"
+                title="Keranjang"
               >
                 <ShoppingCart className="w-6 h-6" />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{cartCount}</span>
                 )}
+              </button>
+
+              {/* Order History */}
+              <button
+                onClick={() => { if (user) openOrderHistory(); else setLoginModalOpen(true); }}
+                className="relative p-2 text-white/90 hover:text-white transition-colors"
+                title="Pesanan Saya"
+              >
+                <ClipboardList className="w-6 h-6" />
               </button>
 
               {/* Chat */}
