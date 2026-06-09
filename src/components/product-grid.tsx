@@ -260,11 +260,11 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                 className="product-card bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl cursor-pointer group"
                 onClick={() => openProductDetail(product.id)}
               >
-                <div className="relative overflow-hidden">
+                <div className="relative overflow-hidden cursor-pointer" onClick={() => openProductDetail(product.id)}>
                   <img
                     src={product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop'}
                     alt={product.name}
-                    className="product-image w-full h-36 sm:h-40 md:h-44 object-cover"
+                    className="product-image w-full h-32 sm:h-36 md:h-40 object-cover"
                     loading="lazy"
                   />
                   {product.discount > 0 && (
