@@ -37,6 +37,7 @@ const BANNERS = [
     subtitle: 'Diskon hingga 90% untuk produk pilihan',
     badge: '🔥 Flash Sale',
     gradient: 'from-orange-500 to-red-500',
+    bgGradient: 'from-orange-600 via-red-500 to-orange-500',
     image: '/banners/banner1.png',
   },
   {
@@ -44,6 +45,7 @@ const BANNERS = [
     subtitle: 'Pengiriman gratis ke seluruh Indonesia',
     badge: '🚚 Gratis Ongkir',
     gradient: 'from-emerald-500 to-teal-500',
+    bgGradient: 'from-emerald-600 via-teal-500 to-emerald-500',
     image: '/banners/banner2.png',
   },
   {
@@ -51,6 +53,7 @@ const BANNERS = [
     subtitle: 'Daftar gratis, tanpa potongan!',
     badge: '🛍️ Jual di GrosirPJ',
     gradient: 'from-purple-500 to-pink-500',
+    bgGradient: 'from-purple-600 via-pink-500 to-purple-500',
     image: '/banners/banner3.png',
   },
   {
@@ -58,6 +61,7 @@ const BANNERS = [
     subtitle: 'Cek setiap hari untuk penawaran terbaik',
     badge: '⭐ Promo Hari Ini',
     gradient: 'from-cyan-500 to-blue-500',
+    bgGradient: 'from-cyan-600 via-blue-500 to-cyan-500',
     image: '/banners/banner4.png',
   },
 ];
@@ -221,9 +225,25 @@ function BannerCarousel() {
 
   return (
     <section className="pb-2 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 transition-all duration-700" style={{ top: '-5rem' }} />
-      <div className="absolute top-[-3rem] right-[10%] w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-      <div className="absolute top-[-1rem] left-[5%] w-48 h-48 bg-amber-300/10 rounded-full blur-2xl" />
+      {/* Dynamic background gradient that changes with each banner */}
+      {BANNERS.map((banner, i) => (
+        <div
+          key={i}
+          className={`absolute inset-0 bg-gradient-to-br ${banner.bgGradient} transition-opacity duration-700`}
+          style={{ top: '-5rem', opacity: i === current ? 1 : 0 }}
+        />
+      ))}
+      {/* Per-banner decorative blurs that also transition */}
+      {BANNERS.map((banner, i) => (
+        <div
+          key={`blur-${i}`}
+          className="absolute transition-opacity duration-700"
+          style={{ opacity: i === current ? 1 : 0 }}
+        >
+          <div className="absolute top-[-3rem] right-[10%] w-64 h-64 bg-white/15 rounded-full blur-3xl" />
+          <div className="absolute top-[-1rem] left-[5%] w-48 h-48 bg-white/10 rounded-full blur-2xl" />
+        </div>
+      ))}
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 md:pt-24">
         <div className="relative rounded-2xl overflow-hidden group h-[180px] md:h-[340px] shadow-xl">
