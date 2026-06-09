@@ -258,11 +258,11 @@ export function ProductDetail() {
 
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
               {/* Image Section */}
-              <div className="relative h-36 sm:h-44 md:h-48 bg-gray-100 overflow-hidden shrink-0">
+              <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden shrink-0">
                 <img
                   src={images[currentImageIndex]}
                   alt={product.name}
-                  className="w-full h-full object-contain bg-white"
+                  className="w-full h-full object-cover"
                 />
                 {product.discount > 0 && (
                   <Badge className="absolute top-3 left-3 bg-red-500 text-white hover:bg-red-600 text-xs font-bold px-2 py-1">
