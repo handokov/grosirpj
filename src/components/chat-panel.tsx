@@ -182,17 +182,19 @@ export function ChatPanel() {
   }, [chatOpen, user, chatWithUserId, fetchConversations, fetchMessages, markAsRead]);
 
   // Polling for new messages when chat is open with an active partner
+  // Also auto mark-as-read so badges disappear while viewing
   useEffect(() => {
     if (chatOpen && user && activePartner) {
-      pollIntervalRef.current = setInterval(() => {
-        fetchMessages(activePartner);
-        fetchConversations();
+      pollIntervalRef.current = setInterval(async () => {
+        await fetchMessages(activePartner);
+        await markAsRead(activePartner);
+        await fetchConversations();
       }, 3000);
     }
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [chatOpen, user, activePartner, fetchMessages, fetchConversations]);
+  }, [chatOpen, user, activePartner, fetchMessages, fetchConversations, markAsRead]);
 
   // Background polling for unread count when chat is closed (updates navbar badge)
   useEffect(() => {
