@@ -128,6 +128,42 @@ export async function GET(request: Request) {
   }
 }
 
+// PATCH /api/chat - Mark messages as read
+export async function PATCH(request: Request) {
+  try {
+    await ensureDb();
+    const body = await request.json();
+    const { userId, partnerId } = body;
+
+    if (!userId || !partnerId) {
+      return Response.json(
+        { error: 'userId dan partnerId wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    // Mark all unread messages from partnerId to userId as read
+    const result = await db.chat.updateMany({
+      where: {
+        senderId: partnerId,
+        receiverId: userId,
+        read: false,
+      },
+      data: {
+        read: true,
+      },
+    });
+
+    return Response.json({ markedCount: result.count });
+  } catch (error) {
+    console.error('Mark as read error:', error);
+    return Response.json(
+      { error: 'Gagal menandai pesan sebagai dibaca' },
+      { status: 500 }
+    );
+  }
+}
+
 // POST /api/chat - Send a message
 export async function POST(request: Request) {
   try {

@@ -43,6 +43,7 @@ export function ChatPanel() {
   const chatOpen = useUIStore((s) => s.chatOpen);
   const chatWithUserId = useUIStore((s) => s.chatWithUserId);
   const closeChat = useUIStore((s) => s.closeChat);
+  const setUnreadChatCount = useUIStore((s) => s.setUnreadChatCount);
 
   const user = useAuthStore((s) => s.user);
   const sellerMode = useAuthStore((s) => s.sellerMode);
@@ -60,6 +61,20 @@ export function ChatPanel() {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const shouldScrollRef = useRef(false); // flag: scroll to bottom only on conversation open
 
+  // Mark messages as read for a specific partner
+  const markAsRead = useCallback(async (partnerId: string) => {
+    if (!user) return;
+    try {
+      await fetch('/api/chat', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, partnerId }),
+      });
+    } catch (err) {
+      console.error('Failed to mark as read:', err);
+    }
+  }, [user]);
+
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
     if (!user) return;
@@ -67,12 +82,16 @@ export function ChatPanel() {
       const res = await fetch(`/api/chat?userId=${user.id}`);
       const data = await res.json();
       if (res.ok) {
-        setConversations(data.conversations || []);
+        const convs = data.conversations || [];
+        setConversations(convs);
+        // Update global unread count for navbar & seller dashboard
+        const total = convs.reduce((sum: number, c: Conversation) => sum + c.unreadCount, 0);
+        setUnreadChatCount(total);
       }
     } catch (err) {
       console.error('Failed to fetch conversations:', err);
     }
-  }, [user]);
+  }, [user, setUnreadChatCount]);
 
   // Fetch messages with a specific partner
   const fetchMessages = useCallback(async (partnerId: string) => {
@@ -154,12 +173,15 @@ export function ChatPanel() {
       if (chatWithUserId) {
         setActivePartner(chatWithUserId);
         await fetchMessages(chatWithUserId);
+        // Mark messages from this partner as read when opening via chatWithUserId
+        await markAsRead(chatWithUserId);
+        await fetchConversations();
       }
     };
     loadData();
-  }, [chatOpen, user, chatWithUserId, fetchConversations, fetchMessages]);
+  }, [chatOpen, user, chatWithUserId, fetchConversations, fetchMessages, markAsRead]);
 
-  // Polling for new messages
+  // Polling for new messages when chat is open with an active partner
   useEffect(() => {
     if (chatOpen && user && activePartner) {
       pollIntervalRef.current = setInterval(() => {
@@ -171,6 +193,17 @@ export function ChatPanel() {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [chatOpen, user, activePartner, fetchMessages, fetchConversations]);
+
+  // Background polling for unread count when chat is closed (updates navbar badge)
+  useEffect(() => {
+    if (!chatOpen && user) {
+      // Poll unread count every 10 seconds
+      const interval = setInterval(() => {
+        fetchConversations();
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [chatOpen, user, fetchConversations]);
 
   // When activePartner changes, mark that we should scroll to bottom after messages load
   useEffect(() => {
@@ -191,9 +224,13 @@ export function ChatPanel() {
     }
   }, [messages]);
 
-  const handleSelectPartner = (partnerId: string) => {
+  const handleSelectPartner = async (partnerId: string) => {
     setActivePartner(partnerId);
-    fetchMessages(partnerId);
+    await fetchMessages(partnerId);
+    // Mark messages from this partner as read
+    await markAsRead(partnerId);
+    // Refresh conversations to update unread counts
+    await fetchConversations();
   };
 
   const formatTime = (dateStr: string) => {

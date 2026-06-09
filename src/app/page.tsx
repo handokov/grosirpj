@@ -424,6 +424,7 @@ function Navbar() {
   const openChat = useUIStore((s) => s.openChat);
   const openNotifPanel = useUIStore((s) => s.openNotifPanel);
   const setSearchQuery = useUIStore((s) => s.setSearchQuery);
+  const unreadChatCount = useUIStore((s) => s.unreadChatCount);
 
   const wishlistCount = useWishlistStore((s) => s.items.length);
   const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
@@ -533,6 +534,9 @@ function Navbar() {
                 className="relative p-2 text-white/90 hover:text-white transition-colors"
               >
                 <MessageCircle className="w-6 h-6" />
+                {unreadChatCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>
+                )}
               </button>
 
               {/* Notification Bell */}

@@ -117,6 +117,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const user = useAuthStore((s) => s.user);
   const openChat = useUIStore((s) => s.openChat);
   const openNotifPanel = useUIStore((s) => s.openNotifPanel);
+  const unreadChatCount = useUIStore((s) => s.unreadChatCount);
 
   // Notification state
   const [notifOpen, setNotifOpen] = useState(false);
@@ -527,7 +528,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
         {SIDEBAR_ITEMS.map((item) => {
           const isActive = activeTab === item.id || (item.id === 'addProduct' && activeTab === 'products' && showForm);
           const badgeCount = item.showBadge === 'orders' ? pendingOrders
-            : item.showBadge === 'chat' ? 2
+            : item.showBadge === 'chat' ? unreadChatCount
             : item.showBadge === 'notifications' ? unreadNotifs : 0;
 
           return (
