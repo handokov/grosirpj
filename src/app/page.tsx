@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Zap, Search, ShoppingCart, Bell, Upload, Menu, X, Star,
   ChevronRight, ChevronDown, ChevronLeft, Play, MapPin, Minus, Plus,
@@ -26,6 +26,7 @@ import { CartSidebar } from '@/components/cart-sidebar';
 import { CheckoutFlow } from '@/components/checkout-flow';
 import { OrderHistory } from '@/components/order-history';
 import { ChatPanel } from '@/components/chat-panel';
+import { NotificationPanel } from '@/components/notification-panel';
 import { AuthModal } from '@/components/auth-modal';
 import { SellerDashboard } from '@/components/seller-dashboard';
 import { Footer } from '@/components/footer';
@@ -403,6 +404,7 @@ function CategorySection() {
 function Navbar() {
   const [mobileSearch, setMobileSearch] = useState('');
   const [notifOpen, setNotifOpen] = useState(false);
+  const notifAutoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const user = useAuthStore((s) => s.user);
   const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
@@ -414,6 +416,7 @@ function Navbar() {
   const openCart = useUIStore((s) => s.openCart);
   const openOrderHistory = useUIStore((s) => s.openOrderHistory);
   const openChat = useUIStore((s) => s.openChat);
+  const openNotifPanel = useUIStore((s) => s.openNotifPanel);
   const setSearchQuery = useUIStore((s) => s.setSearchQuery);
 
   const wishlistCount = useWishlistStore((s) => s.items.length);
@@ -519,6 +522,8 @@ function Navbar() {
                   onClick={() => {
                     if (!user) { setLoginModalOpen(true); return; }
                     setNotifOpen(!notifOpen);
+                    // Reset auto-close timer
+                    if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
                   }}
                   title="Notifikasi"
                 >
@@ -528,7 +533,20 @@ function Navbar() {
                   )}
                 </button>
                 {notifOpen && user && (
-                  <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-96 overflow-hidden">
+                  <div
+                    className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-96 overflow-hidden"
+                    onMouseEnter={() => {
+                      // Start auto-close timer when mouse enters notification area
+                      if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
+                      notifAutoCloseTimer.current = setTimeout(() => {
+                        setNotifOpen(false);
+                      }, 3000);
+                    }}
+                    onMouseLeave={() => {
+                      // Cancel timer if mouse leaves
+                      if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
+                    }}
+                  >
                     <div className="flex items-center justify-between p-4 border-b border-gray-100">
                       <h3 className="font-semibold text-sm text-gray-800">Notifikasi</h3>
                       {unreadNotifs > 0 && (
@@ -568,23 +586,34 @@ function Navbar() {
 
               {user ? (
                 <div className="flex items-center gap-2">
-                  {/* Seller Store Icon - only for sellers */}
+                  {/* Seller Store Icon - only for sellers, opens notification panel */}
                   {user.role === 'seller' && (
                     <button
-                      onClick={() => setSellerMode(true)}
+                      onClick={() => {
+                        if (!user) { setLoginModalOpen(true); return; }
+                        openNotifPanel();
+                      }}
                       className="relative p-2 text-white/90 hover:text-white transition-colors hover:bg-white/10 rounded-full"
-                      title="Dashboard Seller"
+                      title="Notifikasi Seller"
                     >
                       <Store className="w-5 h-5" />
-                      {/* Red notification badge for new orders */}
-                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-emerald-600/40">
-                        {unreadNotifs > 0 ? (unreadNotifs > 9 ? '9+' : unreadNotifs) : ''}
-                      </span>
+                      {/* Red notification badge with count for new orders */}
+                      {unreadNotifs > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-emerald-600/40">
+                          {unreadNotifs > 99 ? '99+' : unreadNotifs}
+                        </span>
+                      )}
                     </button>
                   )}
-                  {/* Profile */}
+                  {/* Profile - clickable for seller to go to dashboard */}
                   <button
-                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/20 rounded-full cursor-default"
+                    onClick={() => {
+                      if (user.role === 'seller') {
+                        setSellerMode(true);
+                      }
+                    }}
+                    className={`hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/20 rounded-full ${user.role === 'seller' ? 'cursor-pointer hover:bg-white/20 transition-colors' : 'cursor-default'}`}
+                    title={user.role === 'seller' ? 'Masuk Dashboard Seller' : undefined}
                   >
                     <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center">
                       <span className="text-gray-800 text-xs font-bold">{user.name.charAt(0).toUpperCase()}</span>
@@ -828,7 +857,12 @@ export default function Home() {
 
   // ===== SELLER MODE =====
   if (sellerMode) {
-    return <SellerDashboard onBack={() => setSellerMode(false)} />;
+    return (
+      <>
+        <SellerDashboard onBack={() => setSellerMode(false)} />
+        <NotificationPanel />
+      </>
+    );
   }
 
   // ===== BUYER MODE =====
@@ -855,6 +889,7 @@ export default function Home() {
       <CheckoutFlow />
       <OrderHistory />
       <ChatPanel />
+      <NotificationPanel />
       <AuthModal />
     </div>
   );

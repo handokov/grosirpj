@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Plus, Pencil, Trash2, ImagePlus, X, Package, DollarSign,
   Tag, MapPin, FileText, Layers, Box, ChevronLeft, Store,
@@ -35,6 +35,7 @@ import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { useNotificationStore } from '@/store/notification';
 import { ChatPanel } from '@/components/chat-panel';
+import { NotificationPanel } from '@/components/notification-panel';
 import { formatPrice, getStatusInfo, CATEGORIES, PAYMENT_METHODS } from '@/lib/constants';
 import { calculateShipping, getCityNames } from '@/lib/shipping';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
@@ -112,9 +113,11 @@ const SIDEBAR_ITEMS = [
 export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const user = useAuthStore((s) => s.user);
   const openChat = useUIStore((s) => s.openChat);
+  const openNotifPanel = useUIStore((s) => s.openNotifPanel);
 
   // Notification state
   const [notifOpen, setNotifOpen] = useState(false);
+  const notifAutoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unreadNotifs = useNotificationStore((s) => s.unreadCount);
   const notifications = useNotificationStore((s) => s.notifications);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
@@ -197,7 +200,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       setSidebarOpen(false);
       return;
     } else if (tabId === 'notifications') {
-      setNotifOpen(true);
+      openNotifPanel();
       setSidebarOpen(false);
       return;
     } else if (tabId === 'promotions') {
@@ -540,7 +543,10 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                 <Home className="w-5 h-5 text-gray-500" />
               </button>
               <button
-                onClick={() => setNotifOpen(!notifOpen)}
+                onClick={() => {
+                  setNotifOpen(!notifOpen);
+                  if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
+                }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
                 title="Notifikasi"
               >
@@ -551,9 +557,20 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                   </span>
                 )}
               </button>
-              {/* Notification Dropdown */}
+              {/* Notification Dropdown - auto-closes after a few seconds */}
               {notifOpen && (
-                <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[480px] overflow-hidden">
+                <div
+                  className="absolute right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[480px] overflow-hidden"
+                  onMouseEnter={() => {
+                    if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
+                    notifAutoCloseTimer.current = setTimeout(() => {
+                      setNotifOpen(false);
+                    }, 3000);
+                  }}
+                  onMouseLeave={() => {
+                    if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
+                  }}
+                >
                   <div className="flex items-center justify-between p-4 border-b border-gray-100">
                     <h3 className="font-bold text-gray-900">Notifikasi</h3>
                     {unreadNotifs > 0 && (
@@ -1133,6 +1150,9 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
 
       {/* Chat Panel */}
       <ChatPanel />
+
+      {/* Notification Panel */}
+      <NotificationPanel />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>

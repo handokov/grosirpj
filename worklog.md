@@ -149,3 +149,41 @@ Stage Summary:
 - Seller profile photo no longer auto-navigates to seller dashboard (reverted per user request)
 - Store icon remains the way to access seller dashboard
 - Sidebar "Notifikasi" badge shows real unread count
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Seller photo navigates to dashboard, Store icon opens notification panel with red badge, bell auto-closes
+
+Work Log:
+- Re-implemented seller photo click → seller dashboard (user changed mind again, wants it back)
+- Changed Store icon from navigating to seller dashboard → opens slide-out NotificationPanel (like ChatPanel)
+- Created new NotificationPanel component (src/components/notification-panel.tsx):
+  - Uses Sheet component (slides from right, like chat panel)
+  - Shows "Notifikasi Seller" title with red bell icon and unread count badge
+  - Lists notifications with icon mapping by type (ShoppingBag for orders, CheckCircle for payments, etc.)
+  - "Tandai semua dibaca" button
+  - Individual notification click marks as read
+  - Relative time formatting (Baru saja, X menit lalu, X jam lalu, etc.)
+- Added notifPanelOpen/openNotifPanel/closeNotifPanel to UI store (src/store/ui.ts)
+- Updated Navbar (page.tsx):
+  - Profile button now clickable for sellers → setSellerMode(true) to enter seller dashboard
+  - Store icon now opens notification panel via openNotifPanel() instead of navigating to seller dashboard
+  - Store icon red badge only shows when unreadNotifs > 0 (previously showed empty circle)
+  - Badge shows actual count number (1, 2, 3, etc.) instead of empty string
+  - Bell notification dropdown now auto-closes after 3 seconds when mouse enters the dropdown area
+- Updated Seller Dashboard (seller-dashboard.tsx):
+  - Added notifAutoCloseTimer ref for auto-close behavior
+  - Bell dropdown now auto-closes after 3 seconds on mouse enter
+  - Sidebar "Notifikasi" item now opens slide-out NotificationPanel instead of inline dropdown
+  - Added NotificationPanel component import and rendering
+- Added NotificationPanel to both buyer mode and seller mode page renders
+- Lint passes, dev server running without errors
+- Verified with agent browser: all features working correctly
+
+Stage Summary:
+- Clicking seller profile photo → enters seller dashboard
+- Store icon (square icon next to photo) → opens slide-out notification panel with red badge showing count
+- Bell icon dropdown auto-closes after 3 seconds when mouse hovers over it
+- Notification panel shows full notification list with icons, timestamps, and mark-as-read functionality
+- Both bell (compact dropdown) and Store icon (slide-out panel) provide notification access

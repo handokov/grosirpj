@@ -9,6 +9,7 @@ interface UIStore {
   orderHistoryOpen: boolean;
   chatOpen: boolean;
   chatWithUserId: string | null;
+  notifPanelOpen: boolean;
 
   // Search/filter state
   searchQuery: string;
@@ -27,6 +28,8 @@ interface UIStore {
   closeOrderHistory: () => void;
   openChat: (userId?: string) => void;
   closeChat: () => void;
+  openNotifPanel: () => void;
+  closeNotifPanel: () => void;
   setSearchQuery: (query: string) => void;
   setActiveCategory: (category: string) => void;
   setSortBy: (sort: string) => void;
@@ -42,6 +45,7 @@ export const useUIStore = create<UIStore>((set) => ({
   orderHistoryOpen: false,
   chatOpen: false,
   chatWithUserId: null,
+  notifPanelOpen: false,
   searchQuery: '',
   activeCategory: 'all',
   sortBy: 'popular',
@@ -57,6 +61,8 @@ export const useUIStore = create<UIStore>((set) => ({
   closeOrderHistory: () => set({ orderHistoryOpen: false }),
   openChat: (userId) => set({ chatOpen: true, chatWithUserId: userId || null }),
   closeChat: () => set({ chatOpen: false, chatWithUserId: null }),
+  openNotifPanel: () => set({ notifPanelOpen: true }),
+  closeNotifPanel: () => set({ notifPanelOpen: false }),
   setSearchQuery: (query) => set({ searchQuery: query, currentPage: 1 }),
   setActiveCategory: (category) => set({ activeCategory: category, currentPage: 1 }),
   setSortBy: (sort) => set({ sortBy: sort, currentPage: 1 }),
