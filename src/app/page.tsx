@@ -405,6 +405,7 @@ function CategorySection() {
 function Navbar() {
   const [mobileSearch, setMobileSearch] = useState('');
   const [notifOpen, setNotifOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeStoreName, setUpgradeStoreName] = useState('');
   const [upgradeStoreDesc, setUpgradeStoreDesc] = useState('');
@@ -487,24 +488,24 @@ function Navbar() {
             </div>
 
             {/* Nav Actions */}
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+              {/* Jual - hidden on mobile */}
               <button
                 onClick={() => {
                   if (!user) {
                     setLoginModalOpen(true);
                     return;
                   }
-                  // Only allow seller role to access seller dashboard
                   if (user.role !== 'seller') {
                     setUpgradeOpen(true);
                     return;
                   }
                   setSellerMode(true);
                 }}
-                className="flex items-center gap-2 px-2 sm:px-4 py-2 text-white/90 hover:text-white border border-white/30 rounded-full transition-colors cursor-pointer hover:bg-white/10"
+                className="hidden sm:flex items-center gap-2 px-2 md:px-4 py-2 text-white/90 hover:text-white border border-white/30 rounded-full transition-colors cursor-pointer hover:bg-white/10"
               >
                 <Upload className="w-5 h-5" />
-                <span className="text-sm font-medium hidden sm:inline">Jual</span>
+                <span className="text-sm font-medium">Jual</span>
               </button>
 
               {/* Cart */}
@@ -513,16 +514,16 @@ function Navbar() {
                 className="relative p-2 text-white/90 hover:text-white transition-colors"
                 title="Keranjang"
               >
-                <ShoppingCart className="w-6 h-6" />
+                <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{cartCount}</span>
+                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 bg-orange-500 text-white text-[10px] sm:text-xs font-bold rounded-full flex items-center justify-center">{cartCount}</span>
                 )}
               </button>
 
-              {/* Order History */}
+              {/* Order History - hidden on mobile (available in profile dropdown) */}
               <button
                 onClick={() => { if (user) openOrderHistory(); else setLoginModalOpen(true); }}
-                className="relative p-2 text-white/90 hover:text-white transition-colors"
+                className="relative p-2 text-white/90 hover:text-white transition-colors hidden sm:block"
                 title="Pesanan Saya"
               >
                 <ClipboardList className="w-6 h-6" />
@@ -533,16 +534,16 @@ function Navbar() {
                 onClick={() => { if (user) openChat(); else setLoginModalOpen(true); }}
                 className="relative p-2 text-white/90 hover:text-white transition-colors"
               >
-                <MessageCircle className="w-6 h-6" />
+                <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                 {unreadChatCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>
+                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 text-white text-[10px] sm:text-xs font-bold rounded-full flex items-center justify-center">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>
                 )}
               </button>
 
-              {/* Notification Bell */}
-              <div className="relative">
+              {/* Notification Bell - hidden on mobile (available in profile dropdown) */}
+              <div className="relative hidden sm:block">
                 <button
-                  className="relative p-2 text-white/90 hover:text-white transition-colors hidden sm:block"
+                  className="relative p-2 text-white/90 hover:text-white transition-colors"
                   onClick={() => {
                     if (!user) { setLoginModalOpen(true); return; }
                     setNotifOpen(!notifOpen);
@@ -560,11 +561,9 @@ function Navbar() {
                   <div
                     className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-96 overflow-hidden"
                     onMouseEnter={() => {
-                      // Cancel auto-close timer while user is reading
                       if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
                     }}
                     onMouseLeave={() => {
-                      // Start auto-close timer when mouse leaves notification area
                       if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
                       notifAutoCloseTimer.current = setTimeout(() => {
                         setNotifOpen(false);
@@ -609,49 +608,96 @@ function Navbar() {
               </div>
 
               {user ? (
-                <div className="flex items-center gap-2">
-                  {/* Seller Store Icon - only for sellers, opens notification panel */}
-                  {user.role === 'seller' && (
-                    <button
-                      onClick={() => {
-                        if (!user) { setLoginModalOpen(true); return; }
-                        openNotifPanel();
-                      }}
-                      className="relative p-2 text-white/90 hover:text-white transition-colors hover:bg-white/10 rounded-full"
-                      title="Notifikasi Seller"
-                    >
-                      <Store className="w-5 h-5" />
-                      {/* Red notification badge with count for new orders */}
-                      {unreadNotifs > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-emerald-600/40">
-                          {unreadNotifs > 99 ? '99+' : unreadNotifs}
-                        </span>
-                      )}
-                    </button>
-                  )}
-                  {/* Profile - clickable for seller to go to dashboard */}
+                <div className="relative">
+                  {/* Profile Avatar Button - opens dropdown on mobile, inline on desktop */}
                   <button
                     onClick={() => {
-                      if (user.role === 'seller') {
+                      // On mobile, toggle profile dropdown; on desktop, seller goes to dashboard
+                      if (window.innerWidth < 640) {
+                        setProfileMenuOpen(!profileMenuOpen);
+                      } else if (user.role === 'seller') {
                         setSellerMode(true);
                       }
                     }}
-                    className={`hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/20 rounded-full ${user.role === 'seller' ? 'cursor-pointer hover:bg-white/20 transition-colors' : 'cursor-default'}`}
-                    title={user.role === 'seller' ? 'Masuk Dashboard Seller' : undefined}
+                    className="flex items-center gap-1.5 px-1.5 py-1 sm:px-3 sm:py-1.5 bg-white/10 border border-white/20 rounded-full hover:bg-white/20 transition-colors"
                   >
                     <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center">
                       <span className="text-gray-800 text-xs font-bold">{user.name.charAt(0).toUpperCase()}</span>
                     </div>
-                    <span className="text-sm font-medium text-white max-w-[80px] truncate">{user.name}</span>
+                    <span className="text-sm font-medium text-white max-w-[60px] sm:max-w-[80px] truncate hidden sm:inline">{user.name}</span>
+                    {/* Unread indicator dot on mobile - shows if there are notifications */}
+                    {(unreadNotifs > 0 || unreadChatCount > 0) && (
+                      <span className="sm:hidden w-2 h-2 bg-red-500 rounded-full" />
+                    )}
                   </button>
-                  <button onClick={logout} className="p-2 text-white/60 hover:text-red-300 transition-colors" title="Keluar">
-                    <LogOut className="w-5 h-5" />
-                  </button>
+
+                  {/* Profile Dropdown Menu - primarily for mobile */}
+                  {profileMenuOpen && (
+                    <>
+                      {/* Backdrop */}
+                      <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                      <div className="absolute right-0 top-12 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                        {/* User Info Header */}
+                        <div className="p-3 bg-emerald-50 border-b border-gray-100">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{user.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        </div>
+                        {/* Menu Items */}
+                        <div className="py-1">
+                          {user.role === 'seller' && (
+                            <button
+                              onClick={() => { setProfileMenuOpen(false); setSellerMode(true); }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                              <Store className="w-4 h-4 text-emerald-500" />
+                              Dashboard Seller
+                            </button>
+                          )}
+                          <button
+                            onClick={() => { setProfileMenuOpen(false); openOrderHistory(); }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <ClipboardList className="w-4 h-4 text-blue-500" />
+                            Pesanan Saya
+                          </button>
+                          <button
+                            onClick={() => { setProfileMenuOpen(false); openNotifPanel(); }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Bell className="w-4 h-4 text-amber-500" />
+                            Notifikasi
+                            {unreadNotifs > 0 && (
+                              <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{unreadNotifs}</span>
+                            )}
+                          </button>
+                          {user.role !== 'seller' && (
+                            <button
+                              onClick={() => { setProfileMenuOpen(false); setUpgradeOpen(true); }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                              <Upload className="w-4 h-4 text-purple-500" />
+                              Jual Produk
+                            </button>
+                          )}
+                        </div>
+                        {/* Logout */}
+                        <div className="border-t border-gray-100">
+                          <button
+                            onClick={() => { setProfileMenuOpen(false); logout(); }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Keluar
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <button
                   onClick={() => setLoginModalOpen(true)}
-                  className="bg-amber-400 hover:bg-amber-500 text-gray-800 font-semibold rounded-full px-4 md:px-6 py-2 transition-colors text-sm"
+                  className="bg-amber-400 hover:bg-amber-500 text-gray-800 font-semibold rounded-full px-3 sm:px-4 md:px-6 py-2 transition-colors text-xs sm:text-sm"
                 >
                   Masuk
                 </button>
