@@ -58,12 +58,7 @@ const FILTER_TABS = [
   { key: 'all', label: 'Semua' },
   { key: 'fashion', label: 'Fashion' },
   { key: 'elektronik', label: 'Elektronik' },
-  { key: 'rumah', label: 'Rumah Tangga' },
-  { key: 'kecantikan', label: 'Kecantikan' },
-  { key: 'kesehatan', label: 'Kesehatan' },
-  { key: 'olahraga', label: 'Olahraga' },
-  { key: 'mainan', label: 'Mainan' },
-  { key: 'makanan', label: 'Makanan' },
+  { key: 'rumah', label: 'Rumah' },
 ];
 
 export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
