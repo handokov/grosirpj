@@ -58,6 +58,7 @@ export function ChatPanel() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const shouldScrollRef = useRef(false); // flag: scroll to bottom only on conversation open
 
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
@@ -171,15 +172,24 @@ export function ChatPanel() {
     };
   }, [chatOpen, user, activePartner, fetchMessages, fetchConversations]);
 
-  // Scroll to bottom ONLY when opening a conversation (not on every polling update)
+  // When activePartner changes, mark that we should scroll to bottom after messages load
   useEffect(() => {
     if (activePartner) {
-      const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
-      }, 150);
-      return () => clearTimeout(timer);
+      shouldScrollRef.current = true;
     }
   }, [activePartner]);
+
+  // Scroll to bottom only when messages change AND we just opened a conversation
+  // This prevents auto-scroll during polling while still scrolling on initial open
+  useEffect(() => {
+    if (shouldScrollRef.current && messages.length > 0) {
+      shouldScrollRef.current = false;
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messages]);
 
   const handleSelectPartner = (partnerId: string) => {
     setActivePartner(partnerId);
