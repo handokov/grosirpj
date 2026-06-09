@@ -264,7 +264,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                   <img
                     src={product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop'}
                     alt={product.name}
-                    className="product-image w-full h-40 md:h-48 object-cover"
+                    className="product-image w-full h-36 sm:h-40 md:h-44 object-cover"
                     loading="lazy"
                   />
                   {product.discount > 0 && (

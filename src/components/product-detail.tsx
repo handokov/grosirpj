@@ -258,7 +258,7 @@ export function ProductDetail() {
 
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
               {/* Image Section */}
-              <div className="relative h-56 sm:h-64 md:h-72 bg-gray-100 overflow-hidden shrink-0">
+              <div className="relative h-44 sm:h-52 md:h-56 bg-gray-100 overflow-hidden shrink-0">
                 <img
                   src={images[currentImageIndex]}
                   alt={product.name}
