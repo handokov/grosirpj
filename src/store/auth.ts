@@ -34,7 +34,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   error: '',
 
   setLoginModalOpen: (open) => set({ loginModalOpen: open }),
-  setSellerMode: (mode) => set({ sellerMode: mode }),
+  setSellerMode: (mode) => {
+    localStorage.setItem('grosirpj_seller_mode', JSON.stringify(mode));
+    set({ sellerMode: mode });
+  },
 
   setUser: (user) => {
     if (user) {
@@ -60,7 +63,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return { success: false, error: errorMsg };
       }
       get().setUser(data);
-      if (data.role === 'seller') set({ sellerMode: true });
+      if (data.role === 'seller') {
+        localStorage.setItem('grosirpj_seller_mode', JSON.stringify(true));
+        set({ sellerMode: true });
+      }
       set({ loginModalOpen: false, error: '' });
       return { success: true };
     } catch (err) {
@@ -85,7 +91,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return { success: false, error: errorMsg };
       }
       get().setUser(data);
-      if (data.role === 'seller') set({ sellerMode: true });
+      if (data.role === 'seller') {
+        localStorage.setItem('grosirpj_seller_mode', JSON.stringify(true));
+        set({ sellerMode: true });
+      }
       set({ loginModalOpen: false, error: '' });
       return { success: true };
     } catch (err) {
@@ -97,6 +106,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: () => {
     get().setUser(null);
+    localStorage.removeItem('grosirpj_seller_mode');
     set({ sellerMode: false, error: '' });
   },
 
@@ -108,7 +118,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const res = await fetch(`/api/auth/me?userId=${user.id}`);
         const data = await res.json();
         if (data.user) {
-          set({ user: data.user, loading: false, sellerMode: data.user.role === 'seller' });
+          const savedSellerMode = localStorage.getItem('grosirpj_seller_mode');
+          const sellerMode = savedSellerMode !== null ? JSON.parse(savedSellerMode) : false;
+          set({ user: data.user, loading: false, sellerMode: data.user.role === 'seller' ? sellerMode : false });
         } else {
           localStorage.removeItem('grosirpj_user');
           set({ user: null, loading: false, sellerMode: false });
