@@ -1,0 +1,9 @@
+-- ============================================
+-- GrosirPJ Database Backup
+-- Date: 2026-06-09
+-- Source: Turso (libsql://grosirpj-handokov.aws-ap-northeast-1.turso.io)
+-- Status: Working on Vercel + Turso
+-- ============================================
+-- This backup represents the schema + seed data setup script.
+-- To restore, run: bun run scripts/turso-setup.ts
+-- ============================================
