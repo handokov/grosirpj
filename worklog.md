@@ -187,3 +187,36 @@ Stage Summary:
 - Bell icon dropdown auto-closes after 3 seconds when mouse hovers over it
 - Notification panel shows full notification list with icons, timestamps, and mark-as-read functionality
 - Both bell (compact dropdown) and Store icon (slide-out panel) provide notification access
+
+---
+Task ID: 1
+Agent: full-stack-developer
+Task: Fix Vercel database schema and seed data
+
+Work Log:
+- Read worklog.md to understand previous agents' work
+- Read current db.ts, prisma/schema.prisma, and seed route to identify all discrepancies
+- Identified missing User columns: province, postalCode, avatar, gender, dateOfBirth, storeAvatar, bankName, bankAccount, bankHolder
+- Identified missing Product column: weight
+- Identified missing Order column: notes
+- Identified missing tables: UserAddress, CartItem, ProductView, SearchHistory
+- Updated all raw SQL CREATE TABLE statements in createTablesAndSeedIfNeeded() to match Prisma schema exactly
+- Added 4 new raw SQL table definitions: UserAddress, CartItem, ProductView, SearchHistory with all indexes
+- Updated seedDemoData() to include all missing user fields (province, postalCode, gender, dateOfBirth, bankName, bankAccount, bankHolder)
+- Added 3 additional users (buyer3, buyer4, seller3) to match seed route
+- Added description and weight fields to all product seed data
+- Added notes field to all order seed data
+- Added link field to all notification seed data
+- Added UserAddress seed data (7 addresses)
+- Added CartItem seed data (5 items)
+- Added ProductView seed data (11 views)
+- Added SearchHistory seed data (10 entries)
+- Ran bun run lint - passed with no errors
+- Verified dev server running without errors
+
+Stage Summary:
+- Raw SQL schema in ensureDb() now fully matches Prisma schema with all columns, tables, and indexes
+- seedDemoData() now matches the complete seed route data with all fields populated
+- All 4 missing tables added: UserAddress, CartItem, ProductView, SearchHistory
+- All missing columns added to existing tables: User (9 cols), Product (1 col), Order (1 col)
+- Products will now show up correctly on Vercel deployment
