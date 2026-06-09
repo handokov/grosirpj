@@ -253,6 +253,23 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
     setUploadingImage(true);
     let uploaded = 0;
 
+    // Step 1: Get signed upload parameters from our server
+    let signData: { signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string };
+    try {
+      const signRes = await fetch('/api/upload/signature?folder=grosirpj/products');
+      if (!signRes.ok) {
+        const errData = await signRes.json().catch(() => ({}));
+        throw new Error(errData.error || 'Gagal mendapatkan signature');
+      }
+      signData = await signRes.json();
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menyiapkan upload');
+      setUploadingImage(false);
+      e.target.value = '';
+      return;
+    }
+
+    // Step 2: Upload each file directly to Cloudinary
     for (const file of filesToUpload) {
       try {
         // Validate file type
@@ -262,31 +279,36 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
           continue;
         }
 
-        // Validate file size (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`${file.name}: File terlalu besar (maks 5MB)`);
+        // Validate file size (10MB for direct upload - no Vercel limit)
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name}: File terlalu besar (maks 10MB)`);
           continue;
         }
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('folder', 'grosirpj/products');
+        formData.append('api_key', signData.apiKey);
+        formData.append('timestamp', signData.timestamp.toString());
+        formData.append('signature', signData.signature);
+        formData.append('folder', signData.folder);
+        formData.append('transformation', 'q_auto:good,f_auto');
 
-        const res = await fetch('/api/upload', {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`, {
           method: 'POST',
           body: formData,
         });
 
         if (res.ok) {
           const data = await res.json();
-          setForm(prev => ({ ...prev, images: [...prev.images, data.url] }));
+          setForm(prev => ({ ...prev, images: [...prev.images, data.secure_url] }));
           uploaded++;
         } else {
-          const data = await res.json();
-          toast.error(`${file.name}: ${data.error || 'Upload gagal'}`);
+          const data = await res.json().catch(() => ({}));
+          toast.error(`${file.name}: ${data.error?.message || 'Upload gagal'}`);
         }
-      } catch {
-        toast.error(`${file.name}: Gagal mengupload`);
+      } catch (err: any) {
+        console.error('[imageUpload] Error:', err);
+        toast.error(`${file.name}: Gagal mengupload - ${err.message || 'Koneksi error'}`);
       }
     }
 
@@ -1016,7 +1038,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                               <>
                                 <Upload className="w-5 h-5 text-emerald-500" />
                                 <span className="text-sm text-emerald-600 font-medium">Upload dari perangkat</span>
-                                <span className="text-xs text-emerald-400">(JPG, PNG, WebP, GIF — maks 5MB)</span>
+                                <span className="text-xs text-emerald-400">(JPG, PNG, WebP, GIF — maks 10MB)</span>
                               </>
                             )}
                           </label>
