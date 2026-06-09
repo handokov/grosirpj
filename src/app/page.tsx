@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
+import { toast } from 'sonner';
 import { useWishlistStore } from '@/store/wishlist';
 import { useNotificationStore } from '@/store/notification';
 import { CATEGORIES, formatPrice } from '@/lib/constants';
@@ -404,9 +405,14 @@ function CategorySection() {
 function Navbar() {
   const [mobileSearch, setMobileSearch] = useState('');
   const [notifOpen, setNotifOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeStoreName, setUpgradeStoreName] = useState('');
+  const [upgradeStoreDesc, setUpgradeStoreDesc] = useState('');
+  const [upgrading, setUpgrading] = useState(false);
   const notifAutoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
   const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
   const logout = useAuthStore((s) => s.logout);
   const setSellerMode = useAuthStore((s) => s.setSellerMode);
@@ -486,6 +492,11 @@ function Navbar() {
                   if (!user) {
                     setLoginModalOpen(true);
                     localStorage.setItem('grosirpj_pending_seller', 'true');
+                    return;
+                  }
+                  // Only allow seller role to access seller dashboard
+                  if (user.role !== 'seller') {
+                    setUpgradeOpen(true);
                     return;
                   }
                   setSellerMode(true);
@@ -663,6 +674,113 @@ function Navbar() {
           </button>
         </div>
       </div>
+
+      {/* Upgrade to Seller Dialog */}
+      {upgradeOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setUpgradeOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                  <Store className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Mulai Jual</h2>
+                  <p className="text-xs text-gray-500">Upgrade akun Anda menjadi seller</p>
+                </div>
+              </div>
+              <button onClick={() => setUpgradeOpen(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="bg-emerald-50 rounded-xl p-3">
+              <p className="text-sm text-emerald-700">
+                🎉 Gratis daftar, tanpa potongan! Jual produk Anda ke ribuan pembeli di GrosirPJ.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nama Toko *</label>
+              <input
+                type="text"
+                placeholder="Contoh: Toko Sejahtera"
+                value={upgradeStoreName}
+                onChange={(e) => setUpgradeStoreName(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Deskripsi Toko</label>
+              <textarea
+                placeholder="Ceritakan tentang toko Anda..."
+                value={upgradeStoreDesc}
+                onChange={(e) => setUpgradeStoreDesc(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setUpgradeOpen(false)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={async () => {
+                  if (!upgradeStoreName.trim()) {
+                    toast.error('Nama toko wajib diisi');
+                    return;
+                  }
+                  setUpgrading(true);
+                  try {
+                    const res = await fetch('/api/auth/upgrade-seller', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        userId: user?.id,
+                        storeName: upgradeStoreName.trim(),
+                        storeDescription: upgradeStoreDesc.trim(),
+                      }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      // Update user in store
+                      setUser(data);
+                      setSellerMode(true);
+                      setUpgradeOpen(false);
+                      toast.success('Selamat! Akun Anda sudah menjadi seller 🎉');
+                    } else {
+                      toast.error(data.error || 'Gagal upgrade akun');
+                    }
+                  } catch {
+                    toast.error('Gagal upgrade akun. Silakan coba lagi.');
+                  }
+                  setUpgrading(false);
+                }}
+                disabled={upgrading}
+                className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {upgrading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Store className="w-4 h-4" />
+                    Jadikan Seller
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -713,9 +831,10 @@ function PromoBanners() {
                   if (!user) {
                     setLoginModalOpen(true);
                     localStorage.setItem('grosirpj_pending_seller', 'true');
-                  } else {
+                  } else if (user.role === 'seller') {
                     setSellerMode(true);
                   }
+                  // Buyers clicking this promo will also need to upgrade via the "Jual" button
                 } else {
                   document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
                 }
