@@ -568,12 +568,35 @@ function Navbar() {
 
               {user ? (
                 <div className="flex items-center gap-2">
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/20 rounded-full">
+                  {/* Seller Store Icon - only for sellers */}
+                  {user.role === 'seller' && (
+                    <button
+                      onClick={() => setSellerMode(true)}
+                      className="relative p-2 text-white/90 hover:text-white transition-colors hover:bg-white/10 rounded-full"
+                      title="Dashboard Seller"
+                    >
+                      <Store className="w-5 h-5" />
+                      {/* Red notification badge for new orders */}
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-emerald-600/40">
+                        {unreadNotifs > 0 ? (unreadNotifs > 9 ? '9+' : unreadNotifs) : ''}
+                      </span>
+                    </button>
+                  )}
+                  {/* Profile - clickable for sellers to go to dashboard */}
+                  <button
+                    onClick={() => {
+                      if (user.role === 'seller') {
+                        setSellerMode(true);
+                      }
+                    }}
+                    className={`hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/20 rounded-full ${user.role === 'seller' ? 'cursor-pointer hover:bg-white/20 transition-colors' : 'cursor-default'}`}
+                    title={user.role === 'seller' ? 'Buka Dashboard Seller' : undefined}
+                  >
                     <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center">
                       <span className="text-gray-800 text-xs font-bold">{user.name.charAt(0).toUpperCase()}</span>
                     </div>
                     <span className="text-sm font-medium text-white max-w-[80px] truncate">{user.name}</span>
-                  </div>
+                  </button>
                   <button onClick={logout} className="p-2 text-white/60 hover:text-red-300 transition-colors" title="Keluar">
                     <LogOut className="w-5 h-5" />
                   </button>

@@ -5,6 +5,8 @@ import {
   Plus, Pencil, Trash2, ImagePlus, X, Package, DollarSign,
   Tag, MapPin, FileText, Layers, Box, ChevronLeft, Store,
   Upload, Eye, BarChart3, ShoppingBag, Star, ArrowRight, AlertCircle, CheckCircle,
+  Home, ClipboardList, MessageCircle, Bell, Megaphone, Clock, Truck,
+  RotateCcw, Download, TrendingUp, Target, Newspaper, Menu, Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +14,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -93,12 +94,26 @@ interface SellerDashboardProps {
 
 const CHART_COLORS = ['#10b981', '#06b6d4', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
+// Sidebar navigation items
+const SIDEBAR_ITEMS = [
+  { id: 'beranda', label: 'Beranda', icon: Home },
+  { id: 'orders', label: 'Pesanan', icon: ClipboardList, showBadge: 'orders' },
+  { id: 'products', label: 'Produk Saya', icon: Package },
+  { id: 'addProduct', label: 'Tambah Produk', icon: Plus },
+  { id: 'chat', label: 'Chat Pembeli', icon: MessageCircle, showBadge: 'chat' },
+  { id: 'stats', label: 'Statistik', icon: BarChart3 },
+  { id: 'notifications', label: 'Notifikasi', icon: Bell, showBadge: 'notifications' },
+  { id: 'promotions', label: 'Pusat Promosi', icon: Megaphone },
+] as const;
+
 export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const user = useAuthStore((s) => s.user);
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('products');
+  const [activeTab, setActiveTab] = useState('beranda');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -147,6 +162,39 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const activeProducts = products.filter(p => p.active).length;
   const totalSold = products.reduce((sum, p) => sum + p.sold, 0);
   const totalRevenue = products.reduce((sum, p) => sum + p.sold * p.price, 0);
+  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  const readyToShipOrders = orders.filter(o => o.status === 'paid').length;
+  const returnOrders = orders.filter(o => o.status === 'cancelled').length;
+  const avgRating = products.length > 0 ? (products.reduce((sum, p) => sum + p.rating, 0) / products.length) : 0;
+  const conversionRate = totalSold > 0 ? Math.min((totalSold / (totalProducts * 10)) * 100, 100) : 0;
+
+  // Navigation handler
+  const handleNavClick = (tabId: string) => {
+    if (tabId === 'addProduct') {
+      setActiveTab('products');
+      resetForm();
+      setShowForm(true);
+    } else if (tabId === 'chat' || tabId === 'notifications' || tabId === 'promotions') {
+      // These are placeholder sections - just show a toast
+      toast.info('Fitur segera hadir!');
+      return;
+    } else {
+      setActiveTab(tabId);
+      setShowForm(false);
+    }
+    setSidebarOpen(false);
+  };
+
+  // Get current tab title for header
+  const getTabTitle = () => {
+    switch (activeTab) {
+      case 'beranda': return 'Beranda';
+      case 'products': return showForm ? (editingId ? 'Edit Produk' : 'Tambah Produk') : 'Produk Saya';
+      case 'orders': return 'Pesanan';
+      case 'stats': return 'Statistik';
+      default: return 'Beranda';
+    }
+  };
 
   // Form handlers
   const handleAddImage = () => {
@@ -333,7 +381,6 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
   }, [products]);
 
   const revenueData = useMemo(() => {
-    // Simulate monthly revenue from sold data
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
     return months.map((m, i) => ({
       name: m,
@@ -344,68 +391,293 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
   // Variant option input state per group
   const [variantOptionInputs, setVariantOptionInputs] = useState<Record<number, string>>({});
 
+  // Sidebar content (reused for desktop and mobile)
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Seller profile in sidebar */}
+      <div className="p-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Store className="w-5 h-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-900 text-sm truncate">{user?.name || 'Seller'}</p>
+            <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 text-[10px] mt-0.5 px-1.5 py-0">Seller</Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation items */}
+      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+        {SIDEBAR_ITEMS.map((item) => {
+          const isActive = activeTab === item.id || (item.id === 'addProduct' && activeTab === 'products' && showForm);
+          const badgeCount = item.showBadge === 'orders' ? pendingOrders
+            : item.showBadge === 'chat' ? 2
+            : item.showBadge === 'notifications' ? 3 : 0;
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNavClick(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-emerald-600' : 'text-gray-400'}`} />
+              <span className="flex-1 text-left">{item.label}</span>
+              {badgeCount > 0 && (
+                <span className="min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1.5">
+                  {badgeCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Back to Buyer */}
+      <div className="p-3 border-t border-gray-100">
+        <button
+          onClick={onBack}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span>Kembali ke Pembeli</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#f0fdf4]">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md shadow-md border-b border-gray-200/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-40">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
+          <aside className="fixed inset-y-0 left-0 w-72 bg-white shadow-xl animate-in slide-in-from-left duration-200">
+            <SidebarContent />
+          </aside>
+        </div>
+      )}
+
+      {/* Main Area */}
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+        {/* Top Header */}
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between h-14 px-4 sm:px-6">
+            {/* Left: Mobile menu + Profile */}
             <div className="flex items-center gap-3">
-              <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 -ml-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Menu className="w-5 h-5 text-gray-600" />
               </button>
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                  <Store className="w-5 h-5 text-white" />
+                  <Store className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-gray-900 text-sm font-display">Dashboard Seller</h1>
-                  <p className="text-xs text-gray-500">{user?.name || 'Seller'} · {user?.city || 'Jakarta'}</p>
+                  <p className="text-sm font-semibold text-gray-900 leading-tight">{user?.name || 'Seller'}</p>
+                  <p className="text-[10px] text-gray-500">Seller</p>
                 </div>
               </div>
             </div>
-            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>Online
-            </Badge>
-          </div>
-        </div>
-      </nav>
 
-      {/* Main Content */}
-      <main className="pt-20 md:pt-24 pb-8 flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {[
-              { icon: Package, label: 'Total Produk', value: totalProducts, color: 'from-emerald-500 to-emerald-600' },
-              { icon: Eye, label: 'Produk Aktif', value: activeProducts, color: 'from-cyan-500 to-cyan-600' },
-              { icon: ShoppingBag, label: 'Total Terjual', value: totalSold, color: 'from-orange-500 to-orange-600' },
-              { icon: DollarSign, label: 'Pendapatan', value: formatPrice(totalRevenue), color: 'from-pink-500 to-pink-600' },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100">
-                <div className={`w-10 h-10 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mb-3`}>
-                  <stat.icon className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-2xl font-bold text-gray-900 font-display">{stat.value}</p>
-                <p className="text-sm text-gray-500">{stat.label}</p>
+            {/* Center: Tab Title */}
+            <h1 className="text-base font-bold text-gray-900">{getTabTitle()}</h1>
+
+            {/* Right: Search, Home, Bell, Online */}
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-1.5">
+                <Search className="w-4 h-4 text-gray-400 mr-2" />
+                <input
+                  type="text"
+                  placeholder="Cari..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent text-sm outline-none w-32 placeholder-gray-400"
+                />
               </div>
-            ))}
+              <button
+                onClick={() => setActiveTab('beranda')}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Beranda"
+              >
+                <Home className="w-5 h-5 text-gray-500" />
+              </button>
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" title="Notifikasi">
+                <Bell className="w-5 h-5 text-gray-500" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 text-xs hidden sm:flex">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1"></span>Online
+              </Badge>
+            </div>
           </div>
+        </header>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6 bg-gray-100 p-1 rounded-full h-auto w-fit">
-              <TabsTrigger value="products" className="rounded-full px-4 py-2">Kelola Produk</TabsTrigger>
-              <TabsTrigger value="orders" className="rounded-full px-4 py-2">Pesanan</TabsTrigger>
-              <TabsTrigger value="stats" className="rounded-full px-4 py-2">Statistik</TabsTrigger>
-            </TabsList>
+        {/* Main Content */}
+        <main className="flex-1 p-4 sm:p-6">
+          {activeTab === 'beranda' && (
+            /* ===== BERANDA TAB ===== */
+            <div className="max-w-6xl mx-auto space-y-6">
+              {/* Order Status Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                {[
+                  { icon: Clock, label: 'Perlu Diproses', value: pendingOrders, color: 'bg-orange-50 text-orange-600', iconBg: 'bg-orange-100' },
+                  { icon: Truck, label: 'Siap Dikirim', value: readyToShipOrders, color: 'bg-blue-50 text-blue-600', iconBg: 'bg-blue-100' },
+                  { icon: RotateCcw, label: 'Pengembalian', value: returnOrders, color: 'bg-pink-50 text-pink-600', iconBg: 'bg-pink-100' },
+                  { icon: Download, label: 'Produk Diturunkan', value: 0, color: 'bg-gray-50 text-gray-600', iconBg: 'bg-gray-100' },
+                ].map((item) => (
+                  <div key={item.label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div className={`w-10 h-10 ${item.iconBg} rounded-xl flex items-center justify-center mb-3`}>
+                      <item.icon className={`w-5 h-5 ${item.color.split(' ')[1]}`} />
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{item.value}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{item.label}</p>
+                  </div>
+                ))}
+              </div>
 
-            {/* ===== KELOLA PRODUK TAB ===== */}
-            <TabsContent value="products">
+              {/* Performa Toko */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                <h2 className="text-base font-bold text-gray-900 mb-4">Performa Toko</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {[
+                    { icon: DollarSign, label: 'Penjualan', value: formatPrice(totalRevenue), color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                    { icon: Eye, label: 'Total Pengunjung', value: Math.floor(totalSold * 15 + 128).toString(), color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { icon: TrendingUp, label: 'Produk Diklik', value: Math.floor(totalSold * 8 + 47).toString(), color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { icon: ShoppingBag, label: 'Pesanan', value: orders.length.toString(), color: 'text-orange-600', bg: 'bg-orange-50' },
+                    { icon: Target, label: 'Conversion Rate', value: `${conversionRate.toFixed(1)}%`, color: 'text-pink-600', bg: 'bg-pink-50' },
+                    { icon: Star, label: 'Rating', value: avgRating > 0 ? avgRating.toFixed(1) : '-', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                  ].map((item) => (
+                    <div key={item.label} className="text-center">
+                      <div className={`w-10 h-10 ${item.bg} rounded-xl flex items-center justify-center mx-auto mb-2`}>
+                        <item.icon className={`w-5 h-5 ${item.color}`} />
+                      </div>
+                      <p className="text-sm font-bold text-gray-900">{item.value}</p>
+                      <p className="text-[11px] text-gray-500">{item.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {avgRating >= 4 && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <Badge className="bg-emerald-100 text-emerald-700 text-xs">
+                      <Star className="w-3 h-3 mr-1" /> Sangat Baik
+                    </Badge>
+                    <span className="text-xs text-gray-500">Performa toko Anda sangat baik!</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Button
+                  onClick={() => { resetForm(); setActiveTab('products'); setShowForm(true); }}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl h-12 flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-5 h-5" /> Tambah Produk Baru
+                </Button>
+                <Button
+                  onClick={() => setActiveTab('orders')}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl h-12 flex items-center justify-center gap-2"
+                >
+                  <ClipboardList className="w-5 h-5" /> Lihat Pesanan
+                </Button>
+                <Button
+                  onClick={() => toast.info('Fitur chat segera hadir!')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl h-12 flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-5 h-5" /> Cek Chat
+                </Button>
+              </div>
+
+              {/* Ringkasan Toko */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                <h2 className="text-base font-bold text-gray-900 mb-4">Ringkasan Toko</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { icon: Package, label: 'Total Produk', value: totalProducts, color: 'from-emerald-500 to-emerald-600' },
+                    { icon: Eye, label: 'Produk Aktif', value: activeProducts, color: 'from-blue-500 to-blue-600' },
+                    { icon: ShoppingBag, label: 'Total Terjual', value: totalSold, color: 'from-orange-500 to-orange-600' },
+                    { icon: DollarSign, label: 'Pendapatan', value: formatPrice(totalRevenue), color: 'from-pink-500 to-pink-600' },
+                  ].map((stat) => (
+                    <div key={stat.label} className="bg-gray-50 rounded-xl p-4 text-center">
+                      <div className={`w-10 h-10 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mx-auto mb-2`}>
+                        <stat.icon className="w-5 h-5 text-white" />
+                      </div>
+                      <p className="text-lg font-bold text-gray-900">{stat.value}</p>
+                      <p className="text-xs text-gray-500">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Berita & Tips Seller */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                <h2 className="text-base font-bold text-gray-900 mb-4">Berita & Tips Seller</h2>
+                <div className="space-y-3">
+                  {[
+                    { title: 'Tips Meningkatkan Penjualan di 2024', desc: 'Pelajari strategi terbaru untuk meningkatkan omzet toko Anda', icon: TrendingUp, color: 'text-emerald-600 bg-emerald-50' },
+                    { title: 'Update Kebijakan Pengiriman Baru', desc: 'Informasi penting mengenai perubahan kebijakan pengiriman', icon: Truck, color: 'text-blue-600 bg-blue-50' },
+                    { title: 'Promo Gratis Ongkir untuk Seller Aktif', desc: 'Dapatkan subsidi ongkir dengan memenuhi target penjualan', icon: Megaphone, color: 'text-orange-600 bg-orange-50' },
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                      <div className={`w-10 h-10 ${item.color.split(' ')[1]} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                        <item.icon className={`w-5 h-5 ${item.color.split(' ')[0]}`} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Misi Seller */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                <h2 className="text-base font-bold text-gray-900 mb-4">Misi Seller</h2>
+                <div className="space-y-4">
+                  {[
+                    { label: 'Tambah 3 produk baru', current: Math.min(totalProducts, 3), target: 3, color: 'bg-emerald-500' },
+                    { label: 'Proses 5 pesanan', current: Math.min(orders.filter(o => ['paid', 'shipped', 'delivered'].includes(o.status)).length, 5), target: 5, color: 'bg-orange-500' },
+                    { label: 'Chat balas cepat', current: 2, target: 5, color: 'bg-blue-500' },
+                  ].map((mission, idx) => (
+                    <div key={idx}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-sm text-gray-700 font-medium">{mission.label}</p>
+                        <span className="text-xs text-gray-500">{mission.current}/{mission.target}</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${mission.color} rounded-full transition-all duration-500`}
+                          style={{ width: `${Math.min((mission.current / mission.target) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'products' && (
+            /* ===== KELOLA PRODUK TAB ===== */
+            <div className="max-w-6xl mx-auto">
               {!showForm ? (
                 <>
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-900 font-display">Produk Saya ({products.length})</h2>
+                    <h2 className="text-xl font-bold text-gray-900">Produk Saya ({products.length})</h2>
                     <Button
                       onClick={() => { resetForm(); setShowForm(true); }}
                       className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl flex items-center gap-2"
@@ -419,7 +691,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                       {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
                     </div>
                   ) : products.length === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
                       <div className="w-20 h-20 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <Package className="w-10 h-10 text-emerald-400" />
                       </div>
@@ -430,12 +702,12 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto pr-1">
+                    <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
                       {products.map(product => {
                         const discount = product.originalPrice > product.price
                           ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0;
                         return (
-                          <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4 hover:shadow-md transition-shadow">
+                          <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex gap-4 hover:shadow-md transition-shadow">
                             <div className="w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
                               {product.images?.[0] ? (
                                 <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
@@ -495,9 +767,9 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                 </>
               ) : (
                 /* Product Form */
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-900 font-display">{editingId ? 'Edit Produk' : 'Tambah Produk Baru'}</h2>
+                    <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Edit Produk' : 'Tambah Produk Baru'}</h2>
                     <button onClick={resetForm} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
                   </div>
 
@@ -620,25 +892,27 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                   </div>
                 </div>
               )}
-            </TabsContent>
+            </div>
+          )}
 
-            {/* ===== PESANAN TAB ===== */}
-            <TabsContent value="orders">
-              <h2 className="text-xl font-bold text-gray-900 font-display mb-6">Pesanan Masuk ({orders.length})</h2>
+          {activeTab === 'orders' && (
+            /* ===== PESANAN TAB ===== */
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Pesanan Masuk ({orders.length})</h2>
               {loading ? (
                 <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}</div>
               ) : orders.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
                   <ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-bold text-gray-900 mb-2">Belum ada pesanan</h3>
                   <p className="text-gray-500">Pesanan dari buyer akan muncul di sini</p>
                 </div>
               ) : (
-                <div className="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto pr-1">
+                <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
                   {orders.map(order => {
                     const statusInfo = getStatusInfo(order.status);
                     return (
-                      <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
+                      <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div>
                             <span className="text-xs text-gray-400 font-mono">#{order.id.slice(-8)}</span>
@@ -681,14 +955,16 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                   })}
                 </div>
               )}
-            </TabsContent>
+            </div>
+          )}
 
-            {/* ===== STATISTIK TAB ===== */}
-            <TabsContent value="stats">
+          {activeTab === 'stats' && (
+            /* ===== STATISTIK TAB ===== */
+            <div className="max-w-6xl mx-auto">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Revenue Chart */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 font-display">Pendapatan Bulanan</h3>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Pendapatan Bulanan</h3>
                   {totalRevenue === 0 ? (
                     <div className="flex items-center justify-center h-48 text-gray-400">
                       <div className="text-center">
@@ -710,8 +986,8 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                 </div>
 
                 {/* Category Distribution */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 font-display">Distribusi Kategori</h3>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Distribusi Kategori</h3>
                   {categoryData.length === 0 ? (
                     <div className="flex items-center justify-center h-48 text-gray-400">
                       <div className="text-center">
@@ -732,8 +1008,8 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                 </div>
 
                 {/* Product Performance */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:col-span-2">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 font-display">Performa Produk</h3>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:col-span-2">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Performa Produk</h3>
                   {products.length === 0 ? (
                     <div className="text-center py-8 text-gray-400"><p>Tambahkan produk untuk melihat statistik</p></div>
                   ) : (
@@ -750,17 +1026,17 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                   )}
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </main>
+            </div>
+          )}
+        </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-6 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
-          <p>&copy; 2024 GrosirPJ. Dashboard Seller</p>
-        </div>
-      </footer>
+        {/* Footer */}
+        <footer className="bg-gray-900 text-gray-300 py-6 mt-auto">
+          <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
+            <p>&copy; 2024 GrosirPJ. Dashboard Seller</p>
+          </div>
+        </footer>
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
