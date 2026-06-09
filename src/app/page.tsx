@@ -536,15 +536,15 @@ function Navbar() {
                   <div
                     className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-96 overflow-hidden"
                     onMouseEnter={() => {
-                      // Start auto-close timer when mouse enters notification area
+                      // Cancel auto-close timer while user is reading
+                      if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
+                    }}
+                    onMouseLeave={() => {
+                      // Start auto-close timer when mouse leaves notification area
                       if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
                       notifAutoCloseTimer.current = setTimeout(() => {
                         setNotifOpen(false);
                       }, 3000);
-                    }}
-                    onMouseLeave={() => {
-                      // Cancel timer if mouse leaves
-                      if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
                     }}
                   >
                     <div className="flex items-center justify-between p-4 border-b border-gray-100">

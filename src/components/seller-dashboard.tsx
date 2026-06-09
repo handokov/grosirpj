@@ -562,13 +562,15 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                 <div
                   className="absolute right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[480px] overflow-hidden"
                   onMouseEnter={() => {
+                    // Cancel auto-close timer while user is reading
+                    if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
+                  }}
+                  onMouseLeave={() => {
+                    // Start auto-close timer when mouse leaves notification area
                     if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
                     notifAutoCloseTimer.current = setTimeout(() => {
                       setNotifOpen(false);
                     }, 3000);
-                  }}
-                  onMouseLeave={() => {
-                    if (notifAutoCloseTimer.current) clearTimeout(notifAutoCloseTimer.current);
                   }}
                 >
                   <div className="flex items-center justify-between p-4 border-b border-gray-100">
