@@ -25,18 +25,10 @@ import { useAuthStore } from '@/store/auth';
 import { getCityNames } from '@/lib/shipping';
 import { Zap, Mail, Lock, User, MapPin, ArrowRight, AlertCircle, Store, Phone, Eye, EyeOff } from 'lucide-react';
 
-// Helper to check seller intent from localStorage
-function checkSellerIntent(): boolean {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem('grosirpj_pending_seller') === 'true';
-}
-
 export function AuthModal() {
   const { loginModalOpen, setLoginModalOpen, login, register, error: storeError } = useAuthStore();
 
-  // Detect seller intent at component creation time
-  const [initialSellerIntent] = useState(checkSellerIntent);
-  const [mode, setMode] = useState<'login' | 'register'>(initialSellerIntent ? 'register' : 'login');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,7 +44,7 @@ export function AuthModal() {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regCity, setRegCity] = useState('Jakarta');
   const [regPhone, setRegPhone] = useState('');
-  const [isSeller, setIsSeller] = useState(initialSellerIntent);
+  const [isSeller, setIsSeller] = useState(false);
   const [regStoreName, setRegStoreName] = useState('');
   const [regStoreDesc, setRegStoreDesc] = useState('');
 
@@ -122,7 +114,6 @@ export function AuthModal() {
     if (!result.success) {
       setError(result.error || 'Registrasi gagal. Email mungkin sudah terdaftar.');
     } else {
-      localStorage.removeItem('grosirpj_pending_seller');
       resetForm();
     }
     setLoading(false);

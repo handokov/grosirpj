@@ -491,7 +491,6 @@ function Navbar() {
                 onClick={() => {
                   if (!user) {
                     setLoginModalOpen(true);
-                    localStorage.setItem('grosirpj_pending_seller', 'true');
                     return;
                   }
                   // Only allow seller role to access seller dashboard
@@ -830,11 +829,10 @@ function PromoBanners() {
                 if (promo.title === 'Mulai Jual') {
                   if (!user) {
                     setLoginModalOpen(true);
-                    localStorage.setItem('grosirpj_pending_seller', 'true');
                   } else if (user.role === 'seller') {
                     setSellerMode(true);
                   }
-                  // Buyers clicking this promo will also need to upgrade via the "Jual" button
+                  // Buyers need to upgrade first via the "Jual" button
                 } else {
                   document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
                 }
@@ -947,8 +945,12 @@ export default function Home() {
     initAuth();
   }, [initAuth]);
 
-  // Auto-enable seller mode after login if pending
+  // Clean up stale pending seller flag for non-sellers
   useEffect(() => {
+    if (user && user.role !== 'seller') {
+      localStorage.removeItem('grosirpj_pending_seller');
+    }
+    // Auto-enable seller mode for actual sellers who had pending intent
     if (user && user.role === 'seller' && !sellerMode) {
       const pending = localStorage.getItem('grosirpj_pending_seller');
       if (pending === 'true') {
@@ -985,13 +987,19 @@ export default function Home() {
   }
 
   // ===== SELLER MODE =====
-  if (sellerMode) {
+  // Only allow actual sellers to access seller dashboard
+  if (sellerMode && user && user.role === 'seller') {
     return (
       <>
         <SellerDashboard onBack={() => setSellerMode(false)} />
         <NotificationPanel />
       </>
     );
+  }
+
+  // If sellerMode is true but user is not a seller, reset and show buyer view
+  if (sellerMode && user && user.role !== 'seller') {
+    setSellerMode(false);
   }
 
   // ===== BUYER MODE =====
