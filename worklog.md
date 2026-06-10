@@ -127,3 +127,31 @@ Stage Summary:
 - Minimum withdrawal is Rp 10.000
 - Auth/me now returns sellerBalance and totalSales fields
 - Auth store User type includes sellerBalance and totalSales
+
+---
+Task ID: 1-9
+Agent: main-agent
+Task: Fix entire purchase/transaction flow to follow escrow model
+
+Work Log:
+- Read all current codebase files: payment-dialog.tsx, order APIs, order components, prisma schema, checkout.tsx, checkout-flow.tsx, seller-dashboard.tsx, order-history.tsx
+- Found existing code already had most escrow logic (self-purchase prevention, buyer confirms payment, seller processes/ships, buyer confirms receipt, marketplace fee calculation)
+- Fixed payment method inconsistency: checkout.tsx used bank_transfer/qris but system expects transfer/ewallet
+- Fixed orders-panel.tsx PAYMENT_LABELS to match: transfer, ewallet
+- Added "Keuangan" (Finance) tab to seller dashboard with balance card, withdrawal form, fee info, transaction history
+- Added withdrawal API endpoint (POST /api/withdraw) with validation
+- Added auto-completion API (POST /api/orders/auto-complete) for orders shipped >3 days
+- Added auto-complete trigger in order-history and seller-dashboard fetchOrders
+- Updated auth/me API to return sellerBalance and totalSales
+- Updated auth store User type with sellerBalance and totalSales fields
+- Added "3 hari otomatis selesai" notice in order history for shipped orders
+
+Stage Summary:
+- Full escrow flow verified via API: pending → paid → processing → shipped → delivered
+- Self-purchase prevention working: "Anda tidak dapat membeli produk sendiri"
+- Marketplace fee 2% calculated correctly on payment confirmation
+- Seller wallet balance updated on delivery confirmation
+- Withdrawal API works: balance deducted, notification created
+- Auto-completion API for 3-day shipped orders works
+- Payment methods now consistent across all components (cod, transfer, ewallet)
+- Lint passes with no errors
