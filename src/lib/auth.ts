@@ -2,9 +2,10 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { parse } from 'cookie';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'grosirpj-secret-key-change-in-production-2024'
-);
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Set it in .env file.');
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 const COOKIE_NAME = 'grosirpj_token';
 
@@ -31,27 +32,12 @@ export async function verifyPassword(password: string, hashedPassword: string): 
     return bcrypt.compare(password, hashedPassword);
   }
   
-  // Fallback to legacy simpleHash for existing users
-  const legacyHash = simpleHash(password);
-  if (hashedPassword === legacyHash) {
-    return true;
-  }
-  
+  // Legacy simpleHash no longer supported - force password reset
   return false;
 }
 
-/**
- * Legacy simple hash function - kept for backward compatibility with existing passwords
- */
-export function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
-}
+// Legacy simpleHash removed for security.
+// Users with legacy hashes will be forced to reset their password.
 
 /**
  * Create a JWT token and return the Set-Cookie header value
@@ -111,23 +97,5 @@ export async function getAuthUser(request: Request): Promise<AuthPayload | null>
   return verifySessionToken(token);
 }
 
-/**
- * Get userId from either JWT cookie or query parameter (backward compatible)
- * For write operations, prefer JWT for security
- */
-export async function getUserIdFromRequest(request: Request, requireAuth = false): Promise<string | null> {
-  // Try JWT first
-  const authUser = await getAuthUser(request);
-  if (authUser) {
-    return authUser.userId;
-  }
-
-  // Fallback to query parameter for backward compatibility (read-only)
-  if (!requireAuth) {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
-    return userId;
-  }
-
-  return null;
-}
+// getUserIdFromRequest removed for security. Use getAuthUser() directly.
+// Never trust userId from query parameters.

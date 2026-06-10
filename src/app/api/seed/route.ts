@@ -1106,7 +1106,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Require seller or admin auth
+    // Require authentication for seeding
     const authUser = await getAuthUser(request);
     if (!authUser) {
       return NextResponse.json(
@@ -1139,7 +1139,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Require seller or admin auth
+    // Require authentication for seeding
     const authUser = await getAuthUser(request);
     if (!authUser) {
       return NextResponse.json(

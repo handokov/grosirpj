@@ -1,6 +1,6 @@
 import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import { verifyPassword, createSessionToken, getSessionCookie, hashPassword } from '@/lib/auth';
+import { verifyPassword, createSessionToken, getSessionCookie } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
@@ -35,13 +35,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // If user has legacy simpleHash password, upgrade to bcrypt on successful login
+    // If user has legacy password hash (not bcrypt), force password reset
     if (!user.password.startsWith('$2a$') && !user.password.startsWith('$2b$')) {
-      const newHash = await hashPassword(password);
-      await db.user.update({
-        where: { id: user.id },
-        data: { password: newHash },
-      });
+      return NextResponse.json(
+        { error: 'Password Anda perlu direset untuk keamanan. Silakan hubungi admin atau daftar ulang.' },
+        { status: 401 }
+      );
     }
 
     // Create JWT session token
@@ -67,9 +66,12 @@ export async function POST(request: Request) {
       storeName: user.storeName,
       storeDescription: user.storeDescription,
       storeAvatar: user.storeAvatar,
-      bankName: user.bankName,
-      bankAccount: user.bankAccount,
-      bankHolder: user.bankHolder,
+      // Bank details only for seller accounts
+      ...(user.role === 'seller' ? {
+        bankName: user.bankName,
+        bankAccount: user.bankAccount,
+        bankHolder: user.bankHolder,
+      } : {}),
     };
 
     const response = NextResponse.json(userData);

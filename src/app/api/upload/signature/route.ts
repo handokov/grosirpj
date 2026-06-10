@@ -45,7 +45,6 @@ export async function GET(request: Request) {
     return NextResponse.json({
       signature,
       timestamp,
-      apiKey,
       cloudName,
       folder,
     });

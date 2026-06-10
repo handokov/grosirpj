@@ -65,17 +65,22 @@ export async function GET(
       );
     }
 
-    // If authenticated, verify the user is the buyer or seller of this order
+    // Require authentication - only buyer or seller can view order details
     const authUser = await getAuthUser(request);
-    if (authUser) {
-      const isBuyer = order.buyerId === authUser.userId;
-      const isSeller = order.sellerId === authUser.userId;
-      if (!isBuyer && !isSeller) {
-        return Response.json(
-          { error: 'Anda tidak berwenang melihat pesanan ini' },
-          { status: 403 }
-        );
-      }
+    if (!authUser) {
+      return Response.json(
+        { error: 'Anda harus login untuk melihat pesanan' },
+        { status: 401 }
+      );
+    }
+
+    const isBuyer = order.buyerId === authUser.userId;
+    const isSeller = order.sellerId === authUser.userId;
+    if (!isBuyer && !isSeller) {
+      return Response.json(
+        { error: 'Anda tidak berwenang melihat pesanan ini' },
+        { status: 403 }
+      );
     }
 
     return Response.json({ order });

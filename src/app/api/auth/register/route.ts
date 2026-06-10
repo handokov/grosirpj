@@ -16,14 +16,21 @@ export async function POST(request: Request) {
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: 'Password minimal 6 karakter' },
+        { error: 'Password minimal 8 karakter' },
         { status: 400 }
       );
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return NextResponse.json(
+        { error: 'Format email tidak valid' },
+        { status: 400 }
+      );
+    }
 
     // Check if user already exists
     const existing = await db.user.findUnique({ where: { email: normalizedEmail } });
@@ -75,9 +82,12 @@ export async function POST(request: Request) {
       storeName: user.storeName,
       storeDescription: user.storeDescription,
       storeAvatar: user.storeAvatar,
-      bankName: user.bankName,
-      bankAccount: user.bankAccount,
-      bankHolder: user.bankHolder,
+      // Bank details only for seller accounts
+      ...(userRole === 'seller' ? {
+        bankName: user.bankName,
+        bankAccount: user.bankAccount,
+        bankHolder: user.bankHolder,
+      } : {}),
     };
 
     const response = NextResponse.json(userData, { status: 201 });

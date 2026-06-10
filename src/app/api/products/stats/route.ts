@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'sellerId is required' }, { status: 400 })
     }
 
-    // Only allow viewing your own stats (unless you're just checking your own sellerId)
-    if (sellerId !== authUser.userId && authUser.role !== 'seller') {
+    // Only allow viewing your own stats
+    if (sellerId !== authUser.userId) {
       return NextResponse.json({ error: 'Anda hanya bisa melihat statistik toko sendiri' }, { status: 403 })
     }
 
