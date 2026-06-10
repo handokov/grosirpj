@@ -81,8 +81,17 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Login error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
+
+    // Check for Turso auth error and provide a clear message
+    if (message.includes('HTTP status 401') || message.includes('SERVER_ERROR')) {
+      return NextResponse.json(
+        { error: 'Database connection error. Pastikan TURSO_AUTH_TOKEN sudah diatur di Vercel environment variables. Kunjungi turso.tech/app → database → Settings → Auth Tokens untuk mendapatkan token.' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: `Terjadi kesalahan saat login: ${message}. Silakan coba lagi.` },
+      { error: `Terjadi kesalahan saat login. Silakan coba lagi.` },
       { status: 500 }
     );
   }

@@ -5,18 +5,42 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
+function isTursoUrl(url: string): boolean {
+  return url.startsWith('libsql://') || url.startsWith('https://')
+}
+
 function createPrismaClient() {
   // Use TURSO_DATABASE_URL for Turso connection if available (runtime),
   // fall back to DATABASE_URL (which Prisma CLI also uses for db push etc.)
   const tursoUrl = process.env.TURSO_DATABASE_URL || ''
   const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db'
-  const isTurso = tursoUrl.startsWith('libsql://') || tursoUrl.startsWith('https://') || databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://')
+  const hasTursoUrl = isTursoUrl(tursoUrl) || isTursoUrl(databaseUrl)
 
-  if (isTurso) {
+  if (hasTursoUrl) {
     // Turso / libSQL connection
-    // PrismaLibSQL in v6 is a FACTORY that takes config, not a client instance
     const url = tursoUrl || databaseUrl
     const authToken = process.env.TURSO_AUTH_TOKEN || ''
+
+    // Check if auth token is provided - Turso requires it for authentication
+    if (!authToken) {
+      console.error('⚠️ [db] TURSO_AUTH_TOKEN is NOT set! Turso requires an auth token for authentication.')
+      console.error('⚠️ [db] Please add TURSO_AUTH_TOKEN to your Vercel environment variables.')
+      console.error('⚠️ [db] You can get the auth token from: https://turso.tech/app → your database → Settings → Auth Tokens')
+      console.error('⚠️ [db] Falling back to local SQLite...')
+
+      // Fall back to local SQLite on Vercel
+      const resolvedUrl = process.env.VERCEL ? 'file:///tmp/grosirpj.db' : databaseUrl
+      console.log(`[db] Falling back to local SQLite: ${resolvedUrl.substring(0, 40)}`)
+
+      return new PrismaClient({
+        log: process.env.NODE_ENV === 'development' ? ['query'] : ['error'],
+        datasources: {
+          db: {
+            url: resolvedUrl,
+          },
+        },
+      })
+    }
 
     console.log(`[db] Connecting to Turso: ${url.substring(0, 30)}...`)
 
@@ -69,11 +93,13 @@ let dbEnsurePromise: Promise<void> | null = null;
  * When using Turso, this function is a no-op since Turso persists data.
  */
 export async function ensureDb(): Promise<void> {
-  // If using Turso, skip ensureDb - data is persisted
+  // If using Turso WITH a valid auth token, skip ensureDb - data is persisted
   const tursoUrl = process.env.TURSO_DATABASE_URL || ''
   const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db'
-  const isTurso = tursoUrl.startsWith('libsql://') || tursoUrl.startsWith('https://') || databaseUrl.startsWith('libsql://') || databaseUrl.startsWith('https://')
-  if (isTurso) return
+  const hasTursoUrl = isTursoUrl(tursoUrl) || isTursoUrl(databaseUrl)
+  const hasAuthToken = !!process.env.TURSO_AUTH_TOKEN
+  // Only skip ensureDb if Turso is properly configured (URL + auth token)
+  if (hasTursoUrl && hasAuthToken) return
 
   if (dbTablesEnsured) return;
 
