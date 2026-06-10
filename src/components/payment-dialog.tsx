@@ -16,7 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { formatPrice, PAYMENT_METHODS } from '@/lib/constants';
 import {
   CreditCard, Building2, Smartphone, Banknote,
-  Copy, CheckCircle, Clock, AlertCircle, Loader2, Hourglass,
+  Copy, CheckCircle, Clock, AlertCircle, Loader2,
+  Shield, ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -114,7 +115,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // Buyer submits payment proof (NOT changing status to paid)
+  // ESCROW: Buyer confirms payment → status changes to 'paid'
   const handleSubmitPayment = async () => {
     if (!order) return;
     setConfirming(true);
@@ -128,22 +129,24 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // No status change - just submitting payment proof
+          // ESCROW: Buyer confirms payment → status becomes 'paid'
+          // Funds conceptually held in Escrow GrosirPJ
+          status: 'paid',
           paymentProof: proof,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        toast.error(data.error || 'Gagal mengirim bukti pembayaran');
+        toast.error(data.error || 'Gagal mengkonfirmasi pembayaran');
         return;
       }
 
-      toast.success('Bukti pembayaran berhasil dikirim! Menunggu konfirmasi penjual.');
+      toast.success('Pembayaran berhasil dikonfirmasi! Dana ditampung di Escrow GrosirPJ.');
       onPaymentConfirmed();
       onOpenChange(false);
     } catch (err) {
-      toast.error('Gagal mengirim bukti pembayaran. Silakan coba lagi.');
+      toast.error('Gagal mengkonfirmasi pembayaran. Silakan coba lagi.');
     } finally {
       setConfirming(false);
     }
@@ -152,29 +155,33 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
   if (!order) return null;
 
   const paymentMethodInfo = PAYMENT_METHODS.find(p => p.value === order.paymentMethod);
+  const isPaid = order.status === 'paid' || order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered';
   const isPending = order.status === 'pending';
-  const isPaid = order.status === 'paid';
-  const hasSubmittedProof = !!order.paymentProof; // Buyer already submitted proof
-  const isAwaitingConfirmation = isPending && hasSubmittedProof; // Waiting for seller to confirm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm max-h-[85vh] overflow-y-auto p-4">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="flex items-center gap-2 font-display text-base">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="flex items-center gap-2 text-sm">
             <CreditCard className="w-4 h-4 text-emerald-500" />
-            Detail Pembayaran
+            Pembayaran
           </DialogTitle>
-          <DialogDescription className="text-xs">
+          <DialogDescription className="text-[11px]">
             Pesanan #{order.id.slice(-8)}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Order Summary - compact */}
-        <div className="bg-gray-50 rounded-lg p-2.5 space-y-1.5 text-xs">
+        {/* Escrow Badge */}
+        <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
+          <Shield className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span className="text-[10px] text-emerald-700 font-medium">Dana aman di Escrow GrosirPJ</span>
+        </div>
+
+        {/* Order Summary - very compact */}
+        <div className="bg-gray-50 rounded-lg p-2 space-y-1 text-xs">
           <div className="flex items-center justify-between">
             <span className="text-gray-500">Total</span>
-            <span className="text-sm font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
+            <span className="font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-gray-500">Metode</span>
@@ -182,46 +189,25 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
           </div>
           <div className="flex items-center justify-between">
             <span className="text-gray-500">Seller</span>
-            <span className="font-medium">{order.seller?.storeName || order.seller?.name}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Status</span>
-            {isPaid ? (
-              <Badge className="bg-emerald-100 text-emerald-700" style={{fontSize: '10px'}}>
-                ✅ Dibayar
-              </Badge>
-            ) : isAwaitingConfirmation ? (
-              <Badge className="bg-blue-100 text-blue-700" style={{fontSize: '10px'}}>
-                ⏳ Menunggu Konfirmasi
-              </Badge>
-            ) : isPending ? (
-              <Badge className="bg-yellow-100 text-yellow-700" style={{fontSize: '10px'}}>
-                💳 Belum Bayar
-              </Badge>
-            ) : (
-              <Badge className="bg-gray-100 text-gray-700" style={{fontSize: '10px'}}>
-                {order.status}
-              </Badge>
-            )}
+            <span className="font-medium truncate ml-2">{order.seller?.storeName || order.seller?.name}</span>
           </div>
         </div>
 
         {/* Items - compact */}
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-gray-700">Produk:</p>
+        <div className="space-y-0.5">
           {order.items.map((item) => {
             let variants: Record<string, string> = {};
             try { variants = JSON.parse(item.variants); } catch {}
             return (
-              <div key={item.id} className="flex items-center justify-between p-1.5 bg-gray-50 rounded text-xs">
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-800 truncate">{item.productName}</p>
+              <div key={item.id} className="flex items-center justify-between py-1 text-xs">
+                <div className="min-w-0 flex-1">
+                  <span className="text-gray-800 truncate">{item.productName}</span>
                   {Object.keys(variants).length > 0 && (
-                    <p className="text-[10px] text-gray-500">
-                      {Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                    </p>
+                    <span className="text-[10px] text-gray-400 ml-1">
+                      ({Object.entries(variants).map(([k, v]) => `${v}`).join('/')})
+                    </span>
                   )}
-                  <p className="text-[10px] text-gray-400">{item.quantity} x {formatPrice(item.price)}</p>
+                  <span className="text-gray-400 ml-1">×{item.quantity}</span>
                 </div>
                 <span className="font-medium text-gray-800 ml-2">{formatPrice(item.price * item.quantity)}</span>
               </div>
@@ -233,9 +219,9 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
 
         {/* === ALREADY PAID === */}
         {isPaid && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5">
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
+              <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
               <div>
                 <p className="font-semibold text-xs text-gray-800">Pembayaran Dikonfirmasi</p>
                 <p className="text-[10px] text-gray-500">
@@ -248,28 +234,15 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
           </div>
         )}
 
-        {/* === AWAITING SELLER CONFIRMATION === */}
-        {isAwaitingConfirmation && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <Hourglass className="w-5 h-5 text-blue-500 shrink-0 animate-pulse" />
-              <div>
-                <p className="font-semibold text-xs text-blue-800">Menunggu Konfirmasi Penjual</p>
-                <p className="text-[10px] text-blue-600">Bukti pembayaran sudah dikirim. Penjual akan memverifikasi pembayaran Anda.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* === PENDING - Transfer Payment (buyer hasn't submitted proof yet) === */}
-        {isPending && !hasSubmittedProof && order.paymentMethod === 'transfer' && (
+        {/* === PENDING - Transfer Payment === */}
+        {isPending && order.paymentMethod === 'transfer' && (
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+            <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
               <Building2 className="w-3.5 h-3.5 text-emerald-500" />
               Transfer ke Rekening:
             </div>
             {sellerBankInfo ? (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 space-y-1">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 space-y-0.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-gray-500">Bank</span>
                   <div className="flex items-center gap-1">
@@ -280,7 +253,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-500">No. Rekening</span>
+                  <span className="text-[10px] text-gray-500">No. Rek</span>
                   <div className="flex items-center gap-1">
                     <span className="font-semibold text-xs text-gray-800 font-mono">{sellerBankInfo.bankAccount}</span>
                     <button onClick={() => copyToClipboard(sellerBankInfo.bankAccount, 'account')} className="p-0.5 hover:bg-emerald-100 rounded">
@@ -304,8 +277,8 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
+              <div className="bg-gray-50 rounded-lg p-2 flex items-center gap-2">
+                <Loader2 className="w-3 h-3 text-emerald-500 animate-spin" />
                 <span className="text-xs text-gray-500">Memuat info rekening...</span>
               </div>
             )}
@@ -316,13 +289,13 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                 <div className="text-[10px] text-amber-700 space-y-0.5">
                   <p>1. Transfer sesuai jumlah total</p>
                   <p>2. Isi nama pengirim</p>
-                  <p>3. Klik &quot;Saya Sudah Bayar&quot;</p>
+                  <p>3. Klik "Saya Sudah Bayar" → Dana ditampung Escrow</p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Label htmlFor="senderName" className="text-[10px] font-medium text-gray-700">
                   Nama Pengirim *
                 </Label>
@@ -334,7 +307,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                   className="rounded-lg text-xs h-8"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Label htmlFor="paymentNote" className="text-[10px] font-medium text-gray-700">
                   Catatan (Opsional)
                 </Label>
@@ -349,7 +322,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
             </div>
 
             <Button
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg text-xs"
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg text-xs h-9"
               onClick={handleSubmitPayment}
               disabled={confirming || !senderName.trim()}
             >
@@ -359,23 +332,24 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-3 h-3 mr-1" /> Saya Sudah Bayar
+                  <Shield className="w-3 h-3 mr-1" /> Saya Sudah Bayar
                 </>
               )}
             </Button>
+            <p className="text-[9px] text-gray-400 text-center">Dana akan ditampung di Escrow GrosirPJ sampai barang diterima</p>
           </div>
         )}
 
         {/* === PENDING - E-Wallet Payment === */}
-        {isPending && !hasSubmittedProof && order.paymentMethod === 'ewallet' && (
+        {isPending && order.paymentMethod === 'ewallet' && (
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+            <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
               <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
               Pembayaran via E-Wallet
             </div>
 
             {sellerBankInfo ? (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 space-y-1">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 space-y-0.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-gray-500">E-Wallet</span>
                   <span className="font-semibold text-xs text-gray-800">{sellerBankInfo.bankName || 'GoPay'}</span>
@@ -396,7 +370,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 text-purple-500 animate-spin" />
+                <Loader2 className="w-3 h-3 text-purple-500 animate-spin" />
                 <span className="text-xs text-gray-500">Memuat info e-wallet...</span>
               </div>
             )}
@@ -407,13 +381,13 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                 <div className="text-[10px] text-amber-700 space-y-0.5">
                   <p>1. Transfer ke e-wallet seller</p>
                   <p>2. Isi nama pengirim</p>
-                  <p>3. Klik &quot;Saya Sudah Bayar&quot;</p>
+                  <p>3. Klik "Saya Sudah Bayar" → Dana ditampung Escrow</p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Label htmlFor="senderNameEwallet" className="text-[10px] font-medium text-gray-700">
                   Nama Pengirim *
                 </Label>
@@ -425,7 +399,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                   className="rounded-lg text-xs h-8"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Label htmlFor="paymentNoteEwallet" className="text-[10px] font-medium text-gray-700">
                   Catatan (Opsional)
                 </Label>
@@ -440,7 +414,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
             </div>
 
             <Button
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg text-xs"
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg text-xs h-9"
               onClick={handleSubmitPayment}
               disabled={confirming || !senderName.trim()}
             >
@@ -450,19 +424,20 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-3 h-3 mr-1" /> Saya Sudah Bayar
+                  <Shield className="w-3 h-3 mr-1" /> Saya Sudah Bayar
                 </>
               )}
             </Button>
+            <p className="text-[9px] text-gray-400 text-center">Dana akan ditampung di Escrow GrosirPJ sampai barang diterima</p>
           </div>
         )}
 
         {/* === PENDING - COD Payment === */}
-        {isPending && !hasSubmittedProof && order.paymentMethod === 'cod' && (
+        {isPending && order.paymentMethod === 'cod' && (
           <div className="space-y-2">
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
               <div className="flex items-start gap-2">
-                <Banknote className="w-5 h-5 text-emerald-500 shrink-0" />
+                <Banknote className="w-4 h-4 text-emerald-500 shrink-0" />
                 <div>
                   <p className="font-medium text-xs text-gray-800">Bayar saat barang tiba</p>
                   <p className="text-[10px] text-gray-500">
@@ -473,7 +448,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
             </div>
 
             <Button
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg text-xs"
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg text-xs h-9"
               onClick={handleSubmitPayment}
               disabled={confirming}
             >

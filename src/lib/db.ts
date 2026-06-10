@@ -169,12 +169,18 @@ async function createTablesAndSeedIfNeeded(): Promise<void> {
           "bankName" TEXT,
           "bankAccount" TEXT,
           "bankHolder" TEXT,
+          "sellerBalance" INTEGER NOT NULL DEFAULT 0,
+          "totalSales" INTEGER NOT NULL DEFAULT 0,
           "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`);
+
+    // Add new columns if they don't exist (for existing databases)
+    try { await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "sellerBalance" INTEGER NOT NULL DEFAULT 0`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "totalSales" INTEGER NOT NULL DEFAULT 0`); } catch {}
 
     // --- UserAddress ---
     await db.$executeRawUnsafe(`
@@ -259,6 +265,8 @@ async function createTablesAndSeedIfNeeded(): Promise<void> {
           "status" TEXT NOT NULL DEFAULT 'pending',
           "totalAmount" INTEGER NOT NULL,
           "shippingCost" INTEGER NOT NULL DEFAULT 0,
+          "marketplaceFee" INTEGER NOT NULL DEFAULT 0,
+          "sellerPayout" INTEGER NOT NULL DEFAULT 0,
           "shippingAddress" TEXT NOT NULL DEFAULT '',
           "paymentMethod" TEXT NOT NULL DEFAULT 'cod',
           "paymentProof" TEXT NOT NULL DEFAULT '',
@@ -286,6 +294,8 @@ async function createTablesAndSeedIfNeeded(): Promise<void> {
     try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "paymentProof" TEXT NOT NULL DEFAULT ''`); } catch {}
     try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "shippingAddress" TEXT NOT NULL DEFAULT ''`); } catch {}
     try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "shippingCost" INTEGER NOT NULL DEFAULT 0`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "marketplaceFee" INTEGER NOT NULL DEFAULT 0`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "sellerPayout" INTEGER NOT NULL DEFAULT 0`); } catch {}
 
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Order_buyerId_idx" ON "Order"("buyerId")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Order_sellerId_idx" ON "Order"("sellerId")`);

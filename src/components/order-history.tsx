@@ -14,7 +14,11 @@ import { Separator } from '@/components/ui/separator';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { formatPrice, getStatusInfo } from '@/lib/constants';
-import { Package, MapPin, CreditCard, ChevronDown, ChevronUp, Clock, ShoppingBag, Banknote, Star } from 'lucide-react';
+import {
+  Package, MapPin, CreditCard, ChevronDown, ChevronUp, Clock,
+  ShoppingBag, Banknote, Star, Shield, Truck, CheckCircle, XCircle,
+  Navigation, Copy,
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaymentDialog } from '@/components/payment-dialog';
 import { toast } from 'sonner';
@@ -39,12 +43,20 @@ interface Order {
   paymentMethod: string;
   paymentProof: string;
   paidAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  expedition: string;
+  trackingNumber: string;
   notes: string;
   createdAt: string;
   items: OrderItem[];
   seller: { id: string; name: string; storeName?: string; city?: string; bankName?: string; bankAccount?: string; bankHolder?: string };
   buyer: { id: string; name: string; email: string; city?: string };
 }
+
+// ESCROW status steps for timeline
+const STATUS_STEPS = ['pending', 'paid', 'processing', 'shipped', 'delivered'];
+const STEP_LABELS = ['Menunggu Bayar', 'Dibayar', 'Diproses', 'Dikirim', 'Selesai'];
 
 export function OrderHistory() {
   const orderHistoryOpen = useUIStore((s) => s.orderHistoryOpen);
@@ -56,6 +68,7 @@ export function OrderHistory() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [confirmingReceipt, setConfirmingReceipt] = useState<string | null>(null);
   const [reviewItem, setReviewItem] = useState<{ orderId: string; productId: string; productName: string } | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
@@ -107,13 +120,61 @@ export function OrderHistory() {
     }
   };
 
+  // Confirm receipt (buyer confirms → delivered → funds released to seller)
+  const handleConfirmReceipt = async (orderId: string) => {
+    if (!user) return;
+    setConfirmingReceipt(orderId);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'delivered' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Pesanan diterima! Dana Escrow dicairkan ke penjual.');
+        fetchOrders();
+      } else {
+        toast.error(data.error || 'Gagal mengkonfirmasi penerimaan');
+      }
+    } catch {
+      toast.error('Gagal mengkonfirmasi penerimaan');
+    } finally {
+      setConfirmingReceipt(null);
+    }
+  };
+
+  // Cancel order
+  const handleCancelOrder = async (orderId: string) => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'cancelled' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Pesanan dibatalkan');
+        fetchOrders();
+      } else {
+        toast.error(data.error || 'Gagal membatalkan pesanan');
+      }
+    } catch {
+      toast.error('Gagal membatalkan pesanan');
+    }
+  };
+
   useEffect(() => {
     if (orderHistoryOpen && user) {
       fetchOrders();
     }
   }, [orderHistoryOpen, user, fetchOrders]);
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
     const d = new Date(dateStr);
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
@@ -124,12 +185,21 @@ export function OrderHistory() {
   };
 
   const handlePaymentConfirmed = () => {
-    fetchOrders(); // Refresh orders
+    fetchOrders();
   };
 
-  // Status timeline steps
-  const STATUS_STEPS = ['pending', 'paid', 'shipped', 'delivered'];
-  const getStatusStepIndex = (status: string) => STATUS_STEPS.indexOf(status);
+  const getStatusStepIndex = (status: string) => {
+    if (status === 'cancelled') return -1;
+    return STATUS_STEPS.indexOf(status);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success('Nomor resi berhasil disalin!');
+    }).catch(() => {
+      toast.error('Gagal menyalin');
+    });
+  };
 
   return (
     <>
@@ -137,9 +207,9 @@ export function OrderHistory() {
         <SheetContent side="right" className="w-full sm:w-96 md:max-w-lg p-0 flex flex-col gap-0 overflow-hidden">
           <SheetHeader className="p-6 pb-4 border-b border-gray-100">
             <SheetTitle className="text-xl font-display flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-emerald-500" /> Riwayat Pesanan
+              <ShoppingBag className="w-5 h-5 text-emerald-500" /> Pesanan Saya
             </SheetTitle>
-            <SheetDescription>Pesanan yang pernah Anda buat</SheetDescription>
+            <SheetDescription>Lacak dan kelola pesanan Anda</SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
@@ -163,11 +233,14 @@ export function OrderHistory() {
             ) : (
               <div className="p-4 space-y-3">
                 {orders.map((order) => {
-                  const statusInfo = getStatusInfo(order.paymentProof && order.status === 'pending' ? 'awaiting_confirmation' : order.status);
+                  const statusInfo = getStatusInfo(order.status);
                   const isExpanded = expandedId === order.id;
                   const currentStep = getStatusStepIndex(order.status);
                   const isCancelled = order.status === 'cancelled';
                   const isPending = order.status === 'pending';
+                  const isPaid = order.status === 'paid';
+                  const isShipped = order.status === 'shipped';
+                  const isDelivered = order.status === 'delivered';
 
                   return (
                     <div key={order.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
@@ -189,13 +262,21 @@ export function OrderHistory() {
 
                       {/* Expanded Detail */}
                       {isExpanded && (
-                        <div className="border-t border-gray-100 p-4 space-y-4">
+                        <div className="border-t border-gray-100 p-4 space-y-3">
+                          {/* Escrow Info */}
+                          {(isPaid || order.status === 'processing') && (
+                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+                              <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span className="text-xs text-emerald-700 font-medium">Dana aman di Escrow GrosirPJ</span>
+                            </div>
+                          )}
+
                           {/* Status Timeline */}
                           {!isCancelled && (
-                            <div className="flex items-center gap-1 px-2">
+                            <div className="flex items-center gap-0.5 px-1">
                               {STATUS_STEPS.map((step, idx) => (
                                 <div key={step} className="flex items-center flex-1">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
                                     idx <= currentStep ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-400'
                                   }`}>
                                     {idx + 1}
@@ -207,6 +288,15 @@ export function OrderHistory() {
                               ))}
                             </div>
                           )}
+                          {!isCancelled && (
+                            <div className="flex justify-between px-0">
+                              {STEP_LABELS.map((label, idx) => (
+                                <span key={label} className={`text-[8px] text-center flex-1 ${idx <= currentStep ? 'text-emerald-600 font-medium' : 'text-gray-400'}`}>
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {isCancelled && (
                             <div className="bg-red-50 rounded-lg p-3 text-center">
                               <p className="text-sm text-red-600 font-medium">Pesanan Dibatalkan</p>
@@ -214,7 +304,7 @@ export function OrderHistory() {
                           )}
 
                           {/* Items */}
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             {order.items.map((item) => {
                               let variants: Record<string, string> = {};
                               try { variants = JSON.parse(item.variants); } catch {}
@@ -234,6 +324,30 @@ export function OrderHistory() {
                               );
                             })}
                           </div>
+
+                          {/* Shipping Info for shipped orders */}
+                          {(isShipped || isDelivered) && order.expedition && order.trackingNumber && (
+                            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <Truck className="w-4 h-4 text-purple-600" />
+                                  <span className="text-xs font-semibold text-purple-800">{order.expedition}</span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-purple-600 hover:bg-purple-100 h-6 text-xs"
+                                  onClick={() => copyToClipboard(order.trackingNumber)}
+                                >
+                                  <Copy className="w-3 h-3 mr-1" /> Salin Resi
+                                </Button>
+                              </div>
+                              <p className="text-xs text-purple-700 font-mono">{order.trackingNumber}</p>
+                              {order.shippedAt && (
+                                <p className="text-[10px] text-purple-500 mt-1">Dikirim: {formatDate(order.shippedAt)}</p>
+                              )}
+                            </div>
+                          )}
 
                           <Separator />
 
@@ -257,16 +371,6 @@ export function OrderHistory() {
                             </div>
                           </div>
 
-                          {/* Payment proof if paid */}
-                          {order.paymentProof && order.status !== 'pending' && (
-                            <div className="bg-emerald-50 rounded-lg p-3">
-                              <div className="flex items-center gap-2 text-xs text-emerald-700">
-                                <Banknote className="w-3.5 h-3.5" />
-                                <span>{order.paymentProof}</span>
-                              </div>
-                            </div>
-                          )}
-
                           <div className="flex items-center gap-2 text-sm">
                             <Clock className="w-4 h-4 text-gray-400" />
                             <span className="text-gray-500">Seller: {order.seller?.storeName || order.seller?.name}</span>
@@ -277,31 +381,61 @@ export function OrderHistory() {
                             <span className="font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
                           </div>
 
-                          {/* Pay Now Button for Pending Orders */}
-                          {isPending && !order.paymentProof && (
-                            <Button
-                              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl py-5 mt-2"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenPayment(order);
-                              }}
-                            >
-                              <CreditCard className="w-4 h-4 mr-2" />
-                              Bayar Sekarang
-                            </Button>
-                          )}
-                          {isPending && order.paymentProof && (
-                            <div className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-sm font-medium mt-2">
-                              <Clock className="w-4 h-4 animate-pulse" />
-                              Menunggu Konfirmasi Penjual
+                          {/* Action Buttons */}
+
+                          {/* Pending: Pay Now or Cancel */}
+                          {isPending && (
+                            <div className="flex gap-2 mt-2">
+                              <Button
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl py-4"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenPayment(order);
+                                }}
+                              >
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Bayar Sekarang
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelOrder(order.id);
+                                }}
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
                             </div>
                           )}
 
-                          {/* Review Button for Delivered Orders */}
-                          {order.status === 'delivered' && (
-                            <div className="mt-3 pt-3 border-t border-gray-100">
+                          {/* Shipped: Confirm Receipt */}
+                          {isShipped && (
+                            <Button
+                              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl py-4 mt-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConfirmReceipt(order.id);
+                              }}
+                              disabled={confirmingReceipt === order.id}
+                            >
+                              {confirmingReceipt === order.id ? (
+                                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" /> Memproses...</>
+                              ) : (
+                                <><CheckCircle className="w-4 h-4 mr-2" /> Pesanan Diterima</>
+                              )}
+                            </Button>
+                          )}
+
+                          {isShipped && (
+                            <p className="text-[10px] text-gray-400 text-center">Klik "Pesanan Diterima" untuk mencairkan dana ke penjual</p>
+                          )}
+
+                          {/* Delivered: Review */}
+                          {isDelivered && (
+                            <div className="mt-2 pt-2 border-t border-gray-100">
                               <p className="text-xs text-gray-500 mb-2">Bagikan pengalaman Anda:</p>
-                              <div className="space-y-2">
+                              <div className="space-y-1.5">
                                 {order.items.map((item) => (
                                   <Button
                                     key={item.id}

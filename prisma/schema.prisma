@@ -30,6 +30,8 @@ model User {
   bankName         String?   // seller only - nama bank untuk pembayaran
   bankAccount      String?   // seller only - nomor rekening
   bankHolder       String?   // seller only - nama pemilik rekening
+  sellerBalance    Int       @default(0) // seller only - saldo dari escrow (dalam Rupiah)
+  totalSales       Int       @default(0) // seller only - total penjualan kumulatif
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -128,6 +130,8 @@ model Order {
   status          String      @default("pending") // pending, paid, processing, shipped, delivered, cancelled
   totalAmount     Int
   shippingCost    Int         @default(0)
+  marketplaceFee  Int         @default(0)    // Fee marketplace (2% dari totalAmount)
+  sellerPayout    Int         @default(0)    // Amount yang diterima seller setelah fee
   shippingAddress String      @default("")
   paymentMethod   String      @default("cod") // cod, bank_transfer, qris
   paymentProof    String      @default("")    // Catatan/bukti pembayaran dari buyer

@@ -7,7 +7,7 @@ import {
   Upload, Eye, BarChart3, ShoppingBag, Star, ArrowRight, AlertCircle, CheckCircle,
   Home, ClipboardList, MessageCircle, Bell, Megaphone, Clock, Truck,
   RotateCcw, Download, TrendingUp, Target, Newspaper, Menu, Search,
-  CreditCard, Banknote, Loader2,
+  CreditCard, Banknote, Loader2, Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -218,7 +218,8 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const totalSold = products.reduce((sum, p) => sum + p.sold, 0);
   const totalRevenue = products.reduce((sum, p) => sum + p.sold * p.price, 0);
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const readyToShipOrders = orders.filter(o => o.status === 'paid').length;
+  const paidOrders = orders.filter(o => o.status === 'paid').length; // Buyer has paid, need to process
+  const readyToShipOrders = orders.filter(o => o.status === 'paid' || o.status === 'processing').length;
   const returnOrders = orders.filter(o => o.status === 'cancelled').length;
   const avgRating = products.length > 0 ? (products.reduce((sum, p) => sum + p.rating, 0) / products.length) : 0;
   const conversionRate = totalSold > 0 ? Math.min((totalSold / (totalProducts * 10)) * 100, 100) : 0;
@@ -781,10 +782,10 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
               {/* Order Status Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 {[
-                  { icon: Clock, label: 'Perlu Diproses', value: pendingOrders, color: 'bg-orange-50 text-orange-600', iconBg: 'bg-orange-100' },
-                  { icon: Truck, label: 'Siap Dikirim', value: readyToShipOrders, color: 'bg-blue-50 text-blue-600', iconBg: 'bg-blue-100' },
-                  { icon: RotateCcw, label: 'Pengembalian', value: returnOrders, color: 'bg-pink-50 text-pink-600', iconBg: 'bg-pink-100' },
-                  { icon: Download, label: 'Produk Diturunkan', value: 0, color: 'bg-gray-50 text-gray-600', iconBg: 'bg-gray-100' },
+                  { icon: Clock, label: 'Menunggu Bayar', value: pendingOrders, color: 'bg-orange-50 text-orange-600', iconBg: 'bg-orange-100' },
+                  { icon: Package, label: 'Perlu Diproses', value: paidOrders, color: 'bg-blue-50 text-blue-600', iconBg: 'bg-blue-100' },
+                  { icon: Truck, label: 'Siap Dikirim', value: readyToShipOrders, color: 'bg-indigo-50 text-indigo-600', iconBg: 'bg-indigo-100' },
+                  { icon: RotateCcw, label: 'Dibatalkan', value: returnOrders, color: 'bg-red-50 text-red-600', iconBg: 'bg-red-100' },
                 ].map((item) => (
                   <div key={item.label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div className={`w-10 h-10 ${item.iconBg} rounded-xl flex items-center justify-center mb-3`}>
@@ -1182,7 +1183,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
           )}
 
           {activeTab === 'orders' && (
-            /* ===== PESANAN TAB ===== */
+            /* ===== PESANAN TAB (ESCROW FLOW) ===== */
             <div className="max-w-6xl mx-auto">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Pesanan Masuk ({orders.length})</h2>
               {loading ? (
@@ -1218,30 +1219,24 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                             </div>
                           ))}
                         </div>
-                        {/* Payment method & proof */}
+                        {/* Payment method & escrow info */}
                         <div className="flex items-center gap-3 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
                             <CreditCard className="w-3 h-3" />
                             {order.paymentMethod === 'cod' ? 'COD' : order.paymentMethod === 'transfer' ? 'Transfer Bank' : 'E-Wallet'}
                           </span>
-                          {order.paymentProof && order.status === 'pending' && (
-                            <span className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium">
-                              <Banknote className="w-3 h-3" />
-                              Bukti bayar diterima
-                            </span>
-                          )}
-                          {!order.paymentProof && order.status === 'pending' && (
-                            <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                              <Clock className="w-3 h-3" />
-                              Belum ada bukti bayar
-                            </span>
-                          )}
                           {order.paidAt && (
                             <span className="text-gray-400">Dibayar: {new Date(order.paidAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                           )}
+                          {(order.status === 'paid' || order.status === 'processing') && (
+                            <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
+                              <Shield className="w-3 h-3" />
+                              Dana di Escrow
+                            </span>
+                          )}
                         </div>
                         {/* Shipping info for shipped orders */}
-                        {order.status === 'shipped' && order.expedition && (
+                        {(order.status === 'shipped' || order.status === 'delivered') && order.expedition && (
                           <div className="flex items-center gap-2 text-xs bg-cyan-50 text-cyan-700 px-3 py-2 rounded-lg">
                             <Truck className="w-3.5 h-3.5" />
                             <span className="font-medium">{order.expedition}</span>
@@ -1259,30 +1254,43 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
                           <div className="flex gap-2">
-                            {order.status === 'pending' && order.paymentProof && (
-                              <>
-                                <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-semibold" onClick={() => handleUpdateOrderStatus(order.id, 'paid')}>
-                                  <CheckCircle className="w-3 h-3 mr-1" /> Konfirmasi Bayar
-                                </Button>
-                                <Button size="sm" variant="outline" className="rounded-lg text-xs border-red-300 text-red-500 hover:bg-red-50" onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}>Tolak</Button>
-                              </>
-                            )}
-                            {order.status === 'pending' && !order.paymentProof && (
+                            {/* ESCROW: Seller actions */}
+                            {/* Pending = waiting for buyer to pay, no seller action */}
+                            {order.status === 'pending' && (
                               <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 Menunggu pembeli bayar
                               </span>
                             )}
+                            {/* Paid = buyer has paid (escrow), seller should process */}
                             {order.status === 'paid' && (
-                              <Button size="sm" className="rounded-lg text-xs bg-cyan-500 hover:bg-cyan-600 text-white" onClick={() => openShippingDialog(order.id)}>
-                                <Truck className="w-3 h-3 mr-1" />
-                                Kirim Pesanan
+                              <>
+                                <Button size="sm" className="rounded-lg text-xs bg-indigo-500 hover:bg-indigo-600 text-white font-semibold" onClick={() => handleUpdateOrderStatus(order.id, 'processing')}>
+                                  <Package className="w-3 h-3 mr-1" /> Proses Pesanan
+                                </Button>
+                                <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => openShippingDialog(order.id)}>
+                                  <Truck className="w-3 h-3 mr-1" /> Kirim Langsung
+                                </Button>
+                              </>
+                            )}
+                            {/* Processing = seller preparing, can ship */}
+                            {order.status === 'processing' && (
+                              <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => openShippingDialog(order.id)}>
+                                <Truck className="w-3 h-3 mr-1" /> Kirim Pesanan
                               </Button>
                             )}
+                            {/* Shipped = waiting for buyer to confirm receipt */}
                             {order.status === 'shipped' && (
                               <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
                                 <Truck className="w-3 h-3" />
                                 Menunggu konfirmasi pembeli
+                              </span>
+                            )}
+                            {/* Delivered = complete, funds released */}
+                            {order.status === 'delivered' && (
+                              <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Selesai - Dana dicairkan
                               </span>
                             )}
                           </div>

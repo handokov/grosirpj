@@ -1,14 +1,23 @@
 import { db, ensureDb } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
+import { MARKETPLACE_FEE_PERCENT } from '@/lib/constants';
 
-// Valid status transitions
+// ===== ESCROW-BASED ORDER FLOW (like Tokopedia/Shopee) =====
+// 1. Buyer creates order → pending
+// 2. Buyer confirms payment → paid (funds in escrow conceptually)
+// 3. Seller processes → processing
+// 4. Seller ships with tracking → shipped
+// 5. Buyer confirms receipt → delivered (funds released to seller)
+// 6. Either party can cancel from pending
+
+// Valid status transitions (escrow model)
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: ['paid', 'cancelled'],
-  paid: ['processing', 'shipped', 'cancelled'],
-  processing: ['shipped'],
-  shipped: ['delivered'],
-  delivered: [],
-  cancelled: [],
+  pending: ['paid', 'cancelled'],       // Buyer pays, or either cancels
+  paid: ['processing', 'shipped', 'cancelled'], // Seller processes/ships, or cancel
+  processing: ['shipped'],              // Seller ships
+  shipped: ['delivered'],               // Buyer confirms receipt
+  delivered: [],                        // Final - funds released to seller
+  cancelled: [],                        // Final
 };
 
 // GET /api/orders/[id] - Get order detail by ID
@@ -93,7 +102,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/orders/[id] - Update order (status transition or submit payment proof)
+// PATCH /api/orders/[id] - Update order (escrow-based flow)
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -138,9 +147,61 @@ export async function PATCH(
       );
     }
 
-    // === SPECIAL CASE: Buyer submits payment proof (no status change) ===
-    // When buyer clicks "Saya Sudah Bayar", they submit paymentProof but status stays 'pending'
-    // Only the seller can then change status to 'paid'
+    // === CASE 1: Buyer confirms payment (status → paid) ===
+    // In escrow model, buyer clicks "Saya Sudah Bayar" which:
+    // 1. Saves paymentProof
+    // 2. Changes status to 'paid' (funds conceptually in escrow)
+    // 3. Calculates marketplace fee and seller payout
+    if (paymentProof && status === 'paid' && currentOrder.status === 'pending') {
+      if (!isBuyer) {
+        return Response.json(
+          { error: 'Hanya pembeli yang dapat mengkonfirmasi pembayaran' },
+          { status: 403 }
+        );
+      }
+
+      // Calculate marketplace fee and seller payout
+      const feeAmount = Math.round(currentOrder.totalAmount * (MARKETPLACE_FEE_PERCENT / 100));
+      const sellerPayout = currentOrder.totalAmount - feeAmount;
+
+      // Build update data
+      const updateData: Record<string, unknown> = {
+        status: 'paid',
+        paymentProof,
+        paidAt: new Date(),
+        marketplaceFee: feeAmount,
+        sellerPayout: sellerPayout,
+      };
+
+      const updatedOrder = await db.order.update({
+        where: { id },
+        data: updateData,
+        include: {
+          items: true,
+          buyer: { select: { id: true, name: true, email: true, city: true } },
+          seller: { select: { id: true, name: true, storeName: true, city: true } },
+        },
+      });
+
+      // Notify seller that buyer has paid (escrow: funds received)
+      try {
+        await db.notification.create({
+          data: {
+            userId: currentOrder.sellerId,
+            title: '💰 Pembayaran Diterima',
+            message: `Pembeli ${currentOrder.buyer.name} telah membayar pesanan #${id.slice(-8)}. Dana ditampung di Escrow GrosirPJ. Segera proses pesanan!`,
+            type: 'payment',
+            link: `/orders/${id}`,
+          },
+        });
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError);
+      }
+
+      return Response.json({ order: updatedOrder });
+    }
+
+    // === CASE 2: Submit payment proof without status change (legacy support for COD) ===
     if (paymentProof && (!status || status === currentOrder.status)) {
       if (!isBuyer) {
         return Response.json(
@@ -161,7 +222,6 @@ export async function PATCH(
         );
       }
 
-      // Save payment proof without changing status
       const updatedOrder = await db.order.update({
         where: { id },
         data: { paymentProof },
@@ -172,25 +232,10 @@ export async function PATCH(
         },
       });
 
-      // Notify seller that buyer has submitted payment
-      try {
-        await db.notification.create({
-          data: {
-            userId: currentOrder.sellerId,
-            title: 'Bukti Pembayaran Diterima',
-            message: `Pembeli ${currentOrder.buyer.name} telah mengirim bukti pembayaran. Silakan konfirmasi penerimaan pembayaran.`,
-            type: 'payment',
-            link: `/orders/${id}`,
-          },
-        });
-      } catch (notifError) {
-        console.error('Failed to create notification:', notifError);
-      }
-
       return Response.json({ order: updatedOrder });
     }
 
-    // === STATUS TRANSITION ===
+    // === CASE 3: Status transitions ===
     if (!status) {
       return Response.json(
         { error: 'Status wajib diisi' },
@@ -206,31 +251,40 @@ export async function PATCH(
       );
     }
 
-    // Role-based status transition rules
-    // Seller confirms payment receipt (buyer already submitted proof, seller verifies and marks as paid)
-    if (status === 'paid' && !isSeller) {
-      return Response.json(
-        { error: 'Hanya penjual yang dapat mengonfirmasi pembayaran' },
-        { status: 403 }
-      );
+    // Role-based status transition rules (escrow model)
+    // Buyer: can set 'paid' (from pending), 'delivered' (from shipped), 'cancelled' (from pending)
+    // Seller: can set 'processing' (from paid), 'shipped' (from paid/processing), 'cancelled'
+    if (status === 'paid') {
+      if (!isBuyer) {
+        return Response.json(
+          { error: 'Hanya pembeli yang dapat mengkonfirmasi pembayaran' },
+          { status: 403 }
+        );
+      }
     }
-    if (status === 'processing' && !isSeller) {
-      return Response.json(
-        { error: 'Hanya penjual yang dapat memproses pesanan' },
-        { status: 403 }
-      );
+    if (status === 'processing') {
+      if (!isSeller) {
+        return Response.json(
+          { error: 'Hanya penjual yang dapat memproses pesanan' },
+          { status: 403 }
+        );
+      }
     }
-    if (status === 'shipped' && !isSeller) {
-      return Response.json(
-        { error: 'Hanya penjual yang dapat mengirim pesanan' },
-        { status: 403 }
-      );
+    if (status === 'shipped') {
+      if (!isSeller) {
+        return Response.json(
+          { error: 'Hanya penjual yang dapat mengirim pesanan' },
+          { status: 403 }
+        );
+      }
     }
-    if (status === 'delivered' && !isBuyer) {
-      return Response.json(
-        { error: 'Hanya pembeli yang dapat mengonfirmasi penerimaan' },
-        { status: 403 }
-      );
+    if (status === 'delivered') {
+      if (!isBuyer) {
+        return Response.json(
+          { error: 'Hanya pembeli yang dapat mengonfirmasi penerimaan' },
+          { status: 403 }
+        );
+      }
     }
     if (status === 'cancelled' && !isBuyer && !isSeller) {
       return Response.json(
@@ -250,10 +304,10 @@ export async function PATCH(
       );
     }
 
-    // When seller confirms payment (paid), the order must have paymentProof
+    // When buyer confirms payment (paid), require paymentProof for non-COD
     if (status === 'paid' && !currentOrder.paymentProof && currentOrder.paymentMethod !== 'cod') {
       return Response.json(
-        { error: 'Pembeli belum mengirim bukti pembayaran' },
+        { error: 'Bukti pembayaran belum dikirim. Silakan kirim bukti pembayaran terlebih dahulu.' },
         { status: 400 }
       );
     }
@@ -273,7 +327,7 @@ export async function PATCH(
     if (paymentProof) {
       updateData.paymentProof = paymentProof;
     }
-    if (status === 'paid') {
+    if (status === 'paid' && !currentOrder.paidAt) {
       updateData.paidAt = new Date();
     }
     if (status === 'shipped') {
@@ -283,6 +337,21 @@ export async function PATCH(
     }
     if (status === 'delivered') {
       updateData.deliveredAt = new Date();
+
+      // Release escrow funds to seller balance
+      try {
+        const sellerPayout = currentOrder.sellerPayout || (currentOrder.totalAmount - Math.round(currentOrder.totalAmount * (MARKETPLACE_FEE_PERCENT / 100)));
+        await db.user.update({
+          where: { id: currentOrder.sellerId },
+          data: {
+            sellerBalance: { increment: sellerPayout },
+            totalSales: { increment: currentOrder.totalAmount },
+          },
+        });
+      } catch (balanceError) {
+        console.error('Failed to update seller balance:', balanceError);
+        // Don't fail the request - order status update is more important
+      }
     }
 
     const updatedOrder = await db.order.update({
@@ -318,28 +387,28 @@ export async function PATCH(
 
       switch (status) {
         case 'paid':
-          notificationTitle = 'Pembayaran Dikonfirmasi';
-          notificationMessage = 'Penjual telah mengonfirmasi pembayaran Anda. Pesanan akan segera diproses.';
+          notificationTitle = '💰 Pembayaran Diterima';
+          notificationMessage = `Pembeli ${currentOrder.buyer.name} telah membayar pesanan #${id.slice(-8)}. Dana ditampung di Escrow GrosirPJ. Segera proses pesanan!`;
           notificationType = 'payment';
           break;
         case 'processing':
-          notificationTitle = 'Pesanan Sedang Diproses';
-          notificationMessage = 'Penjual sedang memproses pesanan Anda. Barang akan segera dikirim.';
+          notificationTitle = '📦 Pesanan Diproses';
+          notificationMessage = `Penjual sedang memproses pesanan Anda. Barang akan segera dikirim.`;
           notificationType = 'order';
           break;
         case 'shipped':
-          notificationTitle = `Pesanan Dikirim - ${expedition}`;
+          notificationTitle = `🚚 Pesanan Dikirim - ${expedition}`;
           notificationMessage = `Pesanan Anda telah dikirim via ${expedition}. Nomor Resi: ${trackingNumber}. Lacak pesanan Anda di halaman Pesanan Saya.`;
           notificationType = 'shipping';
           break;
         case 'delivered':
-          notificationTitle = 'Pesanan Diterima';
-          notificationMessage = 'Pembeli telah mengonfirmasi penerimaan pesanan. Terima kasih!';
+          notificationTitle = '✅ Pesanan Selesai';
+          notificationMessage = `Pembeli telah mengonfirmasi penerimaan pesanan. Dana escrow akan dicairkan ke saldo Anda. Terima kasih!`;
           notificationType = 'order';
           break;
         case 'cancelled':
-          notificationTitle = 'Pesanan Dibatalkan';
-          notificationMessage = 'Pesanan telah dibatalkan.';
+          notificationTitle = '❌ Pesanan Dibatalkan';
+          notificationMessage = `Pesanan #${id.slice(-8)} telah dibatalkan.`;
           notificationType = 'order';
           break;
       }
@@ -356,7 +425,6 @@ export async function PATCH(
         });
       }
     } catch (notifError) {
-      // Don't fail the request if notification creation fails
       console.error('Failed to create notification:', notifError);
     }
 

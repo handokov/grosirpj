@@ -34,7 +34,7 @@ import {
   Package, Truck, CreditCard, CheckCircle, XCircle,
   Clock, MapPin, ShoppingBag, ChevronDown, ChevronUp,
   Banknote, QrCode, Store, Navigation, Copy, ExternalLink,
-  Loader2, Archive
+  Loader2, Archive, Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -91,11 +91,11 @@ interface OrdersPanelProps {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: typeof Package; description: string }> = {
   pending: { label: 'Menunggu Pembayaran', color: 'text-amber-700', bgColor: 'bg-amber-100', icon: Clock, description: 'Menunggu pembayaran dari pembeli' },
-  awaiting_confirmation: { label: 'Menunggu Konfirmasi', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: Clock, description: 'Bukti pembayaran diterima, menunggu konfirmasi penjual' },
-  paid: { label: 'Sudah Dibayar', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: CreditCard, description: 'Pembayaran telah dikonfirmasi' },
+  awaiting_confirmation: { label: 'Menunggu Konfirmasi', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: Clock, description: 'Menunggu konfirmasi pembayaran' },
+  paid: { label: 'Dibayar (Escrow)', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: CreditCard, description: 'Pembayaran diterima, dana di Escrow GrosirPJ' },
   processing: { label: 'Sedang Diproses', color: 'text-indigo-700', bgColor: 'bg-indigo-100', icon: Archive, description: 'Penjual sedang memproses pesanan' },
   shipped: { label: 'Dikirim', color: 'text-purple-700', bgColor: 'bg-purple-100', icon: Truck, description: 'Pesanan sedang dalam pengiriman' },
-  delivered: { label: 'Diterima', color: 'text-emerald-700', bgColor: 'bg-emerald-100', icon: CheckCircle, description: 'Pesanan telah diterima pembeli' },
+  delivered: { label: 'Selesai', color: 'text-emerald-700', bgColor: 'bg-emerald-100', icon: CheckCircle, description: 'Pesanan selesai, dana dicairkan ke penjual' },
   cancelled: { label: 'Dibatalkan', color: 'text-red-700', bgColor: 'bg-red-100', icon: XCircle, description: 'Pesanan telah dibatalkan' },
 };
 
@@ -266,6 +266,7 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
   };
 
   // Handle payment confirmation (buyer submits proof, not changing status to paid)
+  // ESCROW: Buyer confirms payment → status becomes 'paid' (funds in escrow)
   const handleSubmitPaymentProof = async () => {
     if (!user) return;
     setPaymentLoading(true);
@@ -278,17 +279,20 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ paymentProof: proof }),
+        body: JSON.stringify({
+          status: 'paid',
+          paymentProof: proof,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success('Bukti pembayaran berhasil dikirim! Menunggu konfirmasi penjual.');
+        toast.success('Pembayaran berhasil dikonfirmasi! Dana ditampung di Escrow GrosirPJ.');
         await fetchOrders();
       } else {
-        toast.error(data.error || 'Gagal mengirim bukti pembayaran');
+        toast.error(data.error || 'Gagal mengkonfirmasi pembayaran');
       }
     } catch {
-      toast.error('Gagal mengirim bukti pembayaran');
+      toast.error('Gagal mengkonfirmasi pembayaran');
     } finally {
       setPaymentLoading(false);
       setPaymentDialogOpen(false);
@@ -328,43 +332,42 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
     const isUpdating = updating === order.id;
 
     if (mode === 'buyer') {
-      // Buyer actions
+      // ESCROW: Buyer actions
       if (order.status === 'pending') {
-        if (order.paymentProof) {
-          // Buyer already submitted proof, waiting for seller confirmation
-          buttons.push(
-            <div key="awaiting" className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-sm font-medium">
-              <Clock className="w-4 h-4 animate-pulse" />
-              Menunggu Konfirmasi Penjual
-            </div>
-          );
-        } else {
-          // Buyer hasn't submitted proof yet
-          buttons.push(
-            <Button
-              key="pay"
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
-              onClick={() => openPaymentDialog(order.id, order.paymentMethod)}
-              disabled={isUpdating}
-            >
-              <CreditCard className="w-4 h-4 mr-2" />
-              {isUpdating ? 'Memproses...' : 'Bayar Sekarang'}
-            </Button>
-          );
-          buttons.push(
-            <Button
-              key="cancel"
-              variant="outline"
-              className="flex-1 border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
-              onClick={() => handleUpdateStatus(order.id, 'cancelled')}
-              disabled={isUpdating}
-            >
-              <XCircle className="w-4 h-4 mr-2" />
-              Batalkan
-            </Button>
-          );
-        }
+        // Buyer hasn't paid yet - show pay button
+        buttons.push(
+          <Button
+            key="pay"
+            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
+            onClick={() => openPaymentDialog(order.id, order.paymentMethod)}
+            disabled={isUpdating}
+          >
+            <CreditCard className="w-4 h-4 mr-2" />
+            {isUpdating ? 'Memproses...' : 'Bayar Sekarang'}
+          </Button>
+        );
+        buttons.push(
+          <Button
+            key="cancel"
+            variant="outline"
+            className="flex-1 border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
+            onClick={() => handleUpdateStatus(order.id, 'cancelled')}
+            disabled={isUpdating}
+          >
+            <XCircle className="w-4 h-4 mr-2" />
+            Batalkan
+          </Button>
+        );
+      } else if (order.status === 'paid' || order.status === 'processing') {
+        // Buyer has paid, waiting for seller to process/ship
+        buttons.push(
+          <div key="escrow" className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium">
+            <Shield className="w-4 h-4" />
+            Dana aman di Escrow GrosirPJ
+          </div>
+        );
       } else if (order.status === 'shipped') {
+        // Buyer can confirm receipt → funds released to seller
         buttons.push(
           <Button
             key="receive"
@@ -373,49 +376,26 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
             disabled={isUpdating}
           >
             <CheckCircle className="w-4 h-4 mr-2" />
-            {isUpdating ? 'Memproses...' : 'Konfirmasi Diterima'}
+            {isUpdating ? 'Memproses...' : 'Pesanan Diterima'}
           </Button>
+        );
+        buttons.push(
+          <p key="escrow-note" className="text-[10px] text-gray-400 text-center w-full">Klik untuk mencairkan dana ke penjual</p>
         );
       }
     } else {
-      // Seller actions
+      // ESCROW: Seller actions
       if (order.status === 'pending') {
-        if (order.paymentProof) {
-          // Buyer has submitted proof, seller can confirm
-          buttons.push(
-            <Button
-              key="confirm-pay"
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
-              onClick={() => handleUpdateStatus(order.id, 'paid')}
-              disabled={isUpdating}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {isUpdating ? 'Memproses...' : 'Konfirmasi Bayar'}
-            </Button>
-          );
-        } else {
-          // Buyer hasn't submitted proof yet
-          buttons.push(
-            <div key="awaiting" className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-medium">
-              <Clock className="w-3 h-3" />
-              Menunggu Pembeli Bayar
-            </div>
-          );
-        }
+        // Waiting for buyer to pay - no seller action
         buttons.push(
-          <Button
-            key="reject"
-            variant="outline"
-            className="flex-1 border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
-            onClick={() => handleUpdateStatus(order.id, 'cancelled')}
-            disabled={isUpdating}
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Tolak
-          </Button>
+          <div key="awaiting" className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-medium">
+            <Clock className="w-3 h-3" />
+            Menunggu Pembeli Bayar
+          </div>
         );
       }
       if (order.status === 'paid') {
+        // Buyer has paid (escrow), seller should process
         buttons.push(
           <Button
             key="process"
@@ -427,8 +407,20 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
             {isUpdating ? 'Memproses...' : 'Proses Pesanan'}
           </Button>
         );
+        buttons.push(
+          <Button
+            key="ship"
+            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
+            onClick={() => openShippingDialog(order.id)}
+            disabled={isUpdating}
+          >
+            <Truck className="w-4 h-4 mr-2" />
+            Kirim Langsung
+          </Button>
+        );
       }
-      if (order.status === 'paid' || order.status === 'processing') {
+      if (order.status === 'processing') {
+        // Seller is processing, can ship
         buttons.push(
           <Button
             key="ship"
@@ -439,6 +431,24 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
             <Truck className="w-4 h-4 mr-2" />
             Kirim Pesanan
           </Button>
+        );
+      }
+      if (order.status === 'shipped') {
+        // Waiting for buyer to confirm receipt
+        buttons.push(
+          <div key="awaiting" className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-medium">
+            <Clock className="w-3 h-3" />
+            Menunggu Konfirmasi Pembeli
+          </div>
+        );
+      }
+      if (order.status === 'delivered') {
+        // Order complete, funds released
+        buttons.push(
+          <div key="complete" className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs font-medium">
+            <CheckCircle className="w-3 h-3" />
+            Selesai - Dana Dicairkan
+          </div>
         );
       }
     }
@@ -614,8 +624,8 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
             ) : (
               <div className="divide-y divide-gray-100">
                 {orders.map((order) => {
-                  // Show "awaiting_confirmation" status when pending + has paymentProof
-                  const effectiveStatus = order.status === 'pending' && order.paymentProof ? 'awaiting_confirmation' : order.status;
+                  // In escrow model, paid status is set directly by buyer (no awaiting_confirmation)
+                  const effectiveStatus = order.status;
                   const statusConfig = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.pending;
                   const StatusIcon = statusConfig.icon;
                   const isExpanded = expandedOrder === order.id;
