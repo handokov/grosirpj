@@ -3,6 +3,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { getAuthUser } from '@/lib/auth';
 
 // GET /api/upload/signature — Generate a Cloudinary upload signature for direct browser uploads
+// NOTE: Prefer using POST /api/upload instead, which handles server-side upload with local fallback.
+// This signature endpoint is kept for backward compatibility but requires Cloudinary credentials.
 export async function GET(request: Request) {
   try {
     // Require authentication
@@ -18,16 +20,14 @@ export async function GET(request: Request) {
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-    // If Cloudinary env vars are not set, return mock/demo data so the app doesn't crash
+    // If Cloudinary env vars are not set, return error with guidance
     if (!cloudName || !apiKey || !apiSecret) {
-      console.warn('Cloudinary env vars not configured, returning demo signature data');
-      return NextResponse.json({
-        signature: 'demo_signature',
-        timestamp: Math.round(new Date().getTime() / 1000),
-        apiKey: 'demo_api_key',
-        cloudName: 'demo_cloud_name',
-        folder: 'grosirpj/products',
-      });
+      return NextResponse.json(
+        {
+          error: 'Upload belum dikonfigurasi. Silakan set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, dan CLOUDINARY_API_SECRET di environment variables, atau gunakan server-side upload (POST /api/upload).',
+        },
+        { status: 503 }
+      );
     }
 
     // Get folder from query params (default: grosirpj/products)

@@ -1,85 +1,27 @@
 ---
 Task ID: 1
-Agent: Main Agent
-Task: Fix order status update error ("Gagal memperbarui status pesanan")
-
-Work Log:
-- Investigated the PATCH /api/orders/[id] endpoint and found it requires JWT cookie authentication via `getAuthUser(request)`
-- Discovered the frontend sends `userId` in the request body but the API only checks JWT cookies
-- When JWT cookie is missing (which can happen through the Caddy proxy), `getAuthUser` returns null and the request fails with 401
-- However, the 401 error message "Anda harus login untuk mengubah pesanan" doesn't match what the user sees ("Gagal memperbarui status pesanan")
-- The 500 error was likely caused by the auth check throwing an exception in certain edge cases
-- Added a fallback in the PATCH endpoint to also accept `userId` from the request body when JWT cookie is not available
-- The frontend already sends `userId` in the body, so this fallback makes the endpoint more resilient
-- Also improved error logging in the catch block to provide better error details in development mode
-- Added `credentials: 'include'` to the login and register fetch calls in the auth store
-- Verified the fix works via both direct access and Caddy gateway
-
-Stage Summary:
-- Fixed the order status update by adding userId fallback authentication
-- Added `credentials: 'include'` to login/register fetch calls
-- Improved error logging for the PATCH endpoint
-- Tested and verified the fix works with both JWT cookie and userId fallback
-
----
-Task ID: 2
-Agent: Main Agent
-Task: Add visible logout button for desktop/laptop view
-
-Work Log:
-- Added a visible "Keluar" (Logout) button in the navbar that shows on desktop (md: breakpoint and above)
-- The button is placed next to the profile avatar button, outside the dropdown menu
-- It's styled consistently with the other nav buttons (rounded-full, border, text-white/70)
-- The existing logout button inside the profile dropdown is still available for mobile users
-- Verified the button appears in the browser snapshot
-
-Stage Summary:
-- Added desktop-visible logout button next to profile avatar in navbar
-- Button is hidden on mobile (hidden md:flex) to avoid clutter
-- Profile dropdown still has logout option for all screen sizes
-
----
-Task ID: 1
 Agent: Main
-Task: Sync live Vercel/Turso data to local SQLite database
+Task: Fix image upload "gagal mendapatkan signature" / "Unknown API key demo_api_key" error
 
 Work Log:
-- Discovered live server URL: https://grosirpj.vercel.app (using Turso database)
-- Live server had 14 users, 33 products, 12 orders, 1 review
-- Created sync script at scripts/sync-live.ts that:
-  - Fetches all user data from live via login API
-  - Fetches products and orders from live REST API
-  - Extracts additional users from order/product references
-  - Clears local DB and recreates all records with live data
-- Successfully synced:
-  - 11/14 users (7 seed + 4 registered users with activity; 3 inactive accounts not accessible via API)
-  - 33/33 products ✅
-  - 12/12 orders ✅
-  - 15 order items ✅
-  - 1/1 review ✅
-  - 38 variant groups + 146 variant options ✅
-- All user passwords reset to 'password123' (bcrypt hashed)
-- User IDs now match live server IDs (was different before)
+- Investigated the issue: Cloudinary env vars (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) were not configured in .env file
+- Old signature endpoint (/api/upload/signature) returned demo data ("demo_api_key") when env vars missing, causing Cloudinary to reject uploads
+- On Vercel, the signature endpoint also failed because Cloudinary wasn't configured
+- Created new server-side upload endpoint at POST /api/upload that:
+  1. Receives file from browser via FormData
+  2. If Cloudinary credentials are configured: uploads to Cloudinary server-side
+  3. If Cloudinary credentials are NOT configured + not on Vercel: saves to local filesystem (public/uploads/)
+  4. If on Vercel without Cloudinary: returns clear error message about needing to configure env vars
+- Updated seller-dashboard.tsx to use new POST /api/upload endpoint instead of signature-based direct-to-Cloudinary approach
+- Updated old signature endpoint to return proper error instead of demo data
+- Updated .env.example with Cloudinary documentation
+- Tested with curl: upload works locally, file saved to public/uploads/grosirpj-products/, accessible via HTTP
+- Verified via Agent Browser: product form renders correctly with upload section
 
 Stage Summary:
-- Local database now fully synchronized with live Vercel/Turso data
-- Key data (products, orders) is 100% in sync
-- 3 inactive user accounts on live server not accessible via API (no orders/products)
-- Script saved at scripts/sync-live.ts for future re-runs
-
----
-Task ID: 2
-Agent: Main
-Task: Fix logout button placement issues
-
-Work Log:
-- Removed standalone "Keluar" button from buyer navbar that was floating outside profile dropdown
-- Added "Keluar" (logout) button to seller dashboard sidebar with red styling
-- Added LogOut icon import and logout() from useAuthStore in seller-dashboard.tsx
-- Verified both fixes work correctly via agent-browser testing
-
-Stage Summary:
-- Buyer mode: "Keluar" only appears inside profile dropdown (not floating outside)
-- Seller mode: "Keluar" button visible in sidebar below "Kembali ke Pembeli"
-- Both tested and verified working
-- Did NOT push to GitHub per user's instructions
+- New upload endpoint: /src/app/api/upload/route.ts
+- Updated: /src/components/seller-dashboard.tsx (handleImageUpload function)
+- Updated: /src/app/api/upload/signature/route.ts (proper error instead of demo data)
+- Updated: /.env.example (Cloudinary vars documented)
+- For Vercel deployment: User MUST add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET to Vercel Environment Variables
+- For local development: Cloudinary is optional - falls back to local file storage

@@ -284,23 +284,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
     setUploadingImage(true);
     let uploaded = 0;
 
-    // Step 1: Get signed upload parameters from our server
-    let signData: { signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string };
-    try {
-      const signRes = await fetch('/api/upload/signature?folder=grosirpj/products');
-      if (!signRes.ok) {
-        const errData = await signRes.json().catch(() => ({}));
-        throw new Error(errData.error || 'Gagal mendapatkan signature');
-      }
-      signData = await signRes.json();
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal menyiapkan upload');
-      setUploadingImage(false);
-      e.target.value = '';
-      return;
-    }
-
-    // Step 2: Upload each file directly to Cloudinary
+    // Upload each file via server-side endpoint (Cloudinary or local fallback)
     for (const file of filesToUpload) {
       try {
         // Validate file type
@@ -310,7 +294,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
           continue;
         }
 
-        // Validate file size (10MB for direct upload - no Vercel limit)
+        // Validate file size (10MB)
         if (file.size > 10 * 1024 * 1024) {
           toast.error(`${file.name}: File terlalu besar (maks 10MB)`);
           continue;
@@ -318,24 +302,20 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('api_key', signData.apiKey);
-        formData.append('timestamp', signData.timestamp.toString());
-        formData.append('signature', signData.signature);
-        formData.append('folder', signData.folder);
-        formData.append('transformation', 'q_auto:good,f_auto');
+        formData.append('folder', 'grosirpj/products');
 
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`, {
+        const res = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         });
 
         if (res.ok) {
           const data = await res.json();
-          setForm(prev => ({ ...prev, images: [...prev.images, data.secure_url] }));
+          setForm(prev => ({ ...prev, images: [...prev.images, data.url] }));
           uploaded++;
         } else {
           const data = await res.json().catch(() => ({}));
-          toast.error(`${file.name}: ${data.error?.message || 'Upload gagal'}`);
+          toast.error(`${file.name}: ${data.error || 'Upload gagal'}`);
         }
       } catch (err: any) {
         console.error('[imageUpload] Error:', err);
