@@ -195,80 +195,75 @@ export async function POST(request: Request) {
         orderShippingCost = Math.round((sellerTotal / allTotal) * shippingCost);
       }
 
-      // Create the order with its items in a transaction
-      const order = await db.$transaction(async (tx) => {
-        // Decrement stock for each product
-        for (const item of sellerItems) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: {
-              stock: { decrement: item.quantity },
-              sold: { increment: item.quantity },
-            },
-          });
-        }
-
-        // Create order with items
-        const newOrder = await tx.order.create({
+      // Decrement stock for each product (sequential, not in transaction - Turso/LibSQL doesn't support interactive transactions)
+      for (const item of sellerItems) {
+        await db.product.update({
+          where: { id: item.productId },
           data: {
-            buyerId,
-            sellerId,
-            status: 'pending',
-            totalAmount,
-            shippingCost: orderShippingCost,
-            shippingAddress: shippingAddress || '',
-            paymentMethod: paymentMethod || 'cod',
-            notes: notes || '',
-            items: {
-              create: sellerItems.map((item) => ({
-                productId: item.productId,
-                productName: item.productName,
-                quantity: item.quantity,
-                price: item.price,
-                variants: JSON.stringify(item.variants),
-              })),
-            },
-          },
-          include: {
-            items: true,
-            buyer: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                city: true,
-              },
-            },
-            seller: {
-              select: {
-                id: true,
-                name: true,
-                storeName: true,
-                city: true,
-              },
-            },
+            stock: { decrement: item.quantity },
+            sold: { increment: item.quantity },
           },
         });
+      }
 
-        // Create notification for the seller
-        try {
-          await tx.notification.create({
-            data: {
-              userId: sellerId,
-              title: 'Pesanan Baru',
-              message: `Anda mendapat pesanan baru dari ${newOrder.buyer.name}. Silakan cek detail pesanan.`,
-              type: 'new_order',
-              link: `/orders/${newOrder.id}`,
+      // Create order with items
+      const newOrder = await db.order.create({
+        data: {
+          buyerId,
+          sellerId,
+          status: 'pending',
+          totalAmount,
+          shippingCost: orderShippingCost,
+          shippingAddress: shippingAddress || '',
+          paymentMethod: paymentMethod || 'cod',
+          notes: notes || '',
+          items: {
+            create: sellerItems.map((item) => ({
+              productId: item.productId,
+              productName: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+              variants: JSON.stringify(item.variants),
+            })),
+          },
+        },
+        include: {
+          items: true,
+          buyer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              city: true,
             },
-          });
-        } catch {
-          // Don't fail if notification creation fails
-        }
-
-        return newOrder;
+          },
+          seller: {
+            select: {
+              id: true,
+              name: true,
+              storeName: true,
+              city: true,
+            },
+          },
+        },
       });
 
-      createdOrders.push(order);
+      // Create notification for the seller
+      try {
+        await db.notification.create({
+          data: {
+            userId: sellerId,
+            title: 'Pesanan Baru',
+            message: `Anda mendapat pesanan baru dari ${newOrder.buyer.name}. Silakan cek detail pesanan.`,
+            type: 'new_order',
+            link: `/orders/${newOrder.id}`,
+          },
+        });
+      } catch {
+        // Don't fail if notification creation fails
+      }
+
+      createdOrders.push(newOrder);
     }
 
     return Response.json({ orders: createdOrders }, { status: 201 });
