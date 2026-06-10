@@ -2,10 +2,14 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { parse } from 'cookie';
 
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required. Set it in .env file.');
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'grosirpj-dev-secret-key'
+);
+
+// Warn at runtime if using default secret in production
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn('⚠️ WARNING: JWT_SECRET not set! Using default secret is insecure in production.');
 }
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 const COOKIE_NAME = 'grosirpj_token';
 
