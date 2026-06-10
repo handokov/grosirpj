@@ -89,8 +89,8 @@ export function AuthModal() {
     e.preventDefault();
     setError('');
 
-    if (regPassword.length < 6) {
-      setError('Password minimal 6 karakter');
+    if (regPassword.length < 8) {
+      setError('Password minimal 8 karakter');
       return;
     }
     if (isSeller && !regStoreName.trim()) {
@@ -262,12 +262,12 @@ export function AuthModal() {
                     <Input
                       id="reg-password"
                       type={showRegPassword ? 'text' : 'password'}
-                      placeholder="Minimal 6 karakter"
+                      placeholder="Minimal 8 karakter"
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       className="pl-10 pr-10 rounded-xl"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                     <button
                       type="button"

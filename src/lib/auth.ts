@@ -67,7 +67,7 @@ export function getSessionCookie(token: string): string {
  * Get the Set-Cookie header value for clearing the session
  */
 export function getClearSessionCookie(): string {
-  return `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`;
+  return `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax; ${process.env.NODE_ENV === 'production' ? 'Secure;' : ''}`;
 }
 
 /**

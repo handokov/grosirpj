@@ -454,6 +454,7 @@ async function seedDemoData(): Promise<void> {
   // =====================
   const seller1 = await db.user.create({
     data: {
+      id: 'seed-seller-1',
       email: 'seller1@grosirpj.id',
       name: 'CV Garment Prima',
       password: await hashPassword('password123'),
@@ -474,6 +475,7 @@ async function seedDemoData(): Promise<void> {
 
   const seller2 = await db.user.create({
     data: {
+      id: 'seed-seller-2',
       email: 'seller2@grosirpj.id',
       name: 'Elektronik Surabaya',
       password: await hashPassword('password123'),
@@ -494,6 +496,7 @@ async function seedDemoData(): Promise<void> {
 
   const buyer1 = await db.user.create({
     data: {
+      id: 'seed-buyer-1',
       email: 'buyer@grosirpj.id',
       name: 'Budi Santoso',
       password: await hashPassword('password123'),
@@ -510,6 +513,7 @@ async function seedDemoData(): Promise<void> {
 
   const buyer2 = await db.user.create({
     data: {
+      id: 'seed-buyer-2',
       email: 'buyer2@grosirpj.id',
       name: 'Siti Aminah',
       password: await hashPassword('password123'),
@@ -526,6 +530,7 @@ async function seedDemoData(): Promise<void> {
 
   const buyer3 = await db.user.create({
     data: {
+      id: 'seed-buyer-3',
       email: 'buyer3@grosirpj.id',
       name: 'Dewi Lestari',
       password: await hashPassword('password123'),
@@ -542,6 +547,7 @@ async function seedDemoData(): Promise<void> {
 
   const buyer4 = await db.user.create({
     data: {
+      id: 'seed-buyer-4',
       email: 'buyer4@grosirpj.id',
       name: 'Ahmad Rizki',
       password: await hashPassword('password123'),
@@ -558,6 +564,7 @@ async function seedDemoData(): Promise<void> {
 
   const seller3 = await db.user.create({
     data: {
+      id: 'seed-seller-3',
       email: 'seller3@grosirpj.id',
       name: 'Batik Solo Collection',
       password: await hashPassword('password123'),
@@ -582,6 +589,7 @@ async function seedDemoData(): Promise<void> {
   const productsData = [
     // ===== SELLER 1 - CV Garment Prima =====
     {
+      id: 'seed-product-01',
       name: 'Kaos Polos Premium Cotton Combed 30s',
       description: 'Kaos polos premium berbahan cotton combed 30s, nyaman dipakai sehari-hari. Tersedia dalam berbagai ukuran dan warna. Cocok untuk reseller dan sablon.',
       price: 35000,
@@ -602,6 +610,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-02',
       name: 'Kemeja Batik Pria Lengan Panjang',
       description: 'Kemeja batik pria lengan panjang dengan motif klasik Indonesia. Bahan katun premium yang halus dan nyaman.',
       price: 85000,
@@ -622,6 +631,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-03',
       name: 'Celana Jeans Slim Fit Pria',
       description: 'Celana jeans slim fit pria dengan bahan denim stretch yang nyaman. Potongan modern yang mengikuti kontur tubuh.',
       price: 110000,
@@ -642,6 +652,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-04',
       name: 'Gaun Muslimah Premium',
       description: 'Gaun muslimah premium dengan bahan crepe yang jatuh dan tidak menerawang. Desain elegan dengan detail bros di dada.',
       price: 135000,
@@ -662,6 +673,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-05',
       name: 'Hoodie Oversize Unisex',
       description: 'Hoodie oversize unisex dengan bahan fleece tebal 280gsm. Hangat dan nyaman untuk cuaca dingin.',
       price: 95000,
@@ -682,6 +694,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-06',
       name: 'Rok Plisket Anak Sekolah',
       description: 'Rok plisket untuk anak sekolah dengan bahan premium yang tidak mudah kusut. Lipatan rapi dan tahan lama.',
       price: 42000,
@@ -701,6 +714,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-07',
       name: 'Jaket Parasut Waterproof',
       description: 'Jaket parasut waterproof ringan dan tahan air. Dilengkapi hoodie dan saku resleting.',
       price: 75000,
@@ -721,6 +735,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-08',
       name: 'Daster Rumah Wanita Katun Rayon',
       description: 'Daster rumah wanita berbahan katun rayon yang adem dan menyerap keringat. Motif cantik dan trendy.',
       price: 28000,
@@ -740,6 +755,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-09',
       name: 'Masker Medis 3 Ply Box 50pcs',
       description: 'Masker medis 3 ply untuk perlindungan harian. Bahan non-woven yang lembut dan nyaman.',
       price: 25000,
@@ -759,6 +775,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-10',
       name: 'Vitamin C 1000mg - Botol 60 Tablet',
       description: 'Vitamin C 1000mg dengan formula enhanced absorption. Membantu meningkatkan daya tahan tubuh.',
       price: 45000,
@@ -776,6 +793,7 @@ async function seedDemoData(): Promise<void> {
       variants: [],
     },
     {
+      id: 'seed-product-11',
       name: 'Serum Vitamin C untuk Wajah',
       description: 'Serum vitamin C konsentrasi tinggi untuk mencerahkan wajah. Mengandung niacinamide dan hyaluronic acid.',
       price: 55000,
@@ -795,6 +813,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-12',
       name: 'Paket Skincare Lengkap 5 in 1',
       description: 'Paket skincare lengkap berisi cleanser, toner, serum, moisturizer, dan sunscreen.',
       price: 125000,
@@ -814,6 +833,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-13',
       name: 'Kopi Arabica Gayo Premium 1kg',
       description: 'Kopi arabica Gayo premium dari dataran tinggi Aceh. Roasting medium dengan rasa fruity dan nutty.',
       price: 85000,
@@ -834,6 +854,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-14',
       name: 'Keripik Singkong Pedas Original 250g',
       description: 'Keripik singkong renyah dengan bumbu pedas original. Digoreng dengan minyak berkualitas tanpa pengawet.',
       price: 15000,
@@ -853,6 +874,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-15',
       name: 'Boneka Plush Bear 50cm',
       description: 'Boneka plush bear lembut dan menggemaskan berukuran 50cm. Bahan super soft yang aman untuk anak-anak.',
       price: 35000,
@@ -872,6 +894,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-16',
       name: 'Sepatu Running Olahraga Unisex',
       description: 'Sepatu running olahraga unisex dengan teknologi cushion yang nyaman. Sol karet anti-slip.',
       price: 125000,
@@ -892,6 +915,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-17',
       name: 'Yoga Mat Premium 8mm',
       description: 'Yoga mat premium tebal 8mm untuk kenyamanan maksimal. Permukaan anti-slip pada kedua sisi.',
       price: 65000,
@@ -913,6 +937,7 @@ async function seedDemoData(): Promise<void> {
 
     // ===== SELLER 2 - Elektronik Surabaya =====
     {
+      id: 'seed-product-18',
       name: 'TWS Earbuds Bluetooth 5.3',
       description: 'TWS earbuds dengan Bluetooth 5.3 untuk koneksi stabil dan cepat. Bass yang powerful dan suara jernih.',
       price: 75000,
@@ -932,6 +957,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-19',
       name: 'Speaker Bluetooth Portable',
       description: 'Speaker bluetooth portable dengan suara bass yang kuat. Tahan air IPX5.',
       price: 95000,
@@ -951,6 +977,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-20',
       name: 'Powerbank 20000mAh Fast Charging',
       description: 'Powerbank kapasitas besar 20000mAh dengan fast charging 22.5W. Bisa mengisi 3 perangkat sekaligus.',
       price: 110000,
@@ -970,6 +997,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-21',
       name: 'Smartwatch Sport Waterproof IP68',
       description: 'Smartwatch sport dengan sertifikasi waterproof IP68. Dilengkapi heart rate monitor dan step counter.',
       price: 145000,
@@ -989,6 +1017,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-22',
       name: 'Kabel USB-C Fast Charging 1.5m',
       description: 'Kabel USB-C fast charging mendukung arus hingga 3A dan transfer data hingga 480Mbps.',
       price: 18000,
@@ -1009,6 +1038,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-23',
       name: 'Charger Wall 33W GaN',
       description: 'Charger wall GaN 33W dengan ukuran compact. Mendukung fast charging PD3.0 dan QC4.0.',
       price: 55000,
@@ -1028,6 +1058,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-24',
       name: 'Lampu LED Strip 5m RGB Remote',
       description: 'Lampu LED strip sepanjang 5 meter dengan kontrol remote dan 16 juta warna.',
       price: 35000,
@@ -1047,6 +1078,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-25',
       name: 'Rak Serbaguna 5 Tingkat',
       description: 'Rak serbaguna 5 tingkat yang bisa dibongkar pasang. Bahan besi kokoh dengan coating anti karat.',
       price: 85000,
@@ -1064,6 +1096,7 @@ async function seedDemoData(): Promise<void> {
       variants: [],
     },
     {
+      id: 'seed-product-26',
       name: 'Diffuser Aromatherapy 300ml',
       description: 'Diffuser aromatherapy ultrasonik kapasitas 300ml. Dilengkapi LED 7 warna dan timer auto-off.',
       price: 65000,
@@ -1083,6 +1116,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-27',
       name: 'Set Balok Building Blocks 500pcs',
       description: 'Set balok building blocks 500pcs untuk kreativitas anak-anak. Bahan plastik ABS aman dan berkualitas.',
       price: 55000,
@@ -1100,6 +1134,7 @@ async function seedDemoData(): Promise<void> {
       variants: [],
     },
     {
+      id: 'seed-product-28',
       name: 'Remote Control Mobil Drift 1:16',
       description: 'Mobil remote control drift skala 1:16 dengan kecepatan tinggi. Dilengkapi lampu LED.',
       price: 95000,
@@ -1119,6 +1154,7 @@ async function seedDemoData(): Promise<void> {
       ],
     },
     {
+      id: 'seed-product-29',
       name: 'Resistance Band Set 5 Level',
       description: 'Resistance band set 5 level ketebalan untuk latihan dari pemula hingga lanjutan.',
       price: 45000,
@@ -1136,6 +1172,7 @@ async function seedDemoData(): Promise<void> {
       variants: [],
     },
     {
+      id: 'seed-product-30',
       name: 'Sambal Bawang Crispy Jar 250ml',
       description: 'Sambal bawang crispy dalam jar 250ml. Renyah dan pedas, cocok untuk lauk atau oleh-oleh.',
       price: 25000,
@@ -1159,16 +1196,19 @@ async function seedDemoData(): Promise<void> {
   // =====================
   // 3. INSERT PRODUCTS WITH VARIANTS
   // =====================
-  for (const p of productsData) {
+  for (const [pIdx, p] of productsData.entries()) {
     const { variants, ...productFields } = p;
     const product = await db.product.create({
       data: productFields as any,
     });
 
+    const productNum = String(pIdx + 1).padStart(2, '0');
+
     if (variants && variants.length > 0) {
-      for (const v of variants) {
+      for (const [vIdx, v] of variants.entries()) {
         const variantGroup = await db.variantGroup.create({
           data: {
+            id: `seed-vg-${productNum}-${vIdx}`,
             name: v.name,
             order: v.order,
             productId: product.id,
@@ -1176,7 +1216,8 @@ async function seedDemoData(): Promise<void> {
         });
 
         await db.variantOption.createMany({
-          data: v.options.map((option: string) => ({
+          data: v.options.map((option: string, oIdx: number) => ({
+            id: `seed-vo-${productNum}-${vIdx}-${oIdx}`,
             value: option,
             variantGroupId: variantGroup.id,
           })),
@@ -1191,42 +1232,49 @@ async function seedDemoData(): Promise<void> {
   await db.chat.createMany({
     data: [
       {
+        id: 'seed-chat-01',
         senderId: buyer1.id,
         receiverId: seller1.id,
         message: 'Halo, apakah kaos polos tersedia warna navy ukuran XL?',
         read: true,
       },
       {
+        id: 'seed-chat-02',
         senderId: seller1.id,
         receiverId: buyer1.id,
         message: 'Halo! Ya tersedia, kak. Stok masih banyak. Minimum order 12 pcs ya.',
         read: true,
       },
       {
+        id: 'seed-chat-03',
         senderId: buyer1.id,
         receiverId: seller1.id,
         message: 'Oke, saya mau order 24 pcs. Bisa diskon ga?',
         read: true,
       },
       {
+        id: 'seed-chat-04',
         senderId: seller1.id,
         receiverId: buyer1.id,
         message: 'Bisa dong, untuk 24 pcs saya kasih harga Rp 32.000/pcs ya. Mau lanjut?',
         read: false,
       },
       {
+        id: 'seed-chat-05',
         senderId: buyer2.id,
         receiverId: seller2.id,
         message: 'Mas, charger GaN 33W yang 1C+1A ada stok?',
         read: true,
       },
       {
+        id: 'seed-chat-06',
         senderId: seller2.id,
         receiverId: buyer2.id,
         message: 'Ada kak, stok masih 50 pcs. Langsung order aja ya!',
         read: true,
       },
       {
+        id: 'seed-chat-07',
         senderId: buyer2.id,
         receiverId: seller2.id,
         message: 'Sip, saya order 12 pcs ya. Kirim ke Yogyakarta bisa?',
@@ -1241,6 +1289,7 @@ async function seedDemoData(): Promise<void> {
   await db.notification.createMany({
     data: [
       {
+        id: 'seed-notif-01',
         userId: seller1.id,
         title: 'Pesanan Baru',
         message: 'Anda menerima pesanan baru dari Budi Santoso',
@@ -1248,6 +1297,7 @@ async function seedDemoData(): Promise<void> {
         read: false,
       },
       {
+        id: 'seed-notif-02',
         userId: seller1.id,
         title: 'Pembayaran Diterima',
         message: 'Pembayaran untuk pesanan #ORD-001 telah diterima',
@@ -1255,6 +1305,7 @@ async function seedDemoData(): Promise<void> {
         read: true,
       },
       {
+        id: 'seed-notif-03',
         userId: seller2.id,
         title: 'Chat Baru',
         message: 'Anda menerima pesan baru dari Siti Aminah',
@@ -1262,6 +1313,7 @@ async function seedDemoData(): Promise<void> {
         read: false,
       },
       {
+        id: 'seed-notif-04',
         userId: buyer1.id,
         title: 'Pesanan Dikirim',
         message: 'Pesanan #ORD-001 telah dikirim oleh CV Garment Prima',
@@ -1269,6 +1321,7 @@ async function seedDemoData(): Promise<void> {
         read: false,
       },
       {
+        id: 'seed-notif-05',
         userId: buyer1.id,
         title: 'Promo Flash Sale',
         message: 'Flash Sale mulai pukul 12.00! Diskon hingga 90%',
@@ -1283,7 +1336,8 @@ async function seedDemoData(): Promise<void> {
   // =====================
   const topProducts = await db.product.findMany({ take: 5, orderBy: { sold: 'desc' } });
   await db.wishlist.createMany({
-    data: topProducts.map((p) => ({
+    data: topProducts.map((p, i) => ({
+      id: `seed-wish-${String(i + 1).padStart(2, '0')}`,
       userId: buyer1.id,
       productId: p.id,
     })),
@@ -1300,6 +1354,7 @@ async function seedDemoData(): Promise<void> {
     await db.order.createMany({
       data: [
         {
+          id: 'seed-order-01',
           buyerId: buyer1.id,
           sellerId: seller1.id,
           status: 'delivered',
@@ -1311,6 +1366,7 @@ async function seedDemoData(): Promise<void> {
           notes: 'Tolong packing yang rapi ya',
         },
         {
+          id: 'seed-order-02',
           buyerId: buyer2.id,
           sellerId: seller2.id,
           status: 'shipped',
@@ -1323,6 +1379,7 @@ async function seedDemoData(): Promise<void> {
           trackingNumber: 'JNE1234567890',
         },
         {
+          id: 'seed-order-03',
           buyerId: buyer1.id,
           sellerId: seller2.id,
           status: 'paid',
@@ -1335,6 +1392,7 @@ async function seedDemoData(): Promise<void> {
           notes: 'Mohon dicek varian sebelum dikirim',
         },
         {
+          id: 'seed-order-04',
           buyerId: buyer3.id,
           sellerId: seller1.id,
           status: 'pending',
@@ -1351,13 +1409,13 @@ async function seedDemoData(): Promise<void> {
       await db.orderItem.createMany({
         data: [
           // Order 1: delivered (buyer1 from seller1)
-          { orderId: orders[0].id, productId: product1.id, productName: product1.name, quantity: 24, price: 32000, variants: '{"Ukuran":"XL","Warna":"Navy"}' },
+          { id: 'seed-oi-01', orderId: orders[0].id, productId: product1.id, productName: product1.name, quantity: 24, price: 32000, variants: '{"Ukuran":"XL","Warna":"Navy"}' },
           // Order 2: shipped (buyer2 from seller2)
-          { orderId: orders[1].id, productId: product2.id, productName: product2.name, quantity: 12, price: 55000, variants: '{"Tipe":"USB-C to USB-C","Panjang":"1.5m"}' },
+          { id: 'seed-oi-02', orderId: orders[1].id, productId: product2.id, productName: product2.name, quantity: 12, price: 55000, variants: '{"Tipe":"USB-C to USB-C","Panjang":"1.5m"}' },
           // Order 3: paid (buyer1 from seller2)
-          { orderId: orders[2].id, productId: product2.id, productName: product2.name, quantity: 3, price: 55000, variants: '{"Tipe":"USB-A to USB-C","Panjang":"1m"}' },
+          { id: 'seed-oi-03', orderId: orders[2].id, productId: product2.id, productName: product2.name, quantity: 3, price: 55000, variants: '{"Tipe":"USB-A to USB-C","Panjang":"1m"}' },
           // Order 4: pending (buyer3 from seller1)
-          { orderId: orders[3].id, productId: product1.id, productName: product1.name, quantity: 12, price: 35000, variants: '{"Ukuran":"L","Warna":"Hitam"}' },
+          { id: 'seed-oi-04', orderId: orders[3].id, productId: product1.id, productName: product1.name, quantity: 12, price: 35000, variants: '{"Ukuran":"L","Warna":"Hitam"}' },
         ],
       });
     }
