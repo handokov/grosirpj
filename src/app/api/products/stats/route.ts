@@ -14,62 +14,59 @@ export async function GET(request: NextRequest) {
     }
 
     // Total products
-    const totalProductsResult = await db.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM "Product" WHERE "sellerId" = ?`,
-      sellerId
-    ) as Array<{count: bigint | number}>
+    const totalProducts = await db.product.count({
+      where: { sellerId },
+    })
 
     // Active products
-    const activeProductsResult = await db.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM "Product" WHERE "sellerId" = ? AND "status" = 'active'`,
-      sellerId
-    ) as Array<{count: bigint | number}>
+    const activeProducts = await db.product.count({
+      where: { sellerId, active: true },
+    })
 
     // Total sold (from Product table)
-    const totalSoldResult = await db.$queryRawUnsafe(
-      `SELECT COALESCE(SUM("sold"), 0) as total FROM "Product" WHERE "sellerId" = ?`,
-      sellerId
-    ) as Array<{total: bigint | number}>
+    const soldResult = await db.product.aggregate({
+      where: { sellerId },
+      _sum: { sold: true },
+    })
 
     // Orders statistics
-    const totalOrdersResult = await db.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM "Order" WHERE "sellerId" = ?`,
-      sellerId
-    ) as Array<{count: bigint | number}>
+    const totalOrders = await db.order.count({
+      where: { sellerId },
+    })
 
-    // Orders by status
-    const pendingOrdersResult = await db.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM "Order" WHERE "sellerId" = ? AND "status" = 'pending'`,
-      sellerId
-    ) as Array<{count: bigint | number}>
+    const pendingOrders = await db.order.count({
+      where: { sellerId, status: 'pending' },
+    })
 
-    const paidOrdersResult = await db.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM "Order" WHERE "sellerId" = ? AND "status" IN ('paid', 'processing')`,
-      sellerId
-    ) as Array<{count: bigint | number}>
+    const paidOrders = await db.order.count({
+      where: { sellerId, status: { in: ['paid', 'processing'] } },
+    })
 
-    const shippedOrdersResult = await db.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM "Order" WHERE "sellerId" = ? AND "status" = 'shipped'`,
-      sellerId
-    ) as Array<{count: bigint | number}>
+    const shippedOrders = await db.order.count({
+      where: { sellerId, status: 'shipped' },
+    })
 
-    const deliveredOrdersResult = await db.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM "Order" WHERE "sellerId" = ? AND "status" = 'delivered'`,
-      sellerId
-    ) as Array<{count: bigint | number}>
+    const deliveredOrders = await db.order.count({
+      where: { sellerId, status: 'delivered' },
+    })
 
-    // Total revenue (from delivered/paid orders)
-    const revenueResult = await db.$queryRawUnsafe(
-      `SELECT COALESCE(SUM("totalAmount"), 0) as total FROM "Order" WHERE "sellerId" = ? AND "paymentStatus" = 'paid'`,
-      sellerId
-    ) as Array<{total: bigint | number}>
+    // Total revenue (from orders that have been paid or beyond)
+    const paidStatuses = ['paid', 'processing', 'shipped', 'delivered']
+    const revenueResult = await db.order.aggregate({
+      where: { sellerId, status: { in: paidStatuses } },
+      _sum: { totalAmount: true },
+    })
 
     // Revenue this month
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const monthRevenueResult = await db.$queryRawUnsafe(
-      `SELECT COALESCE(SUM("totalAmount"), 0) as total FROM "Order" WHERE "sellerId" = ? AND "paymentStatus" = 'paid' AND "createdAt" >= ?`,
-      sellerId, monthStart
-    ) as Array<{total: bigint | number}>
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    const monthRevenueResult = await db.order.aggregate({
+      where: {
+        sellerId,
+        status: { in: paidStatuses },
+        createdAt: { gte: monthStart },
+      },
+      _sum: { totalAmount: true },
+    })
 
     // Daily revenue for last 7 days (for chart)
     const dailyRevenue: Array<{date: string; revenue: number; orders: number}> = []
@@ -79,37 +76,44 @@ export async function GET(request: NextRequest) {
       const dayEnd = new Date(dayStart)
       dayEnd.setHours(23, 59, 59, 999)
 
-      const dayResult = await db.$queryRawUnsafe(
-        `SELECT COALESCE(SUM("totalAmount"), 0) as total, COUNT(*) as count FROM "Order" WHERE "sellerId" = ? AND "paymentStatus" = 'paid' AND "createdAt" >= ? AND "createdAt" <= ?`,
-        sellerId, dayStart.toISOString(), dayEnd.toISOString()
-      ) as Array<{total: bigint | number; count: bigint | number}>
+      const dayResult = await db.order.aggregate({
+        where: {
+          sellerId,
+          status: { in: paidStatuses },
+          createdAt: { gte: dayStart, lte: dayEnd },
+        },
+        _sum: { totalAmount: true },
+        _count: true,
+      })
 
       dailyRevenue.push({
         date: dayStart.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }),
-        revenue: Number(dayResult[0]?.total || 0),
-        orders: Number(dayResult[0]?.count || 0),
+        revenue: dayResult._sum.totalAmount || 0,
+        orders: dayResult._count,
       })
     }
 
     // Top selling products
-    const topProducts = await db.$queryRawUnsafe(
-      `SELECT "name", "sold", "price", "images" FROM "Product" WHERE "sellerId" = ? ORDER BY "sold" DESC LIMIT 5`,
-      sellerId
-    ) as Array<{name: string; sold: number; price: number; images: string}>
+    const topProducts = await db.product.findMany({
+      where: { sellerId },
+      orderBy: { sold: 'desc' },
+      take: 5,
+      select: { name: true, sold: true, price: true, images: true },
+    })
 
     return NextResponse.json({
       success: true,
       stats: {
-        totalProducts: Number(totalProductsResult[0]?.count || 0),
-        activeProducts: Number(activeProductsResult[0]?.count || 0),
-        totalSold: Number(totalSoldResult[0]?.total || 0),
-        totalOrders: Number(totalOrdersResult[0]?.count || 0),
-        pendingOrders: Number(pendingOrdersResult[0]?.count || 0),
-        paidOrders: Number(paidOrdersResult[0]?.count || 0),
-        shippedOrders: Number(shippedOrdersResult[0]?.count || 0),
-        deliveredOrders: Number(deliveredOrdersResult[0]?.count || 0),
-        totalRevenue: Number(revenueResult[0]?.total || 0),
-        monthRevenue: Number(monthRevenueResult[0]?.total || 0),
+        totalProducts,
+        activeProducts,
+        totalSold: soldResult._sum.sold || 0,
+        totalOrders,
+        pendingOrders,
+        paidOrders,
+        shippedOrders,
+        deliveredOrders,
+        totalRevenue: revenueResult._sum.totalAmount || 0,
+        monthRevenue: monthRevenueResult._sum.totalAmount || 0,
         dailyRevenue,
         topProducts: topProducts.map(p => ({
           name: p.name,

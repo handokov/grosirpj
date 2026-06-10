@@ -115,6 +115,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   logout: () => {
+    // Call server to clear the JWT cookie
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {
+      // Ignore errors - we still want to clear client-side state
+    });
     get().setUser(null);
     localStorage.removeItem('grosirpj_seller_mode');
     set({ sellerMode: false, error: '' });
@@ -122,6 +126,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   init: async () => {
     try {
+      // First, try to verify via JWT cookie (without userId param)
+      const cookieRes = await fetch('/api/auth/me');
+      const cookieData = await cookieRes.json();
+      if (cookieData.user) {
+        const savedSellerMode = localStorage.getItem('grosirpj_seller_mode');
+        const sellerMode = savedSellerMode !== null ? JSON.parse(savedSellerMode) : false;
+        // Sync localStorage with the verified user
+        localStorage.setItem('grosirpj_user', JSON.stringify(cookieData.user));
+        set({ user: cookieData.user, loading: false, sellerMode: cookieData.user.role === 'seller' ? sellerMode : false });
+        return;
+      }
+
+      // Fallback: check localStorage and verify with userId
       const stored = localStorage.getItem('grosirpj_user');
       if (stored) {
         const user = JSON.parse(stored);

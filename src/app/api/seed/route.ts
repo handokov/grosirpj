@@ -1,15 +1,6 @@
 import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
-
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
-}
+import { hashPassword, simpleHash } from '@/lib/auth';
 
 // Image URL helpers
 const img = (url: string) => `${url}?w=400&h=400&fit=crop`;
@@ -86,6 +77,9 @@ async function seedDatabase(force = false) {
   try { await db.$executeRawUnsafe('DELETE FROM Product'); } catch {}
   try { await db.$executeRawUnsafe('DELETE FROM User'); } catch {}
 
+  // Hash password with bcrypt
+  const hashedPw = await hashPassword('password123');
+
   // =====================
   // 1. CREATE USERS
   // =====================
@@ -93,7 +87,7 @@ async function seedDatabase(force = false) {
     data: {
       email: 'seller1@grosirpj.id',
       name: 'CV Garment Prima',
-      password: simpleHash('password123'),
+      password: hashedPw,
       phone: '021-5551234',
       city: 'Jakarta',
       address: 'Jl. Tanah Abang Blok A No. 12, Jakarta Pusat, DKI Jakarta 10150',
@@ -113,7 +107,7 @@ async function seedDatabase(force = false) {
     data: {
       email: 'seller2@grosirpj.id',
       name: 'Elektronik Surabaya',
-      password: simpleHash('password123'),
+      password: hashedPw,
       phone: '031-7779876',
       city: 'Surabaya',
       address: 'Jl. Genteng Kali No. 45, Surabaya, Jawa Timur 60275',
@@ -133,7 +127,7 @@ async function seedDatabase(force = false) {
     data: {
       email: 'buyer@grosirpj.id',
       name: 'Budi Santoso',
-      password: simpleHash('password123'),
+      password: hashedPw,
       phone: '0812-3456-7890',
       city: 'Bandung',
       address: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135',
@@ -149,7 +143,7 @@ async function seedDatabase(force = false) {
     data: {
       email: 'buyer2@grosirpj.id',
       name: 'Siti Aminah',
-      password: simpleHash('password123'),
+      password: hashedPw,
       phone: '0878-9012-3456',
       city: 'Yogyakarta',
       address: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271',
@@ -165,7 +159,7 @@ async function seedDatabase(force = false) {
     data: {
       email: 'buyer3@grosirpj.id',
       name: 'Dewi Lestari',
-      password: simpleHash('password123'),
+      password: hashedPw,
       phone: '0856-7890-1234',
       city: 'Semarang',
       address: 'Jl. Pandanaran No. 10, Semarang, Jawa Tengah 50134',
@@ -181,7 +175,7 @@ async function seedDatabase(force = false) {
     data: {
       email: 'buyer4@grosirpj.id',
       name: 'Ahmad Rizki',
-      password: simpleHash('password123'),
+      password: hashedPw,
       phone: '0813-5678-9012',
       city: 'Medan',
       address: 'Jl. Gatot Subroto No. 55, Medan, Sumatera Utara 20112',
@@ -197,7 +191,7 @@ async function seedDatabase(force = false) {
     data: {
       email: 'seller3@grosirpj.id',
       name: 'Batik Solo Collection',
-      password: simpleHash('password123'),
+      password: hashedPw,
       phone: '0271-667788',
       city: 'Solo',
       address: 'Jl. Slamet Riyadi No. 200, Solo, Jawa Tengah 57141',

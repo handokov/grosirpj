@@ -1,19 +1,30 @@
 import { db, ensureDb } from '@/lib/db';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/auth';
 
 /**
  * POST /api/auth/upgrade-seller
  * Upgrades a buyer account to seller by adding store info.
+ * Requires authentication via JWT cookie.
  */
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { userId, storeName, storeDescription } = body;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID wajib diisi' }, { status: 400 });
+    // Verify authentication
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { error: 'Anda harus login terlebih dahulu' },
+        { status: 401 }
+      );
     }
+
+    const body = await request.json();
+    const { storeName, storeDescription } = body;
+
+    // Also support userId from body for backward compat, but prefer JWT
+    const userId = authUser.userId;
 
     if (!storeName || !storeName.trim()) {
       return NextResponse.json({ error: 'Nama toko wajib diisi' }, { status: 400 });

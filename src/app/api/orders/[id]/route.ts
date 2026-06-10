@@ -1,9 +1,11 @@
 import { db, ensureDb } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 // Valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ['paid', 'cancelled'],
-  paid: ['shipped'],
+  paid: ['processing', 'shipped', 'cancelled'],
+  processing: ['shipped'],
   shipped: ['delivered'],
   delivered: [],
   cancelled: [],
@@ -21,7 +23,16 @@ export async function GET(
     const order = await db.order.findUnique({
       where: { id },
       include: {
-        items: true,
+        items: {
+          select: {
+            id: true,
+            productId: true,
+            productName: true,
+            quantity: true,
+            price: true,
+            variants: true,
+          },
+        },
         buyer: {
           select: {
             id: true,
@@ -73,7 +84,7 @@ export async function PATCH(
     await ensureDb();
     const { id } = await params;
     const body = await request.json();
-    const { status, paymentProof } = body;
+    const { status, paymentProof, expedition, trackingNumber } = body;
 
     if (!status) {
       return Response.json(
@@ -82,7 +93,7 @@ export async function PATCH(
       );
     }
 
-    const validStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return Response.json(
         { error: `Status tidak valid. Status yang valid: ${validStatuses.join(', ')}` },
@@ -92,12 +103,67 @@ export async function PATCH(
 
     const currentOrder = await db.order.findUnique({
       where: { id },
+      include: {
+        buyer: { select: { id: true, name: true } },
+        seller: { select: { id: true, name: true, storeName: true } },
+      },
     });
 
     if (!currentOrder) {
       return Response.json(
         { error: 'Pesanan tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Require authentication via JWT cookie
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return Response.json(
+        { error: 'Anda harus login untuk mengubah pesanan' },
+        { status: 401 }
+      );
+    }
+
+    // Verify the user is either the buyer or seller of this order
+    const isBuyer = currentOrder.buyerId === authUser.userId;
+    const isSeller = currentOrder.sellerId === authUser.userId;
+    if (!isBuyer && !isSeller) {
+      return Response.json(
+        { error: 'Anda tidak berwenang mengubah pesanan ini' },
+        { status: 403 }
+      );
+    }
+
+    // Role-based status transition rules
+    if (status === 'paid' && !isBuyer) {
+      return Response.json(
+        { error: 'Hanya pembeli yang dapat mengonfirmasi pembayaran' },
+        { status: 403 }
+      );
+    }
+    if (status === 'processing' && !isSeller) {
+      return Response.json(
+        { error: 'Hanya penjual yang dapat memproses pesanan' },
+        { status: 403 }
+      );
+    }
+    if (status === 'shipped' && !isSeller) {
+      return Response.json(
+        { error: 'Hanya penjual yang dapat mengirim pesanan' },
+        { status: 403 }
+      );
+    }
+    if (status === 'delivered' && !isBuyer) {
+      return Response.json(
+        { error: 'Hanya pembeli yang dapat mengonfirmasi penerimaan' },
+        { status: 403 }
+      );
+    }
+    if (status === 'cancelled' && !isBuyer) {
+      return Response.json(
+        { error: 'Hanya pembeli yang dapat membatalkan pesanan' },
+        { status: 403 }
       );
     }
 
@@ -112,6 +178,16 @@ export async function PATCH(
       );
     }
 
+    // When shipping, require expedition and tracking number
+    if (status === 'shipped') {
+      if (!expedition || !trackingNumber) {
+        return Response.json(
+          { error: 'Ekspedisi dan nomor resi wajib diisi untuk pengiriman' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Build update data
     const updateData: Record<string, unknown> = { status };
     if (paymentProof) {
@@ -119,6 +195,14 @@ export async function PATCH(
     }
     if (status === 'paid') {
       updateData.paidAt = new Date();
+    }
+    if (status === 'shipped') {
+      updateData.expedition = expedition;
+      updateData.trackingNumber = trackingNumber;
+      updateData.shippedAt = new Date();
+    }
+    if (status === 'delivered') {
+      updateData.deliveredAt = new Date();
     }
 
     const updatedOrder = await db.order.update({
@@ -144,6 +228,57 @@ export async function PATCH(
         },
       },
     });
+
+    // Create notification for the other party
+    try {
+      const notifyUserId = currentOrder.buyerId === authUser.userId ? currentOrder.sellerId : currentOrder.buyerId;
+      let notificationTitle = '';
+      let notificationMessage = '';
+      let notificationType = 'info';
+
+      switch (status) {
+        case 'paid':
+          notificationTitle = 'Pembayaran Diterima';
+          notificationMessage = 'Pembayaran untuk pesanan telah dikonfirmasi oleh pembeli. Silakan proses pesanan.';
+          notificationType = 'payment';
+          break;
+        case 'processing':
+          notificationTitle = 'Pesanan Sedang Diproses';
+          notificationMessage = 'Penjual sedang memproses pesanan Anda. Barang akan segera dikirim.';
+          notificationType = 'order';
+          break;
+        case 'shipped':
+          notificationTitle = `Pesanan Dikirim - ${expedition}`;
+          notificationMessage = `Pesanan Anda telah dikirim via ${expedition}. Nomor Resi: ${trackingNumber}. Lacak pesanan Anda di halaman Pesanan Saya.`;
+          notificationType = 'shipping';
+          break;
+        case 'delivered':
+          notificationTitle = 'Pesanan Diterima';
+          notificationMessage = 'Pembeli telah mengonfirmasi penerimaan pesanan. Terima kasih!';
+          notificationType = 'order';
+          break;
+        case 'cancelled':
+          notificationTitle = 'Pesanan Dibatalkan';
+          notificationMessage = 'Pesanan telah dibatalkan.';
+          notificationType = 'order';
+          break;
+      }
+
+      if (notificationTitle && notifyUserId) {
+        await db.notification.create({
+          data: {
+            userId: notifyUserId,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: notificationType,
+            link: `/orders/${id}`,
+          },
+        });
+      }
+    } catch (notifError) {
+      // Don't fail the request if notification creation fails
+      console.error('Failed to create notification:', notifError);
+    }
 
     return Response.json({ order: updatedOrder });
   } catch (error) {

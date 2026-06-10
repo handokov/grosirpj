@@ -24,7 +24,7 @@ import {
 import { toast } from 'sonner';
 
 interface CheckoutItem {
-  id: number;
+  productId: string;
   name: string;
   price: number;
   image: string;
@@ -32,6 +32,7 @@ interface CheckoutItem {
   location: string;
   seller: string;
   sellerId?: string;
+  selectedVariants?: Record<string, string>;
 }
 
 interface CheckoutProps {
@@ -75,7 +76,7 @@ export function Checkout({ open, onOpenChange, items: propItems, singleProduct, 
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
-  const [createdOrderId, setCreatedOrderId] = useState('');
+  const [createdOrderIds, setCreatedOrderIds] = useState<string[]>([]);
 
   const user = useAuthStore((s) => s.user);
   const cartItems = useCartStore((s) => s.items);
@@ -83,14 +84,15 @@ export function Checkout({ open, onOpenChange, items: propItems, singleProduct, 
 
   // Use prop items or cart items
   const checkoutItems = propItems || cartItems.map(item => ({
-    id: item.id,
+    productId: item.productId,
     name: item.name,
     price: item.price,
     image: item.image,
     quantity: item.quantity,
     location: item.location || 'Jakarta',
-    seller: item.seller || 'Toko Official',
-    sellerId: (item as any).sellerId || undefined,
+    seller: item.sellerName || 'Toko Official',
+    sellerId: item.sellerId || undefined,
+    selectedVariants: item.selectedVariants || {},
   }));
 
   const subtotal = checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -112,37 +114,34 @@ export function Checkout({ open, onOpenChange, items: propItems, singleProduct, 
 
     setLoading(true);
     try {
-      const res = await fetch('/api/orders/create', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           buyerId: user.id,
           items: checkoutItems.map(item => ({
-            productId: item.id,
-            productName: item.name,
-            productImage: item.image,
-            price: item.price,
+            productId: item.productId,
             quantity: item.quantity,
-            sellerName: item.seller,
-            location: item.location,
+            variants: item.selectedVariants || {},
           })),
           paymentMethod: selectedPayment,
-          shippingCity: user.city,
           shippingAddress: address,
-          notes: notes,
-          totalAmount: totalAmount,
           shippingCost: totalShipping,
-          sellerId: checkoutItems[0]?.sellerId || 'demo_seller_001', // Use product's sellerId or fallback to demo
+          notes: notes,
         }),
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        setCreatedOrderId(data.orderId);
+      if (res.ok && data.orders) {
+        const orderIds = data.orders.map((o: { id: string }) => o.id);
+        setCreatedOrderIds(orderIds);
         setStep('success');
         if (!propItems) clearCart();
-        if (onSuccess) onSuccess(data.orderId);
-        toast.success('Pesanan berhasil dibuat!');
+        if (onSuccess && orderIds.length > 0) onSuccess(orderIds[0]);
+        toast.success(orderIds.length > 1
+          ? `${orderIds.length} pesanan berhasil dibuat!`
+          : 'Pesanan berhasil dibuat!'
+        );
       } else {
         toast.error(data.error || 'Gagal membuat pesanan');
       }
@@ -158,7 +157,7 @@ export function Checkout({ open, onOpenChange, items: propItems, singleProduct, 
     setSelectedPayment('cod');
     setAddress('');
     setNotes('');
-    setCreatedOrderId('');
+    setCreatedOrderIds([]);
   };
 
   return (
@@ -173,20 +172,41 @@ export function Checkout({ open, onOpenChange, items: propItems, singleProduct, 
             <h2 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               Pesanan Berhasil!
             </h2>
-            <p className="text-gray-500 mb-2">Pesanan Anda telah dibuat dengan sukses</p>
-            <p className="text-sm text-gray-400 mb-6">Order ID: {createdOrderId}</p>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 w-full max-w-sm">
-              <p className="text-sm text-emerald-700 font-medium mb-1">Langkah Selanjutnya:</p>
-              <p className="text-sm text-emerald-600">
-                {selectedPayment === 'cod'
-                  ? 'Bayar saat barang diterima oleh kurir'
-                  : selectedPayment === 'bank_transfer'
-                  ? 'Transfer ke rekening BCA 1234567890 a.n. GrosirPJ'
-                  : 'Scan QR code untuk pembayaran'
-                }
+            <p className="text-gray-500 mb-2">
+              {createdOrderIds.length > 1
+                ? `${createdOrderIds.length} pesanan Anda telah dibuat dengan sukses`
+                : 'Pesanan Anda telah dibuat dengan sukses'}
+            </p>
+            {createdOrderIds.length === 1 && (
+              <p className="text-sm text-gray-400 mb-6">Order ID: {createdOrderIds[0].slice(-6).toUpperCase()}</p>
+            )}
+            {createdOrderIds.length > 1 && (
+              <p className="text-sm text-gray-400 mb-6">
+                {createdOrderIds.map(id => `#${id.slice(-6).toUpperCase()}`).join(', ')}
               </p>
-              <p className="text-xs text-emerald-500 mt-2">Kemudian tekan tombol &quot;Bayar&quot; di halaman Pesanan Saya</p>
-            </div>
+            )}
+            {(createdOrderIds.length === 1 || createdOrderIds.length === 0) && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 w-full max-w-sm">
+                <p className="text-sm text-emerald-700 font-medium mb-1">Langkah Selanjutnya:</p>
+                <p className="text-sm text-emerald-600">
+                  {selectedPayment === 'cod'
+                    ? 'Bayar saat barang diterima oleh kurir'
+                    : selectedPayment === 'bank_transfer'
+                    ? 'Transfer ke rekening BCA 1234567890 a.n. GrosirPJ'
+                    : 'Scan QR code untuk pembayaran'
+                  }
+                </p>
+                <p className="text-xs text-emerald-500 mt-2">Kemudian tekan tombol &quot;Bayar&quot; di halaman Pesanan Saya</p>
+              </div>
+            )}
+            {createdOrderIds.length > 1 && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 w-full max-w-sm">
+                <p className="text-sm text-emerald-700 font-medium mb-1">Langkah Selanjutnya:</p>
+                <p className="text-sm text-emerald-600">
+                  Pesanan dibuat terpisah per penjual. Silakan lakukan pembayaran masing-masing di halaman Pesanan Saya.
+                </p>
+              </div>
+            )}
             <div className="flex gap-3 w-full max-w-sm">
               <Button
                 variant="outline"
@@ -319,7 +339,7 @@ export function Checkout({ open, onOpenChange, items: propItems, singleProduct, 
                       Ringkasan Pesanan
                     </h4>
                     {checkoutItems.map((item) => (
-                      <div key={item.id} className="flex gap-3">
+                      <div key={item.productId} className="flex gap-3">
                         <img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg object-cover" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>

@@ -85,16 +85,8 @@ export async function ensureDb(): Promise<void> {
   await dbEnsurePromise;
 }
 
-// Simple hash function (must match seed route)
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
-}
+// Import bcrypt for password hashing in seed data
+import { hashPassword, simpleHash } from './auth';
 
 async function createTablesAndSeedIfNeeded(): Promise<void> {
   // Quick check: if tables already exist with data, skip
@@ -233,7 +225,11 @@ async function createTablesAndSeedIfNeeded(): Promise<void> {
           "shippingAddress" TEXT NOT NULL DEFAULT '',
           "paymentMethod" TEXT NOT NULL DEFAULT 'cod',
           "paymentProof" TEXT NOT NULL DEFAULT '',
+          "expedition" TEXT NOT NULL DEFAULT '',
+          "trackingNumber" TEXT NOT NULL DEFAULT '',
           "paidAt" DATETIME,
+          "shippedAt" DATETIME,
+          "deliveredAt" DATETIME,
           "notes" TEXT NOT NULL DEFAULT '',
           "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -241,6 +237,12 @@ async function createTablesAndSeedIfNeeded(): Promise<void> {
           CONSTRAINT "Order_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
       )
     `);
+
+    // Add new columns if they don't exist (for existing databases)
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "expedition" TEXT NOT NULL DEFAULT ''`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "trackingNumber" TEXT NOT NULL DEFAULT ''`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "shippedAt" DATETIME`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "deliveredAt" DATETIME`); } catch {}
 
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Order_buyerId_idx" ON "Order"("buyerId")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Order_sellerId_idx" ON "Order"("sellerId")`);
@@ -448,7 +450,7 @@ async function seedDemoData(): Promise<void> {
     data: {
       email: 'seller1@grosirpj.id',
       name: 'CV Garment Prima',
-      password: simpleHash('password123'),
+      password: await hashPassword('password123'),
       phone: '021-5551234',
       city: 'Jakarta',
       address: 'Jl. Tanah Abang Blok A No. 12, Jakarta Pusat, DKI Jakarta 10150',
@@ -468,7 +470,7 @@ async function seedDemoData(): Promise<void> {
     data: {
       email: 'seller2@grosirpj.id',
       name: 'Elektronik Surabaya',
-      password: simpleHash('password123'),
+      password: await hashPassword('password123'),
       phone: '031-7779876',
       city: 'Surabaya',
       address: 'Jl. Genteng Kali No. 45, Surabaya, Jawa Timur 60275',
@@ -488,7 +490,7 @@ async function seedDemoData(): Promise<void> {
     data: {
       email: 'buyer@grosirpj.id',
       name: 'Budi Santoso',
-      password: simpleHash('password123'),
+      password: await hashPassword('password123'),
       phone: '0812-3456-7890',
       city: 'Bandung',
       address: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135',
@@ -504,7 +506,7 @@ async function seedDemoData(): Promise<void> {
     data: {
       email: 'buyer2@grosirpj.id',
       name: 'Siti Aminah',
-      password: simpleHash('password123'),
+      password: await hashPassword('password123'),
       phone: '0878-9012-3456',
       city: 'Yogyakarta',
       address: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271',
@@ -520,7 +522,7 @@ async function seedDemoData(): Promise<void> {
     data: {
       email: 'buyer3@grosirpj.id',
       name: 'Dewi Lestari',
-      password: simpleHash('password123'),
+      password: await hashPassword('password123'),
       phone: '0856-7890-1234',
       city: 'Semarang',
       address: 'Jl. Pandanaran No. 10, Semarang, Jawa Tengah 50134',
@@ -536,7 +538,7 @@ async function seedDemoData(): Promise<void> {
     data: {
       email: 'buyer4@grosirpj.id',
       name: 'Ahmad Rizki',
-      password: simpleHash('password123'),
+      password: await hashPassword('password123'),
       phone: '0813-5678-9012',
       city: 'Medan',
       address: 'Jl. Gatot Subroto No. 55, Medan, Sumatera Utara 20112',
@@ -552,7 +554,7 @@ async function seedDemoData(): Promise<void> {
     data: {
       email: 'seller3@grosirpj.id',
       name: 'Batik Solo Collection',
-      password: simpleHash('password123'),
+      password: await hashPassword('password123'),
       phone: '0271-667788',
       city: 'Solo',
       address: 'Jl. Slamet Riyadi No. 200, Solo, Jawa Tengah 57141',

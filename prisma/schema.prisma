@@ -125,13 +125,17 @@ model Order {
   buyer           User        @relation("BuyerOrders", fields: [buyerId], references: [id])
   sellerId        String
   seller          User        @relation("SellerOrders", fields: [sellerId], references: [id])
-  status          String      @default("pending") // pending, paid, shipped, delivered, cancelled
+  status          String      @default("pending") // pending, paid, processing, shipped, delivered, cancelled
   totalAmount     Int
   shippingCost    Int         @default(0)
   shippingAddress String      @default("")
-  paymentMethod   String      @default("cod") // cod, transfer, ewallet
+  paymentMethod   String      @default("cod") // cod, bank_transfer, qris
   paymentProof    String      @default("")    // Catatan/bukti pembayaran dari buyer
+  expedition      String      @default("")    // Nama ekspedisi (JNE, J&T, SiCepat, dll)
+  trackingNumber  String      @default("")    // Nomor resi pengiriman
   paidAt          DateTime?                    // Waktu pembayaran dikonfirmasi
+  shippedAt       DateTime?                    // Waktu pesanan dikirim
+  deliveredAt     DateTime?                    // Waktu pesanan diterima
   notes           String      @default("")    // Catatan dari buyer
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

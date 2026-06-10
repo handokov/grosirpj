@@ -1,4 +1,5 @@
 import { db, ensureDb } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 // GET /api/orders - List orders
 export async function GET(request: Request) {
@@ -71,12 +72,25 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { buyerId, items, shippingAddress, paymentMethod } = body;
 
-    if (!buyerId || !items || !Array.isArray(items) || items.length === 0) {
+    // Require authentication
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return Response.json(
-        { error: 'buyerId dan items wajib diisi' },
+        { error: 'Anda harus login untuk membuat pesanan' },
+        { status: 401 }
+      );
+    }
+
+    // Set buyerId from JWT token (not from request body)
+    const buyerId = authUser.userId;
+
+    const body = await request.json();
+    const { items, shippingAddress, paymentMethod, shippingCost, notes } = body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return Response.json(
+        { error: 'items wajib diisi' },
         { status: 400 }
       );
     }
@@ -88,6 +102,7 @@ export async function POST(request: Request) {
       quantity: number;
       price: number;
       sellerId: string;
+      location: string;
       variants: Record<string, string>;
     }[] = [];
 
@@ -132,6 +147,7 @@ export async function POST(request: Request) {
         quantity,
         price: product.price,
         sellerId: product.sellerId,
+        location: product.location,
         variants: variants || {},
       });
     }
@@ -151,6 +167,18 @@ export async function POST(request: Request) {
         (sum, item) => sum + item.price * item.quantity,
         0
       );
+
+      // Calculate shipping cost per seller if provided at top level, otherwise distribute
+      let orderShippingCost = 0;
+      if (shippingCost && itemsBySeller.size === 1) {
+        // Single seller: use the provided shipping cost directly
+        orderShippingCost = shippingCost;
+      } else if (shippingCost && itemsBySeller.size > 1) {
+        // Multiple sellers: distribute shipping cost proportionally
+        const sellerTotal = sellerItems.reduce((s, i) => s + i.price * i.quantity, 0);
+        const allTotal = itemDetails.reduce((s, i) => s + i.price * i.quantity, 0);
+        orderShippingCost = Math.round((sellerTotal / allTotal) * shippingCost);
+      }
 
       // Create the order with its items in a transaction
       const order = await db.$transaction(async (tx) => {
@@ -172,8 +200,10 @@ export async function POST(request: Request) {
             sellerId,
             status: 'pending',
             totalAmount,
+            shippingCost: orderShippingCost,
             shippingAddress: shippingAddress || '',
             paymentMethod: paymentMethod || 'cod',
+            notes: notes || '',
             items: {
               create: sellerItems.map((item) => ({
                 productId: item.productId,
@@ -204,6 +234,21 @@ export async function POST(request: Request) {
             },
           },
         });
+
+        // Create notification for the seller
+        try {
+          await tx.notification.create({
+            data: {
+              userId: sellerId,
+              title: 'Pesanan Baru',
+              message: `Anda mendapat pesanan baru dari ${newOrder.buyer.name}. Silakan cek detail pesanan.`,
+              type: 'new_order',
+              link: `/orders/${newOrder.id}`,
+            },
+          });
+        } catch {
+          // Don't fail if notification creation fails
+        }
 
         return newOrder;
       });

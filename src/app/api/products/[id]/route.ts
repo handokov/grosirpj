@@ -1,5 +1,6 @@
 import { db, ensureDb } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { getAuthUser } from '@/lib/auth';
 
 // GET /api/products/[id] — Get single product detail
 export async function GET(
@@ -96,12 +97,29 @@ export async function PUT(
     await ensureDb();
     const { id } = await params;
 
+    // Require authentication
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return Response.json(
+        { error: 'Anda harus login untuk mengubah produk' },
+        { status: 401 }
+      );
+    }
+
     // Check if product exists
     const existing = await db.product.findUnique({ where: { id } });
     if (!existing) {
       return Response.json(
         { error: 'Produk tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Verify the authenticated user owns this product
+    if (existing.sellerId !== authUser.userId) {
+      return Response.json(
+        { error: 'Anda tidak berwenang mengubah produk ini' },
+        { status: 403 }
       );
     }
 
@@ -212,12 +230,21 @@ export async function PUT(
 
 // DELETE /api/products/[id] — Delete a product
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureDb();
     const { id } = await params;
+
+    // Require authentication
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return Response.json(
+        { error: 'Anda harus login untuk menghapus produk' },
+        { status: 401 }
+      );
+    }
 
     // Check if product exists
     const existing = await db.product.findUnique({ where: { id } });
@@ -225,6 +252,14 @@ export async function DELETE(
       return Response.json(
         { error: 'Produk tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Verify the authenticated user owns this product
+    if (existing.sellerId !== authUser.userId) {
+      return Response.json(
+        { error: 'Anda tidak berwenang menghapus produk ini' },
+        { status: 403 }
       );
     }
 

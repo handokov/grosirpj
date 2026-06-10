@@ -40,13 +40,25 @@ import { toast } from 'sonner';
 
 interface OrderItem {
   id: string;
-  productId: number;
+  productId: string;
   productName: string;
-  productImage: string;
-  price: number;
   quantity: number;
-  sellerName: string;
-  location: string;
+  price: number;
+  variants: string; // JSON string like '{"Ukuran":"L","Warna":"Merah"}'
+}
+
+interface OrderBuyer {
+  id: string;
+  name: string;
+  email: string;
+  city: string;
+}
+
+interface OrderSeller {
+  id: string;
+  name: string;
+  storeName: string | null;
+  city: string;
 }
 
 interface Order {
@@ -55,9 +67,7 @@ interface Order {
   sellerId: string;
   status: string;
   paymentMethod: string;
-  paymentStatus: string;
   shippingAddress: string;
-  shippingCity: string;
   totalAmount: number;
   shippingCost: number;
   notes: string;
@@ -69,8 +79,8 @@ interface Order {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
-  buyerName?: string;
-  sellerName?: string;
+  buyer: OrderBuyer;
+  seller: OrderSeller;
 }
 
 interface OrdersPanelProps {
@@ -139,6 +149,21 @@ function formatTimeAgo(dateStr: string): string {
   }
 }
 
+// Helper to parse variants JSON string
+function parseVariants(variantsStr: string): Record<string, string> {
+  try {
+    return JSON.parse(variantsStr || '{}');
+  } catch {
+    return {};
+  }
+}
+
+// Determine payment status from order status
+function getPaymentStatus(status: string): string {
+  if (['paid', 'processing', 'shipped', 'delivered'].includes(status)) return 'paid';
+  return 'unpaid';
+}
+
 export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelProps) {
   const user = useAuthStore((s) => s.user);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -163,10 +188,11 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
     if (!user) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/orders/list?userId=${user.id}&role=${mode}`);
+      const param = mode === 'seller' ? 'sellerId' : 'buyerId';
+      const res = await fetch(`/api/orders?${param}=${user.id}`);
       const data = await res.json();
-      if (data.success) {
-        setOrders(data.orders || []);
+      if (data.orders) {
+        setOrders(data.orders);
       }
     } catch (err) {
       console.error('Fetch orders error:', err);
@@ -185,11 +211,10 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
     if (!user) return;
     setUpdating(orderId);
     try {
-      const res = await fetch('/api/orders/update', {
-        method: 'POST',
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId,
           status: newStatus,
           userId: user.id,
           expedition: extra?.expedition,
@@ -197,7 +222,7 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
         }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.order) {
         toast.success(
           newStatus === 'paid' ? 'Pembayaran berhasil dikonfirmasi!' :
           newStatus === 'processing' ? 'Pesanan sedang diproses!' :
@@ -476,6 +501,13 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
     );
   };
 
+  // Get buyer name from order
+  const getBuyerName = (order: Order): string => order.buyer?.name || '-';
+  // Get seller name from order
+  const getSellerName = (order: Order): string => order.seller?.storeName || order.seller?.name || '-';
+  // Get city from order (buyer's city)
+  const getShippingCity = (order: Order): string => order.buyer?.city || 'Jakarta';
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -515,6 +547,7 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
                   const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
                   const StatusIcon = statusConfig.icon;
                   const isExpanded = expandedOrder === order.id;
+                  const paymentStatus = getPaymentStatus(order.status);
 
                   return (
                     <div key={order.id} className="p-4">
@@ -541,7 +574,6 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
                         </div>
                         {!isExpanded && order.items && order.items.length > 0 && (
                           <div className="flex items-center gap-2 mt-2">
-                            <img src={order.items[0].productImage} alt="" className="w-8 h-8 rounded object-cover" />
                             <span className="text-sm text-gray-700 truncate">{order.items[0].productName}</span>
                             {order.items.length > 1 && (
                               <span className="text-xs text-gray-400">+{order.items.length - 1} lainnya</span>
@@ -598,19 +630,28 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
 
                           {/* Items */}
                           <div className="space-y-3">
-                            {order.items?.map((item) => (
-                              <div key={item.id} className="flex gap-3">
-                                <img src={item.productImage} alt={item.productName} className="w-14 h-14 rounded-lg object-cover" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-900 truncate">{item.productName}</p>
-                                  <p className="text-xs text-gray-500">{item.quantity} x {formatPrice(item.price)}</p>
-                                  <p className="text-xs text-gray-400 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" /> {item.location}
-                                  </p>
+                            {order.items?.map((item) => {
+                              const variants = parseVariants(item.variants);
+                              const variantText = Object.entries(variants).length > 0
+                                ? Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')
+                                : null;
+
+                              return (
+                                <div key={item.id} className="flex gap-3">
+                                  <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                                    <Package className="w-6 h-6 text-gray-400" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{item.productName}</p>
+                                    <p className="text-xs text-gray-500">{item.quantity} x {formatPrice(item.price)}</p>
+                                    {variantText && (
+                                      <p className="text-xs text-gray-400">{variantText}</p>
+                                    )}
+                                  </div>
+                                  <p className="text-sm font-medium text-gray-700">{formatPrice(item.price * item.quantity)}</p>
                                 </div>
-                                <p className="text-sm font-medium text-gray-700">{formatPrice(item.price * item.quantity)}</p>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
 
                           <Separator />
@@ -628,8 +669,8 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
                             </div>
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-gray-500">Status Pembayaran</span>
-                              <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'} className={`text-xs ${order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'} border-0`}>
-                                {order.paymentStatus === 'paid' ? '✓ Dibayar' : 'Menunggu'}
+                              <Badge variant={paymentStatus === 'paid' ? 'default' : 'secondary'} className={`text-xs ${paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'} border-0`}>
+                                {paymentStatus === 'paid' ? '✓ Dibayar' : 'Menunggu'}
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between text-sm">
@@ -638,7 +679,7 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
                             </div>
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-gray-500">Kota</span>
-                              <span className="text-gray-700 flex items-center gap-1"><MapPin className="w-3 h-3" />{order.shippingCity}</span>
+                              <span className="text-gray-700 flex items-center gap-1"><MapPin className="w-3 h-3" />{getShippingCity(order)}</span>
                             </div>
                             {order.notes && (
                               <div className="flex items-center justify-between text-sm">
@@ -646,16 +687,16 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
                                 <span className="text-gray-700 text-xs">{order.notes}</span>
                               </div>
                             )}
-                            {mode === 'seller' && order.buyerName && (
+                            {mode === 'seller' && (
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-gray-500">Pembeli</span>
-                                <span className="text-gray-700">{order.buyerName}</span>
+                                <span className="text-gray-700">{getBuyerName(order)}</span>
                               </div>
                             )}
-                            {mode === 'buyer' && order.sellerName && (
+                            {mode === 'buyer' && (
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-gray-500">Penjual</span>
-                                <span className="text-gray-700">{order.sellerName}</span>
+                                <span className="text-gray-700">{getSellerName(order)}</span>
                               </div>
                             )}
                           </div>

@@ -1,17 +1,7 @@
 import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { createId } from '@paralleldrive/cuid2';
-
-// Simple hash function (must match seed/login)
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
-}
+import { hashPassword, createSessionToken, getSessionCookie } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
@@ -22,6 +12,13 @@ export async function POST(request: Request) {
     if (!name || !email || !password || !city) {
       return NextResponse.json(
         { error: 'Nama, email, password, dan kota wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password minimal 6 karakter' },
         { status: 400 }
       );
     }
@@ -38,13 +35,14 @@ export async function POST(request: Request) {
     }
 
     const userRole = role === 'seller' ? 'seller' : 'buyer';
+    const hashedPassword = await hashPassword(password);
 
     const user = await db.user.create({
       data: {
         id: createId(),
         name,
         email: normalizedEmail,
-        password: simpleHash(password),
+        password: hashedPassword,
         city,
         role: userRole,
         phone: phone || '',
@@ -54,7 +52,14 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({
+    // Create JWT session token
+    const token = await createSessionToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    const userData = {
       id: user.id,
       name: user.name,
       email: user.email,
@@ -73,7 +78,12 @@ export async function POST(request: Request) {
       bankName: user.bankName,
       bankAccount: user.bankAccount,
       bankHolder: user.bankHolder,
-    }, { status: 201 });
+    };
+
+    const response = NextResponse.json(userData, { status: 201 });
+    response.headers.set('Set-Cookie', getSessionCookie(token));
+
+    return response;
   } catch (error) {
     console.error('Register error:', error);
     return NextResponse.json(

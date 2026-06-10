@@ -1,5 +1,6 @@
 import { db, ensureDb } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { getAuthUser } from '@/lib/auth';
 
 // GET /api/products — List, search, filter, paginate products
 export async function GET(request: Request) {
@@ -153,6 +154,27 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDb();
+
+    // Require authentication
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return Response.json(
+        { error: 'Anda harus login untuk menambahkan produk' },
+        { status: 401 }
+      );
+    }
+
+    // Only sellers can create products
+    if (authUser.role !== 'seller') {
+      return Response.json(
+        { error: 'Hanya seller yang dapat menambahkan produk' },
+        { status: 403 }
+      );
+    }
+
+    // Set sellerId from JWT token (not from request body)
+    const sellerId = authUser.userId;
+
     const body = await request.json();
     const {
       name,
@@ -164,7 +186,6 @@ export async function POST(request: Request) {
       minOrder,
       stock,
       location,
-      sellerId,
       variantGroups,
     } = body;
 
@@ -185,27 +206,6 @@ export async function POST(request: Request) {
       return Response.json(
         { error: 'Kategori produk wajib diisi' },
         { status: 400 }
-      );
-    }
-    if (!sellerId || !sellerId.trim()) {
-      return Response.json(
-        { error: 'Seller ID wajib diisi' },
-        { status: 400 }
-      );
-    }
-
-    // Verify seller exists and is a seller
-    const seller = await db.user.findUnique({ where: { id: sellerId } });
-    if (!seller) {
-      return Response.json(
-        { error: 'Seller tidak ditemukan' },
-        { status: 404 }
-      );
-    }
-    if (seller.role !== 'seller') {
-      return Response.json(
-        { error: 'Hanya seller yang dapat menambahkan produk' },
-        { status: 403 }
       );
     }
 
