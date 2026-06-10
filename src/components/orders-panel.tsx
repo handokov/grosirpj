@@ -91,6 +91,7 @@ interface OrdersPanelProps {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: typeof Package; description: string }> = {
   pending: { label: 'Menunggu Pembayaran', color: 'text-amber-700', bgColor: 'bg-amber-100', icon: Clock, description: 'Menunggu pembayaran dari pembeli' },
+  awaiting_confirmation: { label: 'Menunggu Konfirmasi', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: Clock, description: 'Bukti pembayaran diterima, menunggu konfirmasi penjual' },
   paid: { label: 'Sudah Dibayar', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: CreditCard, description: 'Pembayaran telah dikonfirmasi' },
   processing: { label: 'Sedang Diproses', color: 'text-indigo-700', bgColor: 'bg-indigo-100', icon: Archive, description: 'Penjual sedang memproses pesanan' },
   shipped: { label: 'Dikirim', color: 'text-purple-700', bgColor: 'bg-purple-100', icon: Truck, description: 'Pesanan sedang dalam pengiriman' },
@@ -264,13 +265,34 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
     });
   };
 
-  // Handle payment confirmation
-  const handleConfirmPayment = () => {
+  // Handle payment confirmation (buyer submits proof, not changing status to paid)
+  const handleSubmitPaymentProof = async () => {
+    if (!user) return;
     setPaymentLoading(true);
-    handleUpdateStatus(paymentOrderId, 'paid').finally(() => {
+    try {
+      const proof = paymentMethod === 'cod'
+        ? 'Pembayaran COD - akan dibayar saat barang tiba'
+        : `Pembayaran dikonfirmasi oleh pembeli (${new Date().toLocaleString('id-ID')})`;
+
+      const res = await fetch(`/api/orders/${paymentOrderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ paymentProof: proof }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Bukti pembayaran berhasil dikirim! Menunggu konfirmasi penjual.');
+        await fetchOrders();
+      } else {
+        toast.error(data.error || 'Gagal mengirim bukti pembayaran');
+      }
+    } catch {
+      toast.error('Gagal mengirim bukti pembayaran');
+    } finally {
       setPaymentLoading(false);
       setPaymentDialogOpen(false);
-    });
+    }
   };
 
   // Generate a simulated tracking number
@@ -308,29 +330,40 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
     if (mode === 'buyer') {
       // Buyer actions
       if (order.status === 'pending') {
-        buttons.push(
-          <Button
-            key="pay"
-            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
-            onClick={() => openPaymentDialog(order.id, order.paymentMethod)}
-            disabled={isUpdating}
-          >
-            <CreditCard className="w-4 h-4 mr-2" />
-            {isUpdating ? 'Memproses...' : 'Bayar Sekarang'}
-          </Button>
-        );
-        buttons.push(
-          <Button
-            key="cancel"
-            variant="outline"
-            className="flex-1 border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
-            onClick={() => handleUpdateStatus(order.id, 'cancelled')}
-            disabled={isUpdating}
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Batalkan
-          </Button>
-        );
+        if (order.paymentProof) {
+          // Buyer already submitted proof, waiting for seller confirmation
+          buttons.push(
+            <div key="awaiting" className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-sm font-medium">
+              <Clock className="w-4 h-4 animate-pulse" />
+              Menunggu Konfirmasi Penjual
+            </div>
+          );
+        } else {
+          // Buyer hasn't submitted proof yet
+          buttons.push(
+            <Button
+              key="pay"
+              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
+              onClick={() => openPaymentDialog(order.id, order.paymentMethod)}
+              disabled={isUpdating}
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              {isUpdating ? 'Memproses...' : 'Bayar Sekarang'}
+            </Button>
+          );
+          buttons.push(
+            <Button
+              key="cancel"
+              variant="outline"
+              className="flex-1 border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
+              onClick={() => handleUpdateStatus(order.id, 'cancelled')}
+              disabled={isUpdating}
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Batalkan
+            </Button>
+          );
+        }
       } else if (order.status === 'shipped') {
         buttons.push(
           <Button
@@ -347,17 +380,28 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
     } else {
       // Seller actions
       if (order.status === 'pending') {
-        buttons.push(
-          <Button
-            key="confirm-pay"
-            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
-            onClick={() => handleUpdateStatus(order.id, 'paid')}
-            disabled={isUpdating}
-          >
-            <CreditCard className="w-4 h-4 mr-2" />
-            {isUpdating ? 'Memproses...' : 'Konfirmasi Bayar'}
-          </Button>
-        );
+        if (order.paymentProof) {
+          // Buyer has submitted proof, seller can confirm
+          buttons.push(
+            <Button
+              key="confirm-pay"
+              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
+              onClick={() => handleUpdateStatus(order.id, 'paid')}
+              disabled={isUpdating}
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              {isUpdating ? 'Memproses...' : 'Konfirmasi Bayar'}
+            </Button>
+          );
+        } else {
+          // Buyer hasn't submitted proof yet
+          buttons.push(
+            <div key="awaiting" className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-medium">
+              <Clock className="w-3 h-3" />
+              Menunggu Pembeli Bayar
+            </div>
+          );
+        }
         buttons.push(
           <Button
             key="reject"
@@ -570,7 +614,9 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
             ) : (
               <div className="divide-y divide-gray-100">
                 {orders.map((order) => {
-                  const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+                  // Show "awaiting_confirmation" status when pending + has paymentProof
+                  const effectiveStatus = order.status === 'pending' && order.paymentProof ? 'awaiting_confirmation' : order.status;
+                  const statusConfig = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.pending;
                   const StatusIcon = statusConfig.icon;
                   const isExpanded = expandedOrder === order.id;
                   const paymentStatus = getPaymentStatus(order.status);
@@ -875,8 +921,8 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
               {paymentMethod === 'cod'
                 ? 'Konfirmasi bahwa Anda akan membayar saat barang diterima'
                 : paymentMethod === 'bank_transfer'
-                ? 'Transfer ke rekening berikut, lalu konfirmasi pembayaran'
-                : 'Scan QR code berikut, lalu konfirmasi pembayaran'
+                ? 'Transfer ke rekening berikut, lalu klik "Saya Sudah Bayar"'
+                : 'Scan QR code berikut, lalu klik "Saya Sudah Bayar"'
               }
             </DialogDescription>
           </DialogHeader>
@@ -938,7 +984,7 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-xs text-amber-700">
-                ⚠️ Ini adalah simulasi pembayaran. Klik &quot;Konfirmasi Pembayaran&quot; untuk melanjutkan ke tahap berikutnya.
+                ⚠️ Setelah klik &quot;Saya Sudah Bayar&quot;, penjual akan memverifikasi pembayaran Anda.
               </p>
             </div>
           </div>
@@ -952,18 +998,18 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
             </Button>
             <Button
               className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
-              onClick={handleConfirmPayment}
+              onClick={handleSubmitPaymentProof}
               disabled={paymentLoading}
             >
               {paymentLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Memproses...
+                  Mengirim...
                 </>
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Konfirmasi Pembayaran
+                  Saya Sudah Bayar
                 </>
               )}
             </Button>

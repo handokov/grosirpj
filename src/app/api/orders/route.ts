@@ -156,6 +156,14 @@ export async function POST(request: Request) {
         );
       }
 
+      // Prevent self-purchase: seller cannot buy their own product
+      if (product.sellerId === buyerId) {
+        return Response.json(
+          { error: `Anda tidak dapat membeli produk sendiri ("${product.name}")` },
+          { status: 400 }
+        );
+      }
+
       itemDetails.push({
         productId: product.id,
         productName: product.name,

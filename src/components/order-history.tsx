@@ -163,7 +163,7 @@ export function OrderHistory() {
             ) : (
               <div className="p-4 space-y-3">
                 {orders.map((order) => {
-                  const statusInfo = getStatusInfo(order.status);
+                  const statusInfo = getStatusInfo(order.paymentProof && order.status === 'pending' ? 'awaiting_confirmation' : order.status);
                   const isExpanded = expandedId === order.id;
                   const currentStep = getStatusStepIndex(order.status);
                   const isCancelled = order.status === 'cancelled';
@@ -278,7 +278,7 @@ export function OrderHistory() {
                           </div>
 
                           {/* Pay Now Button for Pending Orders */}
-                          {isPending && (
+                          {isPending && !order.paymentProof && (
                             <Button
                               className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl py-5 mt-2"
                               onClick={(e) => {
@@ -289,6 +289,12 @@ export function OrderHistory() {
                               <CreditCard className="w-4 h-4 mr-2" />
                               Bayar Sekarang
                             </Button>
+                          )}
+                          {isPending && order.paymentProof && (
+                            <div className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-sm font-medium mt-2">
+                              <Clock className="w-4 h-4 animate-pulse" />
+                              Menunggu Konfirmasi Penjual
+                            </div>
                           )}
 
                           {/* Review Button for Delivered Orders */}

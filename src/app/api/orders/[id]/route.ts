@@ -93,7 +93,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/orders/[id] - Update order status
+// PATCH /api/orders/[id] - Update order (status transition or submit payment proof)
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -103,21 +103,6 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const { status, paymentProof, expedition, trackingNumber } = body;
-
-    if (!status) {
-      return Response.json(
-        { error: 'Status wajib diisi' },
-        { status: 400 }
-      );
-    }
-
-    const validStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return Response.json(
-        { error: `Status tidak valid. Status yang valid: ${validStatuses.join(', ')}` },
-        { status: 400 }
-      );
-    }
 
     const currentOrder = await db.order.findUnique({
       where: { id },
@@ -136,7 +121,6 @@ export async function PATCH(
 
     // Require authentication via JWT cookie
     const authUser = await getAuthUser(request);
-
     if (!authUser) {
       return Response.json(
         { error: 'Anda harus login untuk mengubah pesanan' },
@@ -154,8 +138,76 @@ export async function PATCH(
       );
     }
 
+    // === SPECIAL CASE: Buyer submits payment proof (no status change) ===
+    // When buyer clicks "Saya Sudah Bayar", they submit paymentProof but status stays 'pending'
+    // Only the seller can then change status to 'paid'
+    if (paymentProof && (!status || status === currentOrder.status)) {
+      if (!isBuyer) {
+        return Response.json(
+          { error: 'Hanya pembeli yang dapat mengirim bukti pembayaran' },
+          { status: 403 }
+        );
+      }
+      if (currentOrder.status !== 'pending') {
+        return Response.json(
+          { error: 'Bukti pembayaran hanya dapat dikirim untuk pesanan yang masih menunggu' },
+          { status: 400 }
+        );
+      }
+      if (currentOrder.paymentProof) {
+        return Response.json(
+          { error: 'Bukti pembayaran sudah pernah dikirim' },
+          { status: 400 }
+        );
+      }
+
+      // Save payment proof without changing status
+      const updatedOrder = await db.order.update({
+        where: { id },
+        data: { paymentProof },
+        include: {
+          items: true,
+          buyer: { select: { id: true, name: true, email: true, city: true } },
+          seller: { select: { id: true, name: true, storeName: true, city: true } },
+        },
+      });
+
+      // Notify seller that buyer has submitted payment
+      try {
+        await db.notification.create({
+          data: {
+            userId: currentOrder.sellerId,
+            title: 'Bukti Pembayaran Diterima',
+            message: `Pembeli ${currentOrder.buyer.name} telah mengirim bukti pembayaran. Silakan konfirmasi penerimaan pembayaran.`,
+            type: 'payment',
+            link: `/orders/${id}`,
+          },
+        });
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError);
+      }
+
+      return Response.json({ order: updatedOrder });
+    }
+
+    // === STATUS TRANSITION ===
+    if (!status) {
+      return Response.json(
+        { error: 'Status wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    const validStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return Response.json(
+        { error: `Status tidak valid. Status yang valid: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
     // Role-based status transition rules
-    // Seller confirms payment receipt (buyer already paid, seller verifies)
+    // Seller confirms payment receipt (buyer already submitted proof, seller verifies and marks as paid)
     if (status === 'paid' && !isSeller) {
       return Response.json(
         { error: 'Hanya penjual yang dapat mengonfirmasi pembayaran' },
@@ -194,6 +246,14 @@ export async function PATCH(
         {
           error: `Tidak dapat mengubah status dari "${currentOrder.status}" ke "${status}". Transisi yang diizinkan: ${allowedNextStatuses.length > 0 ? allowedNextStatuses.join(', ') : 'tidak ada'}`,
         },
+        { status: 400 }
+      );
+    }
+
+    // When seller confirms payment (paid), the order must have paymentProof
+    if (status === 'paid' && !currentOrder.paymentProof && currentOrder.paymentMethod !== 'cod') {
+      return Response.json(
+        { error: 'Pembeli belum mengirim bukti pembayaran' },
         { status: 400 }
       );
     }

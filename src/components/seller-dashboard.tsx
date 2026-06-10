@@ -1224,10 +1224,16 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                             <CreditCard className="w-3 h-3" />
                             {order.paymentMethod === 'cod' ? 'COD' : order.paymentMethod === 'transfer' ? 'Transfer Bank' : 'E-Wallet'}
                           </span>
-                          {order.paymentProof && (
-                            <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                          {order.paymentProof && order.status === 'pending' && (
+                            <span className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium">
                               <Banknote className="w-3 h-3" />
-                              {order.paymentProof.length > 40 ? order.paymentProof.slice(0, 40) + '...' : order.paymentProof}
+                              Bukti bayar diterima
+                            </span>
+                          )}
+                          {!order.paymentProof && order.status === 'pending' && (
+                            <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                              <Clock className="w-3 h-3" />
+                              Belum ada bukti bayar
                             </span>
                           )}
                           {order.paidAt && (
@@ -1253,13 +1259,19 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
                           <div className="flex gap-2">
-                            {order.status === 'pending' && (
+                            {order.status === 'pending' && order.paymentProof && (
                               <>
-                                {order.paymentProof && (
-                                  <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => handleUpdateOrderStatus(order.id, 'paid')}>✓ Konfirmasi Bayar</Button>
-                                )}
+                                <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-semibold" onClick={() => handleUpdateOrderStatus(order.id, 'paid')}>
+                                  <CheckCircle className="w-3 h-3 mr-1" /> Konfirmasi Bayar
+                                </Button>
                                 <Button size="sm" variant="outline" className="rounded-lg text-xs border-red-300 text-red-500 hover:bg-red-50" onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}>Tolak</Button>
                               </>
+                            )}
+                            {order.status === 'pending' && !order.paymentProof && (
+                              <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                Menunggu pembeli bayar
+                              </span>
                             )}
                             {order.status === 'paid' && (
                               <Button size="sm" className="rounded-lg text-xs bg-cyan-500 hover:bg-cyan-600 text-white" onClick={() => openShippingDialog(order.id)}>

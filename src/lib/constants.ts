@@ -19,6 +19,7 @@ export const PAYMENT_METHODS = [
 
 export const ORDER_STATUSES = [
   { value: 'pending', label: 'Menunggu Pembayaran', color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'awaiting_confirmation', label: 'Menunggu Konfirmasi', color: 'bg-blue-100 text-blue-700' },
   { value: 'paid', label: 'Sudah Dibayar', color: 'bg-blue-100 text-blue-700' },
   { value: 'shipped', label: 'Dikirim', color: 'bg-purple-100 text-purple-700' },
   { value: 'delivered', label: 'Diterima', color: 'bg-emerald-100 text-emerald-700' },

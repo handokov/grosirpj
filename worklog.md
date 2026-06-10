@@ -81,3 +81,26 @@ Stage Summary:
 - User needs to set JWT_SECRET on Vercel for production security
 - Ephemeral DB limitation still exists for user-generated data (registered users, orders)
 - Recommended: Set up Turso for persistent database on Vercel
+---
+Task ID: 1
+Agent: Main
+Task: Fix e-commerce payment flow and self-purchase prevention
+
+Work Log:
+- Analyzed the entire payment flow: payment-dialog.tsx, orders API, seller dashboard, orders-panel, order-history
+- Identified two critical logic bugs: 1) Sellers could buy from their own store, 2) Buyer couldn't confirm payment because API blocked non-sellers from setting status to 'paid'
+- Fixed POST /api/orders: Added self-purchase prevention check (product.sellerId === buyerId → 400 error)
+- Rewrote PATCH /api/orders/[id]: Added new endpoint behavior - buyer can submit paymentProof without changing status
+- Updated payment-dialog.tsx: Changed "Konfirmasi Pembayaran" to "Saya Sudah Bayar", no longer sets status to 'paid'
+- Updated orders-panel.tsx: Buyer shows "Menunggu Konfirmasi Penjual" after submitting proof; Seller shows "Konfirmasi Bayar" only when proof exists
+- Updated seller-dashboard.tsx: Added visual indicators for pending orders with/without payment proof
+- Updated order-history.tsx: Shows "Menunggu Konfirmasi Penjual" instead of "Bayar Sekarang" after proof submitted
+- Added 'awaiting_confirmation' status to ORDER_STATUSES in constants.ts
+- Made payment dialog more compact (reduced fonts, padding, button sizes)
+
+Stage Summary:
+- Self-purchase prevention: ✅ Sellers can no longer buy from their own store
+- Correct payment flow: ✅ Buyer submits proof → Seller confirms payment
+- Payment dialog: ✅ More compact, button says "Saya Sudah Bayar"
+- Status display: ✅ Shows "Menunggu Konfirmasi" when pending + has paymentProof
+- All API tests pass: self-purchase blocked, buyer proof submission works, seller confirmation works
