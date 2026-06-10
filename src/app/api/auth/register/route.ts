@@ -59,10 +59,20 @@ export async function POST(request: Request) {
       name: user.name,
       email: user.email,
       city: user.city,
+      address: user.address,
+      province: user.province,
+      postalCode: user.postalCode,
+      avatar: user.avatar,
+      gender: user.gender,
+      dateOfBirth: user.dateOfBirth,
       role: user.role,
       phone: user.phone,
       storeName: user.storeName,
       storeDescription: user.storeDescription,
+      storeAvatar: user.storeAvatar,
+      bankName: user.bankName,
+      bankAccount: user.bankAccount,
+      bankHolder: user.bankHolder,
     }, { status: 201 });
   } catch (error) {
     console.error('Register error:', error);

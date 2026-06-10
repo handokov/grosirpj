@@ -5,10 +5,20 @@ export interface AuthUser {
   name: string;
   email: string;
   city: string;
+  address?: string;
+  province?: string;
+  postalCode?: string;
+  avatar?: string;
+  gender?: string;
+  dateOfBirth?: string;
   role: string;
   phone?: string;
   storeName?: string;
   storeDescription?: string;
+  storeAvatar?: string;
+  bankName?: string;
+  bankAccount?: string;
+  bankHolder?: string;
 }
 
 interface AuthStore {

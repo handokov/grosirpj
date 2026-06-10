@@ -43,10 +43,20 @@ export async function POST(request: NextRequest) {
       name: updated.name,
       email: updated.email,
       city: updated.city,
+      address: updated.address,
+      province: updated.province,
+      postalCode: updated.postalCode,
+      avatar: updated.avatar,
+      gender: updated.gender,
+      dateOfBirth: updated.dateOfBirth,
       role: updated.role,
       phone: updated.phone,
       storeName: updated.storeName,
       storeDescription: updated.storeDescription,
+      storeAvatar: updated.storeAvatar,
+      bankName: updated.bankName,
+      bankAccount: updated.bankAccount,
+      bankHolder: updated.bankHolder,
     });
   } catch (error) {
     console.error('[upgrade-seller] Error:', error);
