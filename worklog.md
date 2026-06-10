@@ -57,3 +57,27 @@ All existing variable references (e.g., `seller1.id`, `buyer1.id`, `product.id`)
 - `bun run lint` passed with no errors.
 - Dev server log shows no errors; the application is running correctly with the existing seeded data.
 - All Prisma queries execute successfully, confirming the deterministic IDs work with the schema.
+
+---
+Task ID: 1
+Agent: main
+Task: Fix Vercel build failure and order creation issues
+
+Work Log:
+- Diagnosed Vercel build failure: JWT_SECRET throw-at-import crashed build when env var not set
+- Fixed auth.ts: Changed from throw-at-import to fallback-with-warning for JWT_SECRET
+- Fixed register route: Restored missing `normalizedEmail` variable declaration
+- Fixed frontend-backend password validation mismatch (6 chars frontend vs 8 chars backend)
+- Fixed getClearSessionCookie missing Secure flag in production
+- Added deterministic seed IDs for all demo data (seed-seller-1, seed-product-01, etc.)
+- This ensures consistent product IDs across Vercel serverless function instances
+- Tested order creation locally - works correctly
+- Committed and pushed all fixes (2 commits: f00a2b7 and b3587de)
+
+Stage Summary:
+- Vercel build should now succeed with the JWT_SECRET fallback
+- Order creation on Vercel should work better with deterministic seed IDs
+- Frontend-backend validation is now consistent
+- User needs to set JWT_SECRET on Vercel for production security
+- Ephemeral DB limitation still exists for user-generated data (registered users, orders)
+- Recommended: Set up Turso for persistent database on Vercel
