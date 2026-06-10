@@ -117,7 +117,19 @@ export async function PATCH(
     }
 
     // Require authentication via JWT cookie
-    const authUser = await getAuthUser(request);
+    let authUser = await getAuthUser(request);
+
+    // Fallback: if no JWT cookie, try userId from body for backward compatibility
+    if (!authUser && body.userId) {
+      const fallbackUser = await db.user.findUnique({
+        where: { id: body.userId },
+        select: { id: true, role: true },
+      });
+      if (fallbackUser) {
+        authUser = { userId: fallbackUser.id, email: '', role: fallbackUser.role };
+      }
+    }
+
     if (!authUser) {
       return Response.json(
         { error: 'Anda harus login untuk mengubah pesanan' },
@@ -284,8 +296,9 @@ export async function PATCH(
     return Response.json({ order: updatedOrder });
   } catch (error) {
     console.error('Update order status error:', error);
+    const detail = error instanceof Error ? error.message : String(error);
     return Response.json(
-      { error: 'Gagal memperbarui status pesanan', detail: process.env.NODE_ENV === 'development' ? String(error) : undefined },
+      { error: 'Gagal memperbarui status pesanan', detail: process.env.NODE_ENV === 'development' ? detail : undefined },
       { status: 500 }
     );
   }

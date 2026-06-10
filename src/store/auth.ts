@@ -64,6 +64,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
@@ -92,6 +93,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(registerData),
       });
       const data = await res.json();
