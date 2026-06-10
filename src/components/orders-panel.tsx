@@ -101,8 +101,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
 
 const PAYMENT_LABELS: Record<string, string> = {
   cod: 'Bayar di Tempat (COD)',
-  bank_transfer: 'Transfer Bank',
-  qris: 'QRIS',
+  transfer: 'Transfer Bank',
+  ewallet: 'E-Wallet',
 };
 
 const EXPEDITIONS = [
@@ -744,7 +744,7 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
                               <span className="text-gray-500">Metode Pembayaran</span>
                               <span className="text-gray-700 flex items-center gap-1">
                                 {order.paymentMethod === 'cod' ? <Banknote className="w-3 h-3" /> :
-                                 order.paymentMethod === 'qris' ? <QrCode className="w-3 h-3" /> :
+                                 order.paymentMethod === 'ewallet' ? <QrCode className="w-3 h-3" /> :
                                  <CreditCard className="w-3 h-3" />}
                                 {PAYMENT_LABELS[order.paymentMethod] || order.paymentMethod}
                               </span>
@@ -930,9 +930,9 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
             <DialogDescription>
               {paymentMethod === 'cod'
                 ? 'Konfirmasi bahwa Anda akan membayar saat barang diterima'
-                : paymentMethod === 'bank_transfer'
+                : paymentMethod === 'transfer'
                 ? 'Transfer ke rekening berikut, lalu klik "Saya Sudah Bayar"'
-                : 'Scan QR code berikut, lalu klik "Saya Sudah Bayar"'
+                : 'Bayar via e-wallet, lalu klik "Saya Sudah Bayar"'
               }
             </DialogDescription>
           </DialogHeader>
@@ -945,7 +945,7 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
                   Anda akan membayar saat kurir mengantarkan barang ke alamat Anda. Pastikan Anda menyiapkan uang pas.
                 </p>
               </div>
-            ) : paymentMethod === 'bank_transfer' ? (
+            ) : paymentMethod === 'transfer' ? (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <CreditCard className="w-10 h-10 text-blue-500 mx-auto mb-3" />
                 <p className="text-sm font-semibold text-blue-800 mb-3 text-center">Transfer Bank</p>
@@ -977,9 +977,9 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
             ) : (
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
                 <QrCode className="w-24 h-24 text-purple-500 mx-auto mb-3" />
-                <p className="text-sm font-semibold text-purple-800 mb-1">Scan QRIS</p>
+                <p className="text-sm font-semibold text-purple-800 mb-1">E-Wallet</p>
                 <p className="text-xs text-purple-600 mb-2">
-                  Gunakan GoPay, OVO, DANA, ShopeePay, atau e-wallet lainnya
+                  Bayar via GoPay, OVO, atau DANA
                 </p>
                 <div className="bg-white rounded-lg p-3 inline-block">
                   <div className="w-40 h-40 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">

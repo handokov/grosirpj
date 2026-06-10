@@ -53,20 +53,20 @@ const PAYMENT_METHODS = [
     details: 'Pembayaran dilakukan saat kurir mengantar barang ke alamat Anda.',
   },
   {
-    id: 'bank_transfer',
+    id: 'transfer',
     name: 'Transfer Bank',
-    description: 'BCA / Mandiri / BNI / BRI',
+    description: 'Transfer ke rekening escrow GrosirPJ',
     icon: CreditCard,
     color: 'from-blue-500 to-blue-600',
-    details: 'Transfer ke rekening: BCA 1234567890 a.n. GrosirPJ Indonesia',
+    details: 'Transfer ke rekening escrow GrosirPJ',
   },
   {
-    id: 'qris',
-    name: 'QRIS',
-    description: 'Scan QR dari e-wallet manapun',
+    id: 'ewallet',
+    name: 'E-Wallet',
+    description: 'GoPay / OVO / DANA',
     icon: QrCode,
     color: 'from-purple-500 to-purple-600',
-    details: 'Scan QR code menggunakan GoPay, OVO, DANA, ShopeePay, atau e-wallet lainnya.',
+    details: 'Bayar via GoPay, OVO, atau DANA',
   },
 ];
 
@@ -191,9 +191,9 @@ export function Checkout({ open, onOpenChange, items: propItems, singleProduct, 
                 <p className="text-sm text-emerald-600">
                   {selectedPayment === 'cod'
                     ? 'Bayar saat barang diterima oleh kurir'
-                    : selectedPayment === 'bank_transfer'
-                    ? 'Transfer ke rekening BCA 1234567890 a.n. GrosirPJ'
-                    : 'Scan QR code untuk pembayaran'
+                    : selectedPayment === 'transfer'
+                    ? 'Transfer ke rekening Escrow GrosirPJ'
+                    : 'Bayar via GoPay, OVO, atau DANA'
                   }
                 </p>
                 <p className="text-xs text-emerald-500 mt-2">Kemudian tekan tombol &quot;Bayar&quot; di halaman Pesanan Saya</p>

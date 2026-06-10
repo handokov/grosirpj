@@ -127,6 +127,7 @@ const EXPEDITIONS = [
 const SIDEBAR_ITEMS = [
   { id: 'beranda', label: 'Beranda', icon: Home },
   { id: 'orders', label: 'Pesanan', icon: ClipboardList, showBadge: 'orders' },
+  { id: 'finance', label: 'Keuangan', icon: DollarSign },
   { id: 'products', label: 'Produk Saya', icon: Package },
   { id: 'addProduct', label: 'Tambah Produk', icon: Plus },
   { id: 'chat', label: 'Chat Pembeli', icon: MessageCircle, showBadge: 'chat' },
@@ -168,6 +169,10 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Withdrawal state
+  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+
   // Shipping dialog state
   const [shippingDialogOpen, setShippingDialogOpen] = useState(false);
   const [shippingOrderId, setShippingOrderId] = useState('');
@@ -190,6 +195,13 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     try {
+      // Auto-complete shipped orders older than 3 days
+      try {
+        await fetch('/api/orders/auto-complete', { method: 'POST', credentials: 'include' });
+      } catch {
+        // Silently fail
+      }
+
       const res = await fetch(`/api/orders?sellerId=${user.id}`);
       const data = await res.json();
       if (res.ok) setOrders(data.orders || []);
@@ -256,6 +268,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       case 'beranda': return 'Beranda';
       case 'products': return showForm ? (editingId ? 'Edit Produk' : 'Tambah Produk') : 'Produk Saya';
       case 'orders': return 'Pesanan';
+      case 'finance': return 'Keuangan';
       case 'stats': return 'Statistik';
       default: return 'Beranda';
     }
@@ -535,6 +548,51 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       setSelectedExpedition('');
       setInputTrackingNumber('');
     });
+  };
+
+  const handleWithdraw = async () => {
+    if (!user || withdrawAmount < 10000) {
+      toast.error('Minimum penarikan Rp 10.000');
+      return;
+    }
+    if (withdrawAmount > (user.sellerBalance || 0)) {
+      toast.error('Saldo tidak mencukupi');
+      return;
+    }
+    if (!user.bankName || !user.bankAccount) {
+      toast.error('Lengkapi informasi rekening terlebih dahulu');
+      return;
+    }
+    setWithdrawLoading(true);
+    try {
+      const res = await fetch('/api/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          amount: withdrawAmount,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Penarikan ${formatPrice(withdrawAmount)} berhasil diproses! Dana akan ditransfer ke ${user.bankName} ${user.bankAccount} dalam 1-2 hari kerja.`);
+        setWithdrawAmount(0);
+        // Refresh user data
+        const authRes = await fetch('/api/auth/me');
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData.user) {
+            useAuthStore.getState().setUser(authData.user);
+          }
+        }
+      } else {
+        toast.error(data.error || 'Gagal memproses penarikan');
+      }
+    } catch {
+      toast.error('Gagal memproses penarikan');
+    } finally {
+      setWithdrawLoading(false);
+    }
   };
 
   // Chart data
@@ -1300,6 +1358,139 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'finance' && (
+            /* ===== KEUANGAN TAB ===== */
+            <div className="max-w-4xl mx-auto space-y-6">
+              {/* Balance Card */}
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl p-6 text-white shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-emerald-100 text-sm">Saldo Tersedia</p>
+                    <p className="text-3xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                      {formatPrice(user?.sellerBalance || 0)}
+                    </p>
+                  </div>
+                  <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                    <DollarSign className="w-7 h-7 text-white" />
+                  </div>
+                </div>
+                <div className="flex gap-4 text-sm">
+                  <div>
+                    <p className="text-emerald-200">Total Penjualan</p>
+                    <p className="font-semibold">{formatPrice(user?.totalSales || 0)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Withdrawal Section */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-emerald-500" />
+                  Tarik Saldo
+                </h3>
+
+                {/* Bank Account Info */}
+                {user?.bankName && user?.bankAccount ? (
+                  <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                    <p className="text-sm text-gray-500 mb-2">Rekening Tujuan</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <CreditCard className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{user.bankName}</p>
+                        <p className="text-sm text-gray-600">{user.bankAccount} a.n. {user.bankHolder || user.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-amber-500" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-800">Rekening Belum Terdaftar</p>
+                        <p className="text-xs text-amber-600">Lengkapi informasi rekening di profil Anda untuk melakukan penarikan saldo.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Withdrawal Form */}
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Jumlah Penarikan</Label>
+                    <div className="relative mt-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">Rp</span>
+                      <Input
+                        type="number"
+                        placeholder="Masukkan jumlah"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(Number(e.target.value))}
+                        className="pl-10 rounded-xl"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-400">Min. Rp 10.000</p>
+                      <button
+                        className="text-xs text-emerald-600 font-medium hover:text-emerald-700"
+                        onClick={() => setWithdrawAmount(user?.sellerBalance || 0)}
+                      >
+                        Tarik Semua
+                      </button>
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
+                    onClick={handleWithdraw}
+                    disabled={withdrawLoading || !user?.bankName || !withdrawAmount || withdrawAmount < 10000 || withdrawAmount > (user?.sellerBalance || 0)}
+                  >
+                    {withdrawLoading ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Memproses...</>
+                    ) : (
+                      <><CreditCard className="w-4 h-4 mr-2" /> Tarik Saldo</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Fee Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-800">Info Biaya Marketplace</p>
+                    <p className="text-blue-600 text-xs mt-1">GrosirPJ memotong biaya 2% dari setiap transaksi sebagai biaya layanan. Saldo akan dicairkan setelah pembeli mengkonfirmasi penerimaan barang.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Transactions / Orders */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Riwayat Pencairan</h3>
+                {orders.filter(o => o.status === 'delivered').length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <p className="text-sm">Belum ada pencairan dana</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {orders.filter(o => o.status === 'delivered').map(order => (
+                      <div key={order.id} className="flex items-center justify-between py-2 border-b border-gray-50">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">#{order.id.slice(-8)}</p>
+                          <p className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-emerald-600">+{formatPrice(order.totalAmount)}</p>
+                          <p className="text-[10px] text-gray-400">Dana dicairkan</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

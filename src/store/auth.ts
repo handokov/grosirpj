@@ -19,6 +19,8 @@ export interface AuthUser {
   bankName?: string;
   bankAccount?: string;
   bankHolder?: string;
+  sellerBalance?: number;
+  totalSales?: number;
 }
 
 interface AuthStore {

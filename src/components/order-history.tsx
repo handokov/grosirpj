@@ -78,6 +78,13 @@ export function OrderHistory() {
     if (!user) return;
     setLoading(true);
     try {
+      // Auto-complete shipped orders older than 3 days
+      try {
+        await fetch('/api/orders/auto-complete', { method: 'POST', credentials: 'include' });
+      } catch {
+        // Silently fail - auto-complete is not critical
+      }
+
       const res = await fetch(`/api/orders?buyerId=${user.id}`);
       const data = await res.json();
       if (res.ok) {
@@ -428,7 +435,7 @@ export function OrderHistory() {
                           )}
 
                           {isShipped && (
-                            <p className="text-[10px] text-gray-400 text-center">Klik "Pesanan Diterima" untuk mencairkan dana ke penjual</p>
+                            <p className="text-[10px] text-gray-400 text-center">Klik "Pesanan Diterima" untuk mencairkan dana ke penjual. Pesanan akan selesai otomatis dalam 3 hari.</p>
                           )}
 
                           {/* Delivered: Review */}

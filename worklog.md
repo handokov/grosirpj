@@ -104,3 +104,26 @@ Stage Summary:
 - Payment dialog: ✅ More compact, button says "Saya Sudah Bayar"
 - Status display: ✅ Shows "Menunggu Konfirmasi" when pending + has paymentProof
 - All API tests pass: self-purchase blocked, buyer proof submission works, seller confirmation works
+
+---
+Task ID: 4-5
+Agent: wallet-withdrawal-agent
+Task: Add seller wallet/balance display and withdrawal functionality
+
+Work Log:
+- Added "Keuangan" sidebar item to seller dashboard (SIDEBAR_ITEMS array, after 'orders')
+- Added 'finance' case to getTabTitle() returning 'Keuangan'
+- Added withdrawal state variables (withdrawAmount, withdrawLoading) to seller dashboard
+- Added handleWithdraw async function with validation and API call
+- Created full Finance tab UI with: balance card, withdrawal form, bank account info, fee info, transaction history
+- Created /api/withdraw POST endpoint with auth validation, balance check, and notification creation
+- Added sellerBalance and totalSales to /api/auth/me select fields
+- Added sellerBalance and totalSales to AuthUser interface in auth store
+- Ran lint check - passed with no errors
+
+Stage Summary:
+- Seller dashboard now has a "Keuangan" tab showing balance and withdrawal UI
+- Withdrawal API deducts from sellerBalance and creates notification
+- Minimum withdrawal is Rp 10.000
+- Auth/me now returns sellerBalance and totalSales fields
+- Auth store User type includes sellerBalance and totalSales
