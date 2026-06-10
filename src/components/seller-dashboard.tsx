@@ -7,7 +7,7 @@ import {
   Upload, Eye, BarChart3, ShoppingBag, Star, ArrowRight, AlertCircle, CheckCircle,
   Home, ClipboardList, MessageCircle, Bell, Megaphone, Clock, Truck,
   RotateCcw, Download, TrendingUp, Target, Newspaper, Menu, Search,
-  CreditCard, Banknote, Loader2,
+  CreditCard, Banknote, Loader2, LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -137,6 +137,7 @@ const SIDEBAR_ITEMS = [
 
 export function SellerDashboard({ onBack }: SellerDashboardProps) {
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const openChat = useUIStore((s) => s.openChat);
   const openNotifPanel = useUIStore((s) => s.openNotifPanel);
   const unreadChatCount = useUIStore((s) => s.unreadChatCount);
@@ -622,14 +623,21 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
         })}
       </nav>
 
-      {/* Back to Buyer */}
-      <div className="p-3 border-t border-gray-100">
+      {/* Back to Buyer & Logout */}
+      <div className="p-3 border-t border-gray-100 space-y-1">
         <button
           onClick={onBack}
           className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Kembali ke Pembeli</span>
+        </button>
+        <button
+          onClick={() => logout()}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Keluar</span>
         </button>
       </div>
     </div>

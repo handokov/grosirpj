@@ -689,15 +689,7 @@ function Navbar() {
                     </>
                   )}
                 </div>
-                {/* Visible Logout button on desktop - always visible next to profile */}
-                <button
-                  onClick={() => logout()}
-                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-white/70 hover:text-red-300 border border-white/20 rounded-full transition-colors hover:border-red-400/40 hover:bg-white/5"
-                  title="Keluar"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="text-xs font-medium">Keluar</span>
-                </button>
+
               </>
               ) : (
                 <button
