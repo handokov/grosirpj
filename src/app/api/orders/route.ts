@@ -269,8 +269,9 @@ export async function POST(request: Request) {
     return Response.json({ orders: createdOrders }, { status: 201 });
   } catch (error) {
     console.error('Create order error:', error);
+    const detail = error instanceof Error ? error.message : String(error);
     return Response.json(
-      { error: 'Gagal membuat pesanan' },
+      { error: `Gagal membuat pesanan: ${detail}` },
       { status: 500 }
     );
   }
