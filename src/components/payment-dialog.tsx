@@ -220,46 +220,46 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
               Transfer ke Rekening Berikut:
             </div>
             {sellerBankInfo ? (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
-                <div className="space-y-2">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2.5">
+                <div className="space-y-1">
                   <Label className="text-xs text-gray-500">Nama Bank</Label>
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-lg text-gray-800">{sellerBankInfo.bankName}</span>
+                    <span className="font-semibold text-sm text-gray-800">{sellerBankInfo.bankName}</span>
                     <button
                       onClick={() => copyToClipboard(sellerBankInfo.bankName, 'bank')}
-                      className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors"
+                      className="p-1 hover:bg-emerald-100 rounded-md transition-colors"
                     >
-                      {copiedField === 'bank' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                      {copiedField === 'bank' ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
                     </button>
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label className="text-xs text-gray-500">Nomor Rekening</Label>
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-lg text-gray-800 font-mono tracking-wider">{sellerBankInfo.bankAccount}</span>
+                    <span className="font-semibold text-sm text-gray-800 font-mono tracking-wide">{sellerBankInfo.bankAccount}</span>
                     <button
                       onClick={() => copyToClipboard(sellerBankInfo.bankAccount, 'account')}
-                      className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors"
+                      className="p-1 hover:bg-emerald-100 rounded-md transition-colors"
                     >
-                      {copiedField === 'account' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                      {copiedField === 'account' ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
                     </button>
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label className="text-xs text-gray-500">Atas Nama</Label>
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-800">{sellerBankInfo.bankHolder}</span>
+                    <span className="font-semibold text-sm text-gray-800">{sellerBankInfo.bankHolder}</span>
                     <button
                       onClick={() => copyToClipboard(sellerBankInfo.bankHolder, 'holder')}
-                      className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors"
+                      className="p-1 hover:bg-emerald-100 rounded-md transition-colors"
                     >
-                      {copiedField === 'holder' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-gray-400" />}
+                      {copiedField === 'holder' ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
                     </button>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-emerald-200">
-                  <p className="text-sm text-gray-600">
-                    Total yang harus ditransfer: <span className="font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
+                  <p className="text-xs text-gray-600">
+                    Total transfer: <span className="font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
                   </p>
                 </div>
               </div>
@@ -310,7 +310,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
             </div>
 
             <Button
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-6 rounded-xl"
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl"
               onClick={handleConfirmPayment}
               disabled={confirming || !senderName.trim()}
             >
@@ -341,10 +341,10 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
               </p>
               {sellerBankInfo ? (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label className="text-xs text-gray-500">E-Wallet</Label>
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-800">{sellerBankInfo.bankName || 'GoPay'}</span>
+                      <span className="font-semibold text-sm text-gray-800">{sellerBankInfo.bankName || 'GoPay'}</span>
                       <button
                         onClick={() => copyToClipboard(sellerBankInfo.bankName || 'GoPay', 'ewallet-type')}
                         className="p-1.5 hover:bg-purple-100 rounded-lg transition-colors"
@@ -353,10 +353,10 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label className="text-xs text-gray-500">Nomor E-Wallet</Label>
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-lg text-gray-800 font-mono">{sellerBankInfo.bankAccount || '0812-xxxx-xxxx'}</span>
+                      <span className="font-semibold text-sm text-gray-800 font-mono">{sellerBankInfo.bankAccount || '0812-xxxx-xxxx'}</span>
                       <button
                         onClick={() => copyToClipboard(sellerBankInfo.bankAccount || '', 'ewallet-num')}
                         className="p-1.5 hover:bg-purple-100 rounded-lg transition-colors"
@@ -365,9 +365,9 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label className="text-xs text-gray-500">Atas Nama</Label>
-                    <span className="font-bold text-gray-800">{sellerBankInfo.bankHolder}</span>
+                    <span className="font-semibold text-sm text-gray-800">{sellerBankInfo.bankHolder}</span>
                   </div>
                   <div className="pt-2 border-t border-purple-200">
                     <p className="text-sm text-gray-600">
@@ -423,7 +423,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
             </div>
 
             <Button
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-6 rounded-xl"
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl"
               onClick={handleConfirmPayment}
               disabled={confirming || !senderName.trim()}
             >
@@ -474,7 +474,7 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
             </div>
 
             <Button
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-6 rounded-xl"
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl"
               onClick={handleConfirmPayment}
               disabled={confirming}
             >
