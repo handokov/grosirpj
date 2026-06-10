@@ -1,21 +1,23 @@
 import { db, ensureDb } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
-// GET /api/chat - Get messages or conversations
+// GET /api/chat - Get messages or conversations for authenticated user
 export async function GET(request: Request) {
   try {
     await ensureDb();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const otherUserId = searchParams.get('otherUserId');
-
-    if (!userId) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return Response.json(
-        { error: 'userId wajib diisi' },
-        { status: 400 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
 
-    // If both userId and otherUserId provided: return messages between them
+    const userId = authUser.userId;
+    const { searchParams } = new URL(request.url);
+    const otherUserId = searchParams.get('otherUserId');
+
+    // If otherUserId provided: return messages between them
     if (otherUserId) {
       const messages = await db.chat.findMany({
         where: {
@@ -38,7 +40,7 @@ export async function GET(request: Request) {
       return Response.json({ messages });
     }
 
-    // If only userId provided: return list of conversations with last message and unread count
+    // Return list of conversations with last message and unread count
     // Get all chat partners for this user
     const sentChats = await db.chat.findMany({
       where: { senderId: userId },
@@ -132,15 +134,25 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { userId, partnerId } = body;
-
-    if (!userId || !partnerId) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return Response.json(
-        { error: 'userId dan partnerId wajib diisi' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { partnerId } = body;
+
+    if (!partnerId) {
+      return Response.json(
+        { error: 'partnerId wajib diisi' },
         { status: 400 }
       );
     }
+
+    const userId = authUser.userId;
 
     // Mark all unread messages from partnerId to userId as read
     const result = await db.chat.updateMany({
@@ -168,12 +180,21 @@ export async function PATCH(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { senderId, receiverId, message } = body;
-
-    if (!senderId || !receiverId || !message) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return Response.json(
-        { error: 'senderId, receiverId, dan message wajib diisi' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { receiverId, message } = body;
+    const senderId = authUser.userId;
+
+    if (!receiverId || !message) {
+      return Response.json(
+        { error: 'receiverId dan message wajib diisi' },
         { status: 400 }
       );
     }
@@ -185,18 +206,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify both users exist
-    const [sender, receiver] = await Promise.all([
-      db.user.findUnique({ where: { id: senderId } }),
-      db.user.findUnique({ where: { id: receiverId } }),
-    ]);
-
-    if (!sender) {
-      return Response.json(
-        { error: 'Pengirim tidak ditemukan' },
-        { status: 404 }
-      );
-    }
+    // Verify receiver exists
+    const receiver = await db.user.findUnique({ where: { id: receiverId } });
 
     if (!receiver) {
       return Response.json(

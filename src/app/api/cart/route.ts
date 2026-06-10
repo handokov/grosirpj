@@ -1,16 +1,17 @@
 import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/auth';
 
-// GET /api/cart?userId=xxx
+// GET /api/cart — Get cart items for authenticated user
 export async function GET(request: Request) {
   try {
     await ensureDb();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    const userId = authUser.userId;
 
     const cartItems = await db.cartItem.findMany({
       where: { userId },
@@ -43,13 +44,19 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { userId, productId, quantity, variants } = body;
-
-    if (!userId || !productId) {
-      return NextResponse.json({ error: 'userId and productId required' }, { status: 400 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    const body = await request.json();
+    const { productId, quantity, variants } = body;
+
+    if (!productId) {
+      return NextResponse.json({ error: 'productId required' }, { status: 400 });
+    }
+
+    const userId = authUser.userId;
     const variantsStr = typeof variants === 'string' ? variants : JSON.stringify(variants || {});
 
     // Check if item already exists with same variants
@@ -81,11 +88,25 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     await ensureDb();
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { id, quantity } = body;
 
     if (!id || quantity === undefined) {
       return NextResponse.json({ error: 'id and quantity required' }, { status: 400 });
+    }
+
+    // Verify ownership of the cart item
+    const existingItem = await db.cartItem.findUnique({ where: { id } });
+    if (!existingItem) {
+      return NextResponse.json({ error: 'Cart item not found' }, { status: 404 });
+    }
+    if (existingItem.userId !== authUser.userId) {
+      return NextResponse.json({ error: 'You can only modify your own cart items' }, { status: 403 });
     }
 
     if (quantity <= 0) {
@@ -105,25 +126,35 @@ export async function PATCH(request: Request) {
   }
 }
 
-// DELETE /api/cart?id=xxx or /api/cart?userId=xxx (clear all)
+// DELETE /api/cart?id=xxx (single item) or clear all for authenticated user
 export async function DELETE(request: Request) {
   try {
     await ensureDb();
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const userId = authUser.userId;
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const userId = searchParams.get('userId');
 
     if (id) {
+      // Verify ownership before deleting single item
+      const item = await db.cartItem.findUnique({ where: { id } });
+      if (!item) {
+        return NextResponse.json({ error: 'Cart item not found' }, { status: 404 });
+      }
+      if (item.userId !== authUser.userId) {
+        return NextResponse.json({ error: 'You can only delete your own cart items' }, { status: 403 });
+      }
       await db.cartItem.delete({ where: { id } });
       return NextResponse.json({ success: true });
     }
 
-    if (userId) {
-      await db.cartItem.deleteMany({ where: { userId } });
-      return NextResponse.json({ success: true, cleared: true });
-    }
-
-    return NextResponse.json({ error: 'id or userId required' }, { status: 400 });
+    // Clear all cart items for the authenticated user
+    await db.cartItem.deleteMany({ where: { userId } });
+    return NextResponse.json({ success: true, cleared: true });
   } catch (error) {
     console.error('Error deleting cart item:', error);
     return NextResponse.json({ error: 'Failed to delete cart item' }, { status: 500 });

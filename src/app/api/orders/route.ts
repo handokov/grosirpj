@@ -1,10 +1,18 @@
 import { db, ensureDb } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 
-// GET /api/orders - List orders
+// GET /api/orders - List orders (requires auth, only your own orders)
 export async function GET(request: Request) {
   try {
     await ensureDb();
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return Response.json(
+        { error: 'Anda harus login untuk melihat pesanan' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const buyerId = searchParams.get('buyerId');
     const sellerId = searchParams.get('sellerId');
@@ -12,12 +20,19 @@ export async function GET(request: Request) {
 
     const where: Record<string, unknown> = {};
 
-    if (buyerId) {
-      where.buyerId = buyerId;
-    }
-    if (sellerId) {
+    // Only allow filtering by the authenticated user's own orders
+    if (sellerId && sellerId === authUser.userId) {
       where.sellerId = sellerId;
+    } else if (buyerId && buyerId === authUser.userId) {
+      where.buyerId = buyerId;
+    } else {
+      // If no matching filter, show all orders where user is buyer or seller
+      where.OR = [
+        { buyerId: authUser.userId },
+        { sellerId: authUser.userId },
+      ];
     }
+
     if (status) {
       where.status = status;
     }

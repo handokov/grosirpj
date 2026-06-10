@@ -86,7 +86,7 @@ export async function ensureDb(): Promise<void> {
 }
 
 // Import bcrypt for password hashing in seed data
-import { hashPassword, simpleHash } from './auth';
+import { hashPassword } from './auth';
 
 async function createTablesAndSeedIfNeeded(): Promise<void> {
   // Quick check: if tables already exist with data, skip

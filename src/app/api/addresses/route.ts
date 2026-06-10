@@ -1,16 +1,17 @@
 import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/auth';
 
-// GET /api/addresses?userId=xxx
+// GET /api/addresses — Get addresses for authenticated user
 export async function GET(request: Request) {
   try {
     await ensureDb();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    const userId = authUser.userId;
 
     const addresses = await db.userAddress.findMany({
       where: { userId },
@@ -28,10 +29,16 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { userId, label, recipient, phone, address, city, province, postalCode, isDefault } = body;
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
 
-    if (!userId || !recipient || !phone || !address || !city) {
+    const body = await request.json();
+    const { label, recipient, phone, address, city, province, postalCode, isDefault } = body;
+    const userId = authUser.userId;
+
+    if (!recipient || !phone || !address || !city) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -58,12 +65,28 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { id, userId, label, recipient, phone, address, city, province, postalCode, isDefault } = body;
-
-    if (!id || !userId) {
-      return NextResponse.json({ error: 'id and userId required' }, { status: 400 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    const body = await request.json();
+    const { id, label, recipient, phone, address, city, province, postalCode, isDefault } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'id required' }, { status: 400 });
+    }
+
+    // Verify the address belongs to the authenticated user
+    const existingAddress = await db.userAddress.findUnique({ where: { id } });
+    if (!existingAddress) {
+      return NextResponse.json({ error: 'Address not found' }, { status: 404 });
+    }
+    if (existingAddress.userId !== authUser.userId) {
+      return NextResponse.json({ error: 'You can only modify your own addresses' }, { status: 403 });
+    }
+
+    const userId = authUser.userId;
 
     // If setting as default, unset other defaults
     if (isDefault) {
@@ -89,11 +112,25 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     await ensureDb();
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
     if (!id) {
       return NextResponse.json({ error: 'id required' }, { status: 400 });
+    }
+
+    // Verify the address belongs to the authenticated user before deleting
+    const existingAddress = await db.userAddress.findUnique({ where: { id } });
+    if (!existingAddress) {
+      return NextResponse.json({ error: 'Address not found' }, { status: 404 });
+    }
+    if (existingAddress.userId !== authUser.userId) {
+      return NextResponse.json({ error: 'You can only delete your own addresses' }, { status: 403 });
     }
 
     await db.userAddress.delete({ where: { id } });

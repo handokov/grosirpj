@@ -13,7 +13,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 
 // GET /api/orders/[id] - Get order detail by ID
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -63,6 +63,19 @@ export async function GET(
         { error: 'Pesanan tidak ditemukan' },
         { status: 404 }
       );
+    }
+
+    // If authenticated, verify the user is the buyer or seller of this order
+    const authUser = await getAuthUser(request);
+    if (authUser) {
+      const isBuyer = order.buyerId === authUser.userId;
+      const isSeller = order.sellerId === authUser.userId;
+      if (!isBuyer && !isSeller) {
+        return Response.json(
+          { error: 'Anda tidak berwenang melihat pesanan ini' },
+          { status: 403 }
+        );
+      }
     }
 
     return Response.json({ order });
@@ -117,18 +130,7 @@ export async function PATCH(
     }
 
     // Require authentication via JWT cookie
-    let authUser = await getAuthUser(request);
-
-    // Fallback: if no JWT cookie, try userId from body for backward compatibility
-    if (!authUser && body.userId) {
-      const fallbackUser = await db.user.findUnique({
-        where: { id: body.userId },
-        select: { id: true, role: true },
-      });
-      if (fallbackUser) {
-        authUser = { userId: fallbackUser.id, email: '', role: fallbackUser.role };
-      }
-    }
+    const authUser = await getAuthUser(request);
 
     if (!authUser) {
       return Response.json(

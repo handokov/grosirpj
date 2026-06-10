@@ -1,18 +1,19 @@
 import { db, ensureDb } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
-// GET /api/notifications — List notifications for a user
+// GET /api/notifications — List notifications for authenticated user
 export async function GET(request: Request) {
   try {
     await ensureDb();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return Response.json(
-        { error: 'UserId wajib diisi' },
-        { status: 400 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
+
+    const userId = authUser.userId;
 
     const notifications = await db.notification.findMany({
       where: { userId },
@@ -44,11 +45,20 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { id, markAllRead, userId } = body;
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return Response.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
-    if (markAllRead && userId) {
-      // Mark all notifications as read for a user
+    const userId = authUser.userId;
+    const body = await request.json();
+    const { id, markAllRead } = body;
+
+    if (markAllRead) {
+      // Mark all notifications as read for the authenticated user
       await db.notification.updateMany({
         where: { userId, read: false },
         data: { read: true },
@@ -58,7 +68,21 @@ export async function PATCH(request: Request) {
     }
 
     if (id) {
-      // Mark a single notification as read
+      // Mark a single notification as read — verify ownership
+      const notification = await db.notification.findUnique({ where: { id } });
+      if (!notification) {
+        return Response.json(
+          { error: 'Notifikasi tidak ditemukan' },
+          { status: 404 }
+        );
+      }
+      if (notification.userId !== userId) {
+        return Response.json(
+          { error: 'Anda tidak berwenang mengubah notifikasi ini' },
+          { status: 403 }
+        );
+      }
+
       await db.notification.update({
         where: { id },
         data: { read: true },
@@ -68,7 +92,7 @@ export async function PATCH(request: Request) {
     }
 
     return Response.json(
-      { error: 'Id atau markAllRead + userId wajib diisi' },
+      { error: 'Id atau markAllRead wajib diisi' },
       { status: 400 }
     );
   } catch (error) {

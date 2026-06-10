@@ -1,17 +1,19 @@
 import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/auth';
 
-// GET /api/product-views?userId=xxx - Get user's viewed products
+// GET /api/product-views — Get authenticated user's viewed products
 export async function GET(request: Request) {
   try {
     await ensureDb();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '20');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+
+    const userId = authUser.userId;
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '20');
 
     const views = await db.productView.findMany({
       where: { userId },
@@ -47,11 +49,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { userId, productId } = body;
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
 
-    if (!userId || !productId) {
-      return NextResponse.json({ error: 'userId and productId required' }, { status: 400 });
+    const body = await request.json();
+    const { productId } = body;
+    const userId = authUser.userId;
+
+    if (!productId) {
+      return NextResponse.json({ error: 'productId required' }, { status: 400 });
     }
 
     // Upsert: create or update view count

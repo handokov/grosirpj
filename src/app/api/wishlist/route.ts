@@ -1,18 +1,19 @@
 import { db, ensureDb } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
-// GET /api/wishlist — List user wishlist items
+// GET /api/wishlist — List wishlist items for authenticated user
 export async function GET(request: Request) {
   try {
     await ensureDb();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return Response.json(
-        { error: 'UserId wajib diisi' },
-        { status: 400 }
+        { error: 'Authentication required' },
+        { status: 401 }
       );
     }
+
+    const userId = authUser.userId;
 
     const wishlist = await db.wishlist.findMany({
       where: { userId },
@@ -74,12 +75,21 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { userId, productId } = body;
-
-    if (!userId || !productId) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return Response.json(
-        { error: 'UserId dan ProductId wajib diisi' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { productId } = body;
+    const userId = authUser.userId;
+
+    if (!productId) {
+      return Response.json(
+        { error: 'ProductId wajib diisi' },
         { status: 400 }
       );
     }

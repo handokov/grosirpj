@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, ensureDb } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth'
 
-// GET: Seller statistics
+// GET: Seller statistics (requires auth, only your own stats)
 export async function GET(request: NextRequest) {
   try {
     await ensureDb()
+
+    const authUser = await getAuthUser(request)
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
 
     const { searchParams } = new URL(request.url)
     const sellerId = searchParams.get('sellerId')
 
     if (!sellerId) {
       return NextResponse.json({ error: 'sellerId is required' }, { status: 400 })
+    }
+
+    // Only allow viewing your own stats (unless you're just checking your own sellerId)
+    if (sellerId !== authUser.userId && authUser.role !== 'seller') {
+      return NextResponse.json({ error: 'Anda hanya bisa melihat statistik toko sendiri' }, { status: 403 })
     }
 
     // Total products

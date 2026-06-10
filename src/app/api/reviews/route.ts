@@ -1,4 +1,5 @@
 import { db, ensureDb } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
 // GET /api/reviews - Get reviews for a product
 export async function GET(request: Request) {
@@ -41,12 +42,21 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureDb();
-    const body = await request.json();
-    const { productId, userId, rating, comment } = body;
-
-    if (!productId || !userId || !rating) {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
       return Response.json(
-        { error: 'productId, userId, dan rating wajib diisi' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { productId, rating, comment } = body;
+    const userId = authUser.userId;
+
+    if (!productId || !rating) {
+      return Response.json(
+        { error: 'productId dan rating wajib diisi' },
         { status: 400 }
       );
     }

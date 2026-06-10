@@ -25,3 +25,35 @@ Stage Summary:
 - Updated: /.env.example (Cloudinary vars documented)
 - For Vercel deployment: User MUST add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET to Vercel Environment Variables
 - For local development: Cloudinary is optional - falls back to local file storage
+
+---
+Task ID: 2
+Agent: Main
+Task: Fix all critical security issues - SQL injection, no auth, dual system conflicts
+
+Work Log:
+- Audited all 25 API routes comprehensively
+- Deleted /api/products/seller (raw SQL, no auth, broken schema refs)
+- Deleted /api/debug (exposes DB tables and env info, no auth)
+- Replaced 14 raw SQL DELETE statements in /api/seed with Prisma ORM deleteMany()
+- Added auth (getAuthUser) to all 17 unauthenticated endpoints:
+  - cart (GET/POST/PATCH/DELETE), addresses (all 4), chat (GET/PATCH/POST)
+  - notifications (GET/PATCH), wishlist (GET/POST), reviews (POST)
+  - search-history (GET/POST/DELETE), product-views (GET/POST)
+  - seed (GET/POST - also blocked in production)
+  - orders GET, orders/[id] GET, products/stats GET
+- Fixed IDOR in /api/auth/me - removed ?userId= query param fallback
+- Fixed auth bypass in /api/orders/[id] PATCH - removed body.userId fallback
+- Fixed /api/health - removed password hash status leak
+- Fixed payment-dialog.tsx - replaced IDOR call to /api/auth/me?userId= with /api/orders/[id]
+- Removed unused /src/lib/hash.ts (duplicate of simpleHash)
+- Removed simpleHash import from /src/lib/db.ts and /src/app/api/seed/route.ts
+- simpleHash kept in /src/lib/auth.ts for backward compatibility (legacy password verification + auto-upgrade to bcrypt on login)
+
+Stage Summary:
+- SQL Injection: ELIMINATED - all user-facing raw SQL removed, only schema creation DDL remains in db.ts
+- No Auth: FIXED - all endpoints now require JWT authentication, userId from JWT not client
+- Password Hash: simpleHash only for backward compat, bcrypt for all new passwords, auto-upgrade on login
+- Dual System: FIXED - deleted legacy /api/products/seller, all endpoints now use Prisma ORM
+- ChatUser/Message models: NOT needed - Chat model serves both purposes correctly
+- /api/upload/signature: EXISTS and properly secured with auth

@@ -84,14 +84,16 @@ export function PaymentDialog({ open, onOpenChange, order, onPaymentConfirmed }:
           bankHolder: order.seller.bankHolder || order.seller.storeName || order.seller.name,
         });
       } else {
-        fetch(`/api/auth/me?userId=${order.sellerId}`)
+        // Fetch order detail to get seller bank info
+        fetch(`/api/orders/${order.id}`)
           .then(res => res.json())
           .then(data => {
-            if (data.user) {
+            if (data.order?.seller) {
+              const s = data.order.seller;
               setSellerBankInfo({
-                bankName: data.user.bankName || 'BCA',
-                bankAccount: data.user.bankAccount || '',
-                bankHolder: data.user.bankHolder || data.user.storeName || data.user.name,
+                bankName: s.bankName || 'BCA',
+                bankAccount: s.bankAccount || '',
+                bankHolder: s.bankHolder || s.storeName || s.name,
               });
             }
           })

@@ -1,6 +1,6 @@
 import { db, ensureDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import { hashPassword, simpleHash } from '@/lib/auth';
+import { hashPassword, getAuthUser } from '@/lib/auth';
 
 // Image URL helpers
 const img = (url: string) => `${url}?w=400&h=400&fit=crop`;
@@ -62,20 +62,20 @@ async function seedDatabase(force = false) {
   }
 
   // Delete all existing data in reverse dependency order (safety for re-seed)
-  try { await db.$executeRawUnsafe('DELETE FROM SearchHistory'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM ProductView'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM CartItem'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM UserAddress'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM Notification'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM Wishlist'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM VariantOption'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM VariantGroup'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM OrderItem'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM Review'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM Chat'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM "Order"'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM Product'); } catch {}
-  try { await db.$executeRawUnsafe('DELETE FROM User'); } catch {}
+  try { await db.searchHistory.deleteMany(); } catch {}
+  try { await db.productView.deleteMany(); } catch {}
+  try { await db.cartItem.deleteMany(); } catch {}
+  try { await db.userAddress.deleteMany(); } catch {}
+  try { await db.notification.deleteMany(); } catch {}
+  try { await db.wishlist.deleteMany(); } catch {}
+  try { await db.variantOption.deleteMany(); } catch {}
+  try { await db.variantGroup.deleteMany(); } catch {}
+  try { await db.orderItem.deleteMany(); } catch {}
+  try { await db.review.deleteMany(); } catch {}
+  try { await db.chat.deleteMany(); } catch {}
+  try { await db.order.deleteMany(); } catch {}
+  try { await db.product.deleteMany(); } catch {}
+  try { await db.user.deleteMany(); } catch {}
 
   // Hash password with bcrypt
   const hashedPw = await hashPassword('password123');
@@ -1098,6 +1098,23 @@ async function seedDatabase(force = false) {
 
 export async function POST(request: Request) {
   try {
+    // Only allow seeding in development mode
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { success: false, message: 'Seeding is not allowed in production' },
+        { status: 403 }
+      );
+    }
+
+    // Require seller or admin auth
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     await ensureDb();
     const { searchParams } = new URL(request.url);
     const force = searchParams.get('force') === 'true';
@@ -1114,6 +1131,23 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
+    // Only allow seeding in development mode
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { success: false, message: 'Seeding is not allowed in production' },
+        { status: 403 }
+      );
+    }
+
+    // Require seller or admin auth
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     await ensureDb();
     const { searchParams } = new URL(request.url);
     const force = searchParams.get('force') === 'true';
