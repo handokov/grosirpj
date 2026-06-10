@@ -585,22 +585,41 @@ function Navbar() {
                       {notifications.length === 0 ? (
                         <div className="p-6 text-center text-gray-400 text-sm">Belum ada notifikasi</div>
                       ) : (
-                        notifications.slice(0, 10).map((notif) => (
+                        notifications.slice(0, 10).map((notif) => {
+                          const isChat = notif.type === 'chat';
+                          return (
                           <button
                             key={notif.id}
                             className={`w-full text-left p-3 hover:bg-gray-50 border-b border-gray-50 transition-colors ${!notif.read ? 'bg-emerald-50/50' : ''}`}
-                            onClick={() => { if (!notif.read) markAsRead(notif.id); }}
+                            onClick={() => {
+                              if (!notif.read) markAsRead(notif.id);
+                              setNotifOpen(false);
+                              // Navigate based on type
+                              if (isChat) {
+                                const partnerId = (notif.link || '').replace('/chat/', '');
+                                openChat(partnerId || undefined);
+                              } else {
+                                openOrderHistory();
+                              }
+                            }}
                           >
                             <div className="flex items-start gap-2">
-                              <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!notif.read ? 'bg-emerald-500' : 'bg-transparent'}`} />
+                              <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!notif.read ? (isChat ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-transparent'}`} />
                               <div>
                                 <p className="text-sm font-medium text-gray-800">{notif.title}</p>
                                 <p className="text-xs text-gray-500 mt-0.5">{notif.message}</p>
-                                <p className="text-[10px] text-gray-400 mt-1">{new Date(notif.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <p className="text-[10px] text-gray-400">{new Date(notif.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                  {isChat ? (
+                                    <span className="text-[10px] text-blue-500 font-medium">→ Chat</span>
+                                  ) : (
+                                    <span className="text-[10px] text-emerald-500 font-medium">→ Pesanan</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </button>
-                        ))
+                        );})
                       )}
                     </div>
                   </div>

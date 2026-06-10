@@ -222,13 +222,29 @@ export async function POST(request: Request) {
       },
       include: {
         sender: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, storeName: true },
         },
         receiver: {
           select: { id: true, name: true },
         },
       },
     });
+
+    // Create notification for the receiver
+    try {
+      const senderName = chat.sender.storeName || chat.sender.name;
+      await db.notification.create({
+        data: {
+          userId: receiverId,
+          title: '💬 Pesan Baru',
+          message: `${senderName}: ${message.length > 50 ? message.slice(0, 50) + '...' : message}`,
+          type: 'chat',
+          link: `/chat/${senderId}`,
+        },
+      });
+    } catch (notifError) {
+      console.error('Failed to create chat notification:', notifError);
+    }
 
     return Response.json({ message: chat }, { status: 201 });
   } catch (error) {

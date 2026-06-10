@@ -13,13 +13,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notification';
-import { Bell, ShoppingBag, CheckCircle, AlertCircle, Package } from 'lucide-react';
+import { Bell, ShoppingBag, CheckCircle, AlertCircle, Package, MessageCircle } from 'lucide-react';
 
 const NOTIF_ICON_MAP: Record<string, React.ElementType> = {
   order: ShoppingBag,
   new_order: ShoppingBag,
   payment: CheckCircle,
   shipping: Package,
+  chat: MessageCircle,
   system: AlertCircle,
   default: Bell,
 };
@@ -27,6 +28,8 @@ const NOTIF_ICON_MAP: Record<string, React.ElementType> = {
 export function NotificationPanel() {
   const notifPanelOpen = useUIStore((s) => s.notifPanelOpen);
   const closeNotifPanel = useUIStore((s) => s.closeNotifPanel);
+  const openOrderHistory = useUIStore((s) => s.openOrderHistory);
+  const openChat = useUIStore((s) => s.openChat);
 
   const user = useAuthStore((s) => s.user);
   const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
@@ -44,8 +47,25 @@ export function NotificationPanel() {
     }
   }, [notifPanelOpen, user, fetchNotifications]);
 
-  const handleNotifClick = (notifId: string, read: boolean, type: string) => {
+  const handleNotifClick = (notifId: string, read: boolean, type: string, link: string) => {
     if (!read) markAsRead(notifId);
+
+    // Close notification panel first
+    closeNotifPanel();
+
+    // Navigate based on notification type
+    if (type === 'chat') {
+      // Extract partner userId from link (format: /chat/{userId})
+      const partnerId = link.replace('/chat/', '');
+      if (partnerId) {
+        openChat(partnerId);
+      } else {
+        openChat();
+      }
+    } else {
+      // All order-related notifications (order, new_order, payment, shipping, system) → Order History
+      openOrderHistory();
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -68,7 +88,7 @@ export function NotificationPanel() {
       <SheetContent side="right" className="w-full sm:w-96 md:max-w-lg p-0 flex flex-col gap-0 overflow-hidden">
         <SheetHeader className="p-4 border-b border-gray-100">
           <SheetTitle className="text-lg font-display flex items-center gap-2">
-            <Bell className="w-5 h-5 text-red-500" /> Notifikasi Seller
+            <Bell className="w-5 h-5 text-red-500" /> Notifikasi
             {unreadCount > 0 && (
               <span className="min-w-[22px] h-[22px] bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1.5">
                 {unreadCount > 99 ? '99+' : unreadCount}
@@ -76,7 +96,7 @@ export function NotificationPanel() {
             )}
           </SheetTitle>
           <SheetDescription>
-            Pemberitahuan pesanan dan aktivitas toko
+            Pemberitahuan pesanan dan aktivitas
           </SheetDescription>
         </SheetHeader>
 
@@ -108,34 +128,45 @@ export function NotificationPanel() {
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                   <Bell className="w-12 h-12 text-gray-300 mb-4" />
                   <h3 className="font-semibold text-gray-800 mb-1">Belum Ada Notifikasi</h3>
-                  <p className="text-sm text-gray-400">Notifikasi pesanan baru akan muncul di sini</p>
+                  <p className="text-sm text-gray-400">Notifikasi pesanan dan pesan baru akan muncul di sini</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
                   {notifications.map((notif) => {
                     const IconComp = NOTIF_ICON_MAP[notif.type] || NOTIF_ICON_MAP.default;
-                    const isOrder = notif.type === 'order' || notif.type === 'new_order';
+                    const isChat = notif.type === 'chat';
                     return (
                       <button
                         key={notif.id}
-                        className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${!notif.read ? 'bg-red-50/40' : ''}`}
-                        onClick={() => handleNotifClick(notif.id, notif.read, notif.type)}
+                        className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${!notif.read ? 'bg-emerald-50/40' : ''}`}
+                        onClick={() => handleNotifClick(notif.id, notif.read, notif.type, notif.link || '')}
                       >
                         <div className="flex items-start gap-3">
                           <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            !notif.read ? 'bg-red-100' : 'bg-gray-100'
+                            isChat ? (!notif.read ? 'bg-blue-100' : 'bg-gray-100') :
+                            (!notif.read ? 'bg-emerald-100' : 'bg-gray-100')
                           }`}>
-                            <IconComp className={`w-4 h-4 ${!notif.read ? 'text-red-500' : 'text-gray-400'}`} />
+                            <IconComp className={`w-4 h-4 ${
+                              isChat ? (!notif.read ? 'text-blue-500' : 'text-gray-400') :
+                              (!notif.read ? 'text-emerald-500' : 'text-gray-400')
+                            }`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-semibold text-gray-800 line-clamp-1">{notif.title}</p>
                               {!notif.read && (
-                                <span className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
+                                <span className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0" />
                               )}
                             </div>
                             <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.message}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">{formatDate(notif.createdAt)}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-[10px] text-gray-400">{formatDate(notif.createdAt)}</p>
+                              {isChat ? (
+                                <span className="text-[10px] text-blue-500 font-medium">→ Buka Chat</span>
+                              ) : (
+                                <span className="text-[10px] text-emerald-500 font-medium">→ Lihat Pesanan</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </button>

@@ -26,7 +26,7 @@ import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { calculateShipping, getCityNames } from '@/lib/shipping';
 import { formatPrice, PAYMENT_METHODS } from '@/lib/constants';
-import { ArrowLeft, ArrowRight, MapPin, CreditCard, CheckCircle, Truck, Package } from 'lucide-react';
+import { ArrowLeft, ArrowRight, MapPin, CreditCard, CheckCircle, Truck, Package, Store } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Step = 1 | 2 | 3;
@@ -34,11 +34,11 @@ type Step = 1 | 2 | 3;
 export function CheckoutFlow() {
   const checkoutOpen = useUIStore((s) => s.checkoutOpen);
   const closeCheckout = useUIStore((s) => s.closeCheckout);
+  const checkoutSellerId = useUIStore((s) => s.checkoutSellerId);
   const openCart = useUIStore((s) => s.openCart);
 
-  const items = useCartStore((s) => s.items);
-  const getTotal = useCartStore((s) => s.getTotal);
-  const clearCart = useCartStore((s) => s.clearCart);
+  const allItems = useCartStore((s) => s.items);
+  const removeItemsBySeller = useCartStore((s) => s.removeItemsBySeller);
 
   const user = useAuthStore((s) => s.user);
 
@@ -55,22 +55,26 @@ export function CheckoutFlow() {
   const [paymentMethod, setPaymentMethod] = useState('cod');
 
   const cityNames = getCityNames();
-  const subtotal = getTotal();
 
-  // Calculate shipping per seller group
-  const shippingBySeller = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const item of items) {
-      if (!map[item.sellerId]) {
-        const est = calculateShipping(item.location, city);
-        map[item.sellerId] = est.cost;
-      }
+  // Filter items for the specific seller being checked out
+  const items = useMemo(() => {
+    if (checkoutSellerId) {
+      return allItems.filter((item) => item.sellerId === checkoutSellerId);
     }
-    return map;
-  }, [items, city]);
+    return allItems;
+  }, [allItems, checkoutSellerId]);
 
-  const totalShipping = subtotal >= 100000 ? 0 : Object.values(shippingBySeller).reduce((s, c) => s + c, 0);
-  const grandTotal = subtotal + totalShipping;
+  const sellerName = items.length > 0 ? items[0].sellerName : '';
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  // Calculate shipping
+  const shippingCost = useMemo(() => {
+    if (items.length === 0) return 0;
+    const est = calculateShipping(items[0].location, city);
+    return subtotal >= 100000 ? 0 : est.cost;
+  }, [items, city, subtotal]);
+
+  const grandTotal = subtotal + shippingCost;
 
   const canProceed = () => {
     if (step === 1) return city && address.trim() && phone.trim();
@@ -83,48 +87,37 @@ export function CheckoutFlow() {
     setPlacing(true);
 
     try {
-      // Group items by seller for separate orders
-      const itemsBySeller = new Map<string, typeof items>();
-      for (const item of items) {
-        const sellerItems = itemsBySeller.get(item.sellerId) || [];
-        sellerItems.push(item);
-        itemsBySeller.set(item.sellerId, sellerItems);
+      const orderItems = items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        variants: item.selectedVariants || {},
+      }));
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          buyerId: user.id,
+          items: orderItems,
+          shippingAddress: `${address}, ${city}`,
+          paymentMethod,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || 'Gagal membuat pesanan');
+        setPlacing(false);
+        return;
       }
 
-      let allSuccess = true;
-      for (const [sellerId, sellerItems] of itemsBySeller) {
-        const orderItems = sellerItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          variants: item.selectedVariants || {},
-        }));
-
-        const sellerSubtotal = sellerItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const shippingCost = subtotal >= 100000 ? 0 : (shippingBySeller[sellerId] || 0);
-
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            buyerId: user.id,
-            items: orderItems,
-            shippingAddress: `${address}, ${city}`,
-            paymentMethod,
-          }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          toast.error(data.error || 'Gagal membuat pesanan');
-          allSuccess = false;
-        }
+      // Remove checked-out items from cart
+      if (checkoutSellerId) {
+        removeItemsBySeller(checkoutSellerId);
       }
 
-      if (allSuccess) {
-        setOrderSuccess(true);
-        clearCart();
-        toast.success('Pesanan berhasil dibuat!');
-      }
+      setOrderSuccess(true);
+      toast.success('Pesanan berhasil dibuat!');
     } catch (err) {
       toast.error('Gagal membuat pesanan. Silakan coba lagi.');
     } finally {
@@ -153,8 +146,13 @@ export function CheckoutFlow() {
               <CheckCircle className="w-10 h-10 text-emerald-500" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2 font-display">Pesanan Berhasil!</h2>
-            <p className="text-gray-500 mb-6">Terima kasih telah berbelanja di GrosirPJ. Pesanan Anda sedang diproses.</p>
+            <p className="text-gray-500 mb-2">Terima kasih telah berbelanja di GrosirPJ.</p>
+            <p className="text-sm text-gray-400 mb-6">Pesanan Anda ke <span className="font-semibold text-gray-700">{sellerName}</span> sedang diproses.</p>
             <div className="bg-gray-50 rounded-xl p-4 w-full mb-6 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Toko</span>
+                <span className="font-medium">{sellerName}</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Metode Pembayaran</span>
                 <span className="font-medium">{PAYMENT_METHODS.find(p => p.value === paymentMethod)?.label || paymentMethod}</span>
@@ -162,6 +160,11 @@ export function CheckoutFlow() {
               <div className="flex justify-between">
                 <span className="text-gray-500">Alamat Pengiriman</span>
                 <span className="font-medium text-right max-w-[50%]">{address}, {city}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-bold">
+                <span>Total</span>
+                <span className="text-emerald-600">{formatPrice(grandTotal)}</span>
               </div>
             </div>
             <Button
@@ -194,6 +197,12 @@ export function CheckoutFlow() {
                 }
               </SheetDescription>
             </div>
+          </div>
+          {/* Seller Badge */}
+          <div className="flex items-center gap-2 mt-2 bg-emerald-50 rounded-lg px-3 py-2">
+            <Store className="w-4 h-4 text-emerald-600" />
+            <span className="text-sm font-medium text-emerald-700">{sellerName}</span>
+            <Badge variant="secondary" className="text-[10px] bg-white text-gray-500 ml-auto">{items.length} produk</Badge>
           </div>
           {/* Progress indicator */}
           <div className="flex gap-2 mt-3">
@@ -303,6 +312,14 @@ export function CheckoutFlow() {
                 </div>
               </div>
 
+              {/* Seller Info */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <Store className="w-4 h-4 text-emerald-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-800">{sellerName}</span>
+              </div>
+
               {/* Items */}
               <div className="space-y-3">
                 {items.map((item) => (
@@ -330,8 +347,8 @@ export function CheckoutFlow() {
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> Ongkos Kirim</span>
-                  <span className={totalShipping === 0 ? 'text-emerald-600 font-medium' : ''}>
-                    {totalShipping === 0 ? 'Gratis' : formatPrice(totalShipping)}
+                  <span className={shippingCost === 0 ? 'text-emerald-600 font-medium' : ''}>
+                    {shippingCost === 0 ? 'Gratis' : formatPrice(shippingCost)}
                   </span>
                 </div>
                 <Separator />

@@ -15,8 +15,25 @@ import { useCartStore, CartItem } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { calculateShipping, formatShippingInfo } from '@/lib/shipping';
 import { formatPrice } from '@/lib/constants';
-import { ShoppingCart, Minus, Plus, Trash2, Truck, ArrowRight, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Trash2, Truck, ArrowRight, ShoppingBag, Store } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Group items by seller
+function groupBySeller(items: CartItem[]): { sellerId: string; sellerName: string; location: string; items: CartItem[] }[] {
+  const map = new Map<string, { sellerId: string; sellerName: string; location: string; items: CartItem[] }>();
+  for (const item of items) {
+    if (!map.has(item.sellerId)) {
+      map.set(item.sellerId, {
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
+        location: item.location,
+        items: [],
+      });
+    }
+    map.get(item.sellerId)!.items.push(item);
+  }
+  return Array.from(map.values());
+}
 
 export function CartSidebar() {
   const cartOpen = useUIStore((s) => s.cartOpen);
@@ -33,35 +50,22 @@ export function CartSidebar() {
   const user = useAuthStore((s) => s.user);
   const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
 
-  const subtotal = getTotal();
   const totalItems = getCount();
 
-  // Calculate shipping per seller
-  const shippingBySeller: Record<string, number> = {};
-  if (user) {
-    for (const item of items) {
-      if (!shippingBySeller[item.sellerId]) {
-        const est = calculateShipping(item.location, user.city);
-        shippingBySeller[item.sellerId] = est.cost;
-      }
-    }
-  }
-  const totalShipping = Object.values(shippingBySeller).reduce((sum, cost) => sum + cost, 0);
-  // Free shipping for purchases over 100k
-  const effectiveShipping = subtotal >= 100000 ? 0 : totalShipping;
-  const grandTotal = subtotal + effectiveShipping;
+  // Group items by seller
+  const sellerGroups = groupBySeller(items);
 
-  const handleCheckout = () => {
+  const handleCheckout = (sellerId: string) => {
     if (!user) {
       setLoginModalOpen(true);
       return;
     }
-    openCheckout();
+    openCheckout(sellerId);
   };
 
   return (
     <Sheet open={cartOpen} onOpenChange={(open) => { if (!open) closeCart(); }}>
-      <SheetContent side="right" className="w-full sm:w-96 p-0 flex flex-col gap-0 overflow-hidden">
+      <SheetContent side="right" className="w-full sm:w-96 md:max-w-lg p-0 flex flex-col gap-0 overflow-hidden">
         <SheetHeader className="p-6 pb-4 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-xl font-display flex items-center gap-2">
@@ -92,61 +96,113 @@ export function CartSidebar() {
           </div>
         ) : (
           <>
-            {/* Cart Items */}
+            {/* Cart Items - Grouped by Seller */}
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-              <div className="p-4 space-y-4">
-                {items.map((item) => {
-                  const variantKeys = Object.entries(item.selectedVariants || {});
-                  const itemShipping = user ? calculateShipping(item.location, user.city) : null;
+              <div className="p-4 space-y-5">
+                {sellerGroups.map((group) => {
+                  const sellerSubtotal = group.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                  const sellerItemCount = group.items.reduce((sum, item) => sum + item.quantity, 0);
+                  const shipping = user ? calculateShipping(group.location, user.city) : null;
+                  const shippingCost = sellerSubtotal >= 100000 ? 0 : (shipping?.cost || 0);
+                  const sellerTotal = sellerSubtotal + shippingCost;
+
                   return (
-                    <div key={`${item.productId}-${JSON.stringify(item.selectedVariants)}`} className="flex gap-3 pb-4 border-b border-gray-100 last:border-0">
-                      <img
-                        src={item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop'}
-                        alt={item.name}
-                        className="w-20 h-20 object-cover rounded-xl bg-gray-100 shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{item.name}</h4>
-                        {variantKeys.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {variantKeys.map(([key, val]) => (
-                              <span key={key} className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
-                                {key}: {val}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <p className="text-emerald-600 font-bold mt-1">{formatPrice(item.price)}</p>
-                        {itemShipping && itemShipping.cost > 0 && (
-                          <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                            <Truck className="w-3 h-3" /> Ongkir: {formatShippingInfo(itemShipping)}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center border rounded-lg overflow-hidden">
-                            <button
-                              className="h-7 w-7 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                              onClick={() => updateQuantity(item.productId, -1)}
-                              disabled={item.quantity <= item.minOrder}
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="w-8 text-center text-xs font-medium tabular-nums">{item.quantity}</span>
-                            <button
-                              className="h-7 w-7 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                              onClick={() => updateQuantity(item.productId, 1)}
-                              disabled={item.quantity >= item.stock}
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => { removeItem(item.productId); toast.success('Item dihapus dari keranjang'); }}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                    <div key={group.sellerId} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                      {/* Seller Header */}
+                      <div className="flex items-center gap-2.5 px-4 py-3 bg-gray-50 border-b border-gray-100">
+                        <div className="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center">
+                          <Store className="w-3.5 h-3.5 text-emerald-600" />
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{group.sellerName}</p>
+                          <p className="text-[10px] text-gray-400">{group.location}</p>
+                        </div>
+                        <Badge variant="secondary" className="text-[10px] bg-white text-gray-500 border border-gray-200">{sellerItemCount} item</Badge>
+                      </div>
+
+                      {/* Items */}
+                      <div className="divide-y divide-gray-50">
+                        {group.items.map((item) => {
+                          const variantKeys = Object.entries(item.selectedVariants || {});
+                          return (
+                            <div key={`${item.productId}-${JSON.stringify(item.selectedVariants)}`} className="flex gap-3 p-3">
+                              <img
+                                src={item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop'}
+                                alt={item.name}
+                                className="w-16 h-16 object-cover rounded-xl bg-gray-100 shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 text-sm line-clamp-2 leading-tight">{item.name}</h4>
+                                {variantKeys.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-0.5">
+                                    {variantKeys.map(([key, val]) => (
+                                      <span key={key} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                                        {key}: {val}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                <p className="text-emerald-600 font-bold text-sm mt-1">{formatPrice(item.price)}</p>
+                                <div className="flex items-center justify-between mt-1.5">
+                                  <div className="flex items-center border rounded-lg overflow-hidden">
+                                    <button
+                                      className="h-6 w-6 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                                      onClick={() => updateQuantity(item.productId, -1, item.selectedVariants)}
+                                      disabled={item.quantity <= item.minOrder}
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                    </button>
+                                    <span className="w-7 text-center text-xs font-medium tabular-nums">{item.quantity}</span>
+                                    <button
+                                      className="h-6 w-6 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                                      onClick={() => updateQuantity(item.productId, 1, item.selectedVariants)}
+                                      disabled={item.quantity >= item.stock}
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                  <button
+                                    onClick={() => { removeItem(item.productId, item.selectedVariants); toast.success('Item dihapus dari keranjang'); }}
+                                    className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Seller Subtotal & Checkout */}
+                      <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
+                        <div className="space-y-1.5 mb-3 text-xs">
+                          <div className="flex justify-between text-gray-500">
+                            <span>Subtotal ({sellerItemCount} item)</span>
+                            <span>{formatPrice(sellerSubtotal)}</span>
+                          </div>
+                          <div className="flex justify-between text-gray-500">
+                            <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> Ongkir</span>
+                            <span className={shippingCost === 0 ? 'text-emerald-600 font-medium' : ''}>
+                              {shippingCost === 0 ? 'Gratis' : formatPrice(shippingCost)}
+                            </span>
+                          </div>
+                          {sellerSubtotal >= 100000 && (
+                            <div className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                              <Truck className="w-3 h-3" /> Gratis ongkir pembelian di atas {formatPrice(100000)}
+                            </div>
+                          )}
+                          <div className="flex justify-between text-sm font-bold text-gray-900 pt-1 border-t border-gray-200">
+                            <span>Total</span>
+                            <span className="text-emerald-600">{formatPrice(sellerTotal)}</span>
+                          </div>
+                        </div>
+                        <Button
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 text-sm"
+                          onClick={() => handleCheckout(group.sellerId)}
+                        >
+                          Checkout {group.sellerName} <ArrowRight className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
                     </div>
                   );
@@ -154,37 +210,12 @@ export function CartSidebar() {
               </div>
             </div>
 
-            {/* Cart Total */}
-            <div className="border-t bg-white p-4 space-y-3 shrink-0">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal ({totalItems} item)</span>
-                  <span>{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> Ongkos Kirim</span>
-                  <span className={effectiveShipping === 0 ? 'text-emerald-600 font-medium' : ''}>
-                    {effectiveShipping === 0 ? 'Gratis' : formatPrice(effectiveShipping)}
-                  </span>
-                </div>
-                {subtotal >= 100000 && (
-                  <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                    <Truck className="w-3 h-3" /> Gratis ongkir untuk pembelian di atas {formatPrice(100000)}
-                  </div>
-                )}
-                <Separator />
-                <div className="flex justify-between text-base font-bold text-gray-900">
-                  <span>Total</span>
-                  <span className="text-emerald-600">{formatPrice(grandTotal)}</span>
-                </div>
+            {/* Cart Footer */}
+            <div className="border-t bg-white p-4 shrink-0">
+              <div className="flex justify-between text-sm text-gray-500 mb-2">
+                <span>Total semua ({totalItems} item)</span>
+                <span className="font-semibold text-gray-800">{formatPrice(getTotal())}</span>
               </div>
-
-              <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-6 rounded-xl flex items-center justify-center gap-2"
-                onClick={handleCheckout}
-              >
-                Checkout <ArrowRight className="w-4 h-4" />
-              </Button>
               <button
                 onClick={() => { clearCart(); toast.success('Keranjang dikosongkan'); }}
                 className="w-full text-center text-sm text-gray-400 hover:text-red-500 transition-colors py-1"

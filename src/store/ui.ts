@@ -6,6 +6,7 @@ interface UIStore {
   selectedProductId: string | null;
   cartOpen: boolean;
   checkoutOpen: boolean;
+  checkoutSellerId: string | null; // null = all sellers, specific = per-store checkout
   orderHistoryOpen: boolean;
   chatOpen: boolean;
   chatWithUserId: string | null;
@@ -25,7 +26,7 @@ interface UIStore {
   closeProductDetail: () => void;
   openCart: () => void;
   closeCart: () => void;
-  openCheckout: () => void;
+  openCheckout: (sellerId?: string) => void;
   closeCheckout: () => void;
   openOrderHistory: () => void;
   closeOrderHistory: () => void;
@@ -46,6 +47,7 @@ export const useUIStore = create<UIStore>((set) => ({
   selectedProductId: null,
   cartOpen: false,
   checkoutOpen: false,
+  checkoutSellerId: null,
   orderHistoryOpen: false,
   chatOpen: false,
   chatWithUserId: null,
@@ -60,8 +62,8 @@ export const useUIStore = create<UIStore>((set) => ({
   closeProductDetail: () => set({ productDetailOpen: false, selectedProductId: null }),
   openCart: () => set({ cartOpen: true }),
   closeCart: () => set({ cartOpen: false }),
-  openCheckout: () => set({ checkoutOpen: true, cartOpen: false }),
-  closeCheckout: () => set({ checkoutOpen: false }),
+  openCheckout: (sellerId) => set({ checkoutOpen: true, cartOpen: false, checkoutSellerId: sellerId || null }),
+  closeCheckout: () => set({ checkoutOpen: false, checkoutSellerId: null }),
   openOrderHistory: () => set({ orderHistoryOpen: true }),
   closeOrderHistory: () => set({ orderHistoryOpen: false }),
   openChat: (userId) => set({ chatOpen: true, chatWithUserId: userId || null }),
