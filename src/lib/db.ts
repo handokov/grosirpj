@@ -241,8 +241,14 @@ async function createTablesAndSeedIfNeeded(): Promise<void> {
     // Add new columns if they don't exist (for existing databases)
     try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "expedition" TEXT NOT NULL DEFAULT ''`); } catch {}
     try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "trackingNumber" TEXT NOT NULL DEFAULT ''`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "notes" TEXT NOT NULL DEFAULT ''`); } catch {}
     try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "shippedAt" DATETIME`); } catch {}
     try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "deliveredAt" DATETIME`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "paidAt" DATETIME`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "paymentMethod" TEXT NOT NULL DEFAULT 'cod'`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "paymentProof" TEXT NOT NULL DEFAULT ''`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "shippingAddress" TEXT NOT NULL DEFAULT ''`); } catch {}
+    try { await db.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "shippingCost" INTEGER NOT NULL DEFAULT 0`); } catch {}
 
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Order_buyerId_idx" ON "Order"("buyerId")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Order_sellerId_idx" ON "Order"("sellerId")`);
@@ -1313,26 +1319,45 @@ async function seedDemoData(): Promise<void> {
           shippingAddress: 'Jl. Malioboro No. 25, Yogyakarta, DIY 55271',
           paymentMethod: 'transfer',
           paidAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          expedition: 'JNE',
+          trackingNumber: 'JNE1234567890',
         },
         {
           buyerId: buyer1.id,
           sellerId: seller2.id,
-          status: 'pending',
+          status: 'paid',
           totalAmount: 165000,
+          shippingCost: 15000,
           shippingAddress: 'Jl. Dago No. 88, Bandung, Jawa Barat 40135',
+          paymentMethod: 'transfer',
+          paymentProof: 'Bukti transfer dari Budi Santoso',
+          paidAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+          notes: 'Mohon dicek varian sebelum dikirim',
+        },
+        {
+          buyerId: buyer3.id,
+          sellerId: seller1.id,
+          status: 'pending',
+          totalAmount: 420000,
+          shippingAddress: 'Jl. Pandanaran No. 10, Semarang, Jawa Tengah 50134',
           paymentMethod: 'cod',
         },
       ],
     });
 
     // Order Items
-    const orders = await db.order.findMany({ take: 3, orderBy: { createdAt: 'desc' } });
-    if (orders.length >= 3) {
+    const orders = await db.order.findMany({ orderBy: { createdAt: 'asc' } });
+    if (orders.length >= 4) {
       await db.orderItem.createMany({
         data: [
-          { orderId: orders[2].id, productId: product1.id, productName: product1.name, quantity: 24, price: 32000, variants: '{"Ukuran":"XL","Warna":"Navy"}' },
+          // Order 1: delivered (buyer1 from seller1)
+          { orderId: orders[0].id, productId: product1.id, productName: product1.name, quantity: 24, price: 32000, variants: '{"Ukuran":"XL","Warna":"Navy"}' },
+          // Order 2: shipped (buyer2 from seller2)
           { orderId: orders[1].id, productId: product2.id, productName: product2.name, quantity: 12, price: 55000, variants: '{"Tipe":"USB-C to USB-C","Panjang":"1.5m"}' },
-          { orderId: orders[0].id, productId: product3.id, productName: product3.name, quantity: 6, price: 25000, variants: '{"Level Pedas":"Extra Pedas"}' },
+          // Order 3: paid (buyer1 from seller2)
+          { orderId: orders[2].id, productId: product2.id, productName: product2.name, quantity: 3, price: 55000, variants: '{"Tipe":"USB-A to USB-C","Panjang":"1m"}' },
+          // Order 4: pending (buyer3 from seller1)
+          { orderId: orders[3].id, productId: product1.id, productName: product1.name, quantity: 12, price: 35000, variants: '{"Ukuran":"L","Warna":"Hitam"}' },
         ],
       });
     }

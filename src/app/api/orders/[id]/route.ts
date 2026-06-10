@@ -136,9 +136,10 @@ export async function PATCH(
     }
 
     // Role-based status transition rules
-    if (status === 'paid' && !isBuyer) {
+    // Seller confirms payment receipt (buyer already paid, seller verifies)
+    if (status === 'paid' && !isSeller) {
       return Response.json(
-        { error: 'Hanya pembeli yang dapat mengonfirmasi pembayaran' },
+        { error: 'Hanya penjual yang dapat mengonfirmasi pembayaran' },
         { status: 403 }
       );
     }
@@ -160,9 +161,9 @@ export async function PATCH(
         { status: 403 }
       );
     }
-    if (status === 'cancelled' && !isBuyer) {
+    if (status === 'cancelled' && !isBuyer && !isSeller) {
       return Response.json(
-        { error: 'Hanya pembeli yang dapat membatalkan pesanan' },
+        { error: 'Anda tidak berwenang membatalkan pesanan ini' },
         { status: 403 }
       );
     }
@@ -238,8 +239,8 @@ export async function PATCH(
 
       switch (status) {
         case 'paid':
-          notificationTitle = 'Pembayaran Diterima';
-          notificationMessage = 'Pembayaran untuk pesanan telah dikonfirmasi oleh pembeli. Silakan proses pesanan.';
+          notificationTitle = 'Pembayaran Dikonfirmasi';
+          notificationMessage = 'Penjual telah mengonfirmasi pembayaran Anda. Pesanan akan segera diproses.';
           notificationType = 'payment';
           break;
         case 'processing':
@@ -284,7 +285,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Update order status error:', error);
     return Response.json(
-      { error: 'Gagal memperbarui status pesanan' },
+      { error: 'Gagal memperbarui status pesanan', detail: process.env.NODE_ENV === 'development' ? String(error) : undefined },
       { status: 500 }
     );
   }

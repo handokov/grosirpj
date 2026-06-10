@@ -501,6 +501,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           status,
           userId: user?.id,
@@ -1286,7 +1287,10 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                               </Button>
                             )}
                             {order.status === 'shipped' && (
-                              <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}>Selesai</Button>
+                              <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                                <Truck className="w-3 h-3" />
+                                Menunggu konfirmasi pembeli
+                              </span>
                             )}
                           </div>
                         </div>

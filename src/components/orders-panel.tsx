@@ -214,6 +214,7 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           status: newStatus,
           userId: user.id,
