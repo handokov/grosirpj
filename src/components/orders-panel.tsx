@@ -346,6 +346,31 @@ export function OrdersPanel({ open, onOpenChange, mode = 'buyer' }: OrdersPanelP
       }
     } else {
       // Seller actions
+      if (order.status === 'pending') {
+        buttons.push(
+          <Button
+            key="confirm-pay"
+            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl"
+            onClick={() => handleUpdateStatus(order.id, 'paid')}
+            disabled={isUpdating}
+          >
+            <CreditCard className="w-4 h-4 mr-2" />
+            {isUpdating ? 'Memproses...' : 'Konfirmasi Bayar'}
+          </Button>
+        );
+        buttons.push(
+          <Button
+            key="reject"
+            variant="outline"
+            className="flex-1 border-red-300 text-red-600 hover:bg-red-50 rounded-xl"
+            onClick={() => handleUpdateStatus(order.id, 'cancelled')}
+            disabled={isUpdating}
+          >
+            <XCircle className="w-4 h-4 mr-2" />
+            Tolak
+          </Button>
+        );
+      }
       if (order.status === 'paid') {
         buttons.push(
           <Button
