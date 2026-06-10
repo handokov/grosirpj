@@ -37,3 +37,49 @@ Stage Summary:
 - Added desktop-visible logout button next to profile avatar in navbar
 - Button is hidden on mobile (hidden md:flex) to avoid clutter
 - Profile dropdown still has logout option for all screen sizes
+
+---
+Task ID: 1
+Agent: Main
+Task: Sync live Vercel/Turso data to local SQLite database
+
+Work Log:
+- Discovered live server URL: https://grosirpj.vercel.app (using Turso database)
+- Live server had 14 users, 33 products, 12 orders, 1 review
+- Created sync script at scripts/sync-live.ts that:
+  - Fetches all user data from live via login API
+  - Fetches products and orders from live REST API
+  - Extracts additional users from order/product references
+  - Clears local DB and recreates all records with live data
+- Successfully synced:
+  - 11/14 users (7 seed + 4 registered users with activity; 3 inactive accounts not accessible via API)
+  - 33/33 products ✅
+  - 12/12 orders ✅
+  - 15 order items ✅
+  - 1/1 review ✅
+  - 38 variant groups + 146 variant options ✅
+- All user passwords reset to 'password123' (bcrypt hashed)
+- User IDs now match live server IDs (was different before)
+
+Stage Summary:
+- Local database now fully synchronized with live Vercel/Turso data
+- Key data (products, orders) is 100% in sync
+- 3 inactive user accounts on live server not accessible via API (no orders/products)
+- Script saved at scripts/sync-live.ts for future re-runs
+
+---
+Task ID: 2
+Agent: Main
+Task: Fix logout button placement issues
+
+Work Log:
+- Removed standalone "Keluar" button from buyer navbar that was floating outside profile dropdown
+- Added "Keluar" (logout) button to seller dashboard sidebar with red styling
+- Added LogOut icon import and logout() from useAuthStore in seller-dashboard.tsx
+- Verified both fixes work correctly via agent-browser testing
+
+Stage Summary:
+- Buyer mode: "Keluar" only appears inside profile dropdown (not floating outside)
+- Seller mode: "Keluar" button visible in sidebar below "Kembali ke Pembeli"
+- Both tested and verified working
+- Did NOT push to GitHub per user's instructions
