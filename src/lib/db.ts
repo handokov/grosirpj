@@ -30,9 +30,11 @@ function createPrismaClient() {
     // Local SQLite connection
     let resolvedUrl = databaseUrl
 
-    // If running on Vercel and DATABASE_URL is a relative path, redirect to /tmp
-    if (process.env.VERCEL && resolvedUrl.startsWith('file:./')) {
-      resolvedUrl = `file:///tmp/${resolvedUrl.replace('file:./', '')}`
+    // On Vercel, always use /tmp for SQLite (it's the only writable directory)
+    // The DATABASE_URL might point to a local dev path that doesn't exist on Vercel
+    if (process.env.VERCEL) {
+      resolvedUrl = 'file:///tmp/grosirpj.db'
+      console.log(`[db] Vercel detected, using ephemeral SQLite: ${resolvedUrl}`)
     }
 
     console.log(`[db] Connecting to local SQLite: ${resolvedUrl.substring(0, 40)}`)
@@ -77,9 +79,18 @@ export async function ensureDb(): Promise<void> {
 
   // Deduplicate concurrent calls
   if (!dbEnsurePromise) {
-    dbEnsurePromise = createTablesAndSeedIfNeeded().finally(() => {
-      dbEnsurePromise = null;
-    });
+    dbEnsurePromise = createTablesAndSeedIfNeeded()
+      .then(() => {
+        dbTablesEnsured = true;
+      })
+      .catch((error) => {
+        console.error('[ensureDb] Failed (will retry next request):', error?.message || error);
+        dbTablesEnsured = false;
+        // Don't throw - allow the app to continue (tables might exist from a previous attempt)
+      })
+      .finally(() => {
+        dbEnsurePromise = null;
+      });
   }
 
   await dbEnsurePromise;
