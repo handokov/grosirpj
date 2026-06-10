@@ -175,11 +175,11 @@ function FlashSaleSection() {
           <FlashSaleTimer />
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {products.map((product) => (
             <div
               key={product.id}
-              className="flex-shrink-0 w-44 md:w-52 bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer group"
+              className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer group"
               onClick={() => openProductDetail(product.id)}
             >
               <div className="relative">
