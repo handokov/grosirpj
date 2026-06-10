@@ -7,7 +7,7 @@ import {
   Upload, Eye, BarChart3, ShoppingBag, Star, ArrowRight, AlertCircle, CheckCircle,
   Home, ClipboardList, MessageCircle, Bell, Megaphone, Clock, Truck,
   RotateCcw, Download, TrendingUp, Target, Newspaper, Menu, Search,
-  CreditCard, Banknote,
+  CreditCard, Banknote, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { useNotificationStore } from '@/store/notification';
@@ -76,6 +84,9 @@ interface SellerOrder {
   paymentMethod: string;
   paymentProof: string;
   paidAt: string | null;
+  shippedAt: string | null;
+  expedition: string;
+  trackingNumber: string;
   createdAt: string;
   items: { id: string; productName: string; quantity: number; price: number; variants: string }[];
   buyer: { id: string; name: string; email: string; city?: string };
@@ -100,6 +111,17 @@ interface SellerDashboardProps {
 }
 
 const CHART_COLORS = ['#10b981', '#06b6d4', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+
+const EXPEDITIONS = [
+  { id: 'JNE', name: 'JNE', logo: '📦' },
+  { id: 'J&T', name: 'J&T Express', logo: '🚀' },
+  { id: 'SiCepat', name: 'SiCepat', logo: '⚡' },
+  { id: 'POS', name: 'POS Indonesia', logo: '📮' },
+  { id: 'TIKI', name: 'TIKI', logo: '✈️' },
+  { id: 'AnterAja', name: 'AnterAja', logo: '🚛' },
+  { id: 'Ninja', name: 'Ninja Xpress', logo: '🥷' },
+  { id: 'Wahana', name: 'Wahana Express', logo: '🏠' },
+];
 
 // Sidebar navigation items
 const SIDEBAR_ITEMS = [
@@ -144,6 +166,13 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
 
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Shipping dialog state
+  const [shippingDialogOpen, setShippingDialogOpen] = useState(false);
+  const [shippingOrderId, setShippingOrderId] = useState('');
+  const [selectedExpedition, setSelectedExpedition] = useState('');
+  const [inputTrackingNumber, setInputTrackingNumber] = useState('');
+  const [shippingLoading, setShippingLoading] = useState(false);
 
   // Fetch data
   const fetchProducts = useCallback(async () => {
@@ -467,12 +496,17 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
     }
   };
 
-  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+  const handleUpdateOrderStatus = async (orderId: string, status: string, extra?: { expedition?: string; trackingNumber?: string }) => {
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          userId: user?.id,
+          expedition: extra?.expedition,
+          trackingNumber: extra?.trackingNumber,
+        }),
       });
       if (res.ok) {
         toast.success('Status pesanan diperbarui');
@@ -484,6 +518,40 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
     } catch (err) {
       toast.error('Terjadi kesalahan');
     }
+  };
+
+  const openShippingDialog = (orderId: string) => {
+    setShippingOrderId(orderId);
+    setSelectedExpedition('');
+    setInputTrackingNumber('');
+    setShippingDialogOpen(true);
+  };
+
+  const generateTrackingNumber = () => {
+    const prefix = selectedExpedition ? selectedExpedition.substring(0, 3).toUpperCase() : 'TRK';
+    const num = Math.random().toString().substring(2, 16).toUpperCase();
+    setInputTrackingNumber(`${prefix}${num}`);
+  };
+
+  const handleShipOrder = () => {
+    if (!selectedExpedition) {
+      toast.error('Pilih ekspedisi terlebih dahulu');
+      return;
+    }
+    if (!inputTrackingNumber.trim()) {
+      toast.error('Masukkan nomor resi pengiriman');
+      return;
+    }
+    setShippingLoading(true);
+    handleUpdateOrderStatus(shippingOrderId, 'shipped', {
+      expedition: selectedExpedition,
+      trackingNumber: inputTrackingNumber.trim(),
+    }).finally(() => {
+      setShippingLoading(false);
+      setShippingDialogOpen(false);
+      setSelectedExpedition('');
+      setInputTrackingNumber('');
+    });
   };
 
   // Chart data
@@ -1184,6 +1252,21 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                             <span className="text-gray-400">Dibayar: {new Date(order.paidAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                           )}
                         </div>
+                        {/* Shipping info for shipped orders */}
+                        {order.status === 'shipped' && order.expedition && (
+                          <div className="flex items-center gap-2 text-xs bg-cyan-50 text-cyan-700 px-3 py-2 rounded-lg">
+                            <Truck className="w-3.5 h-3.5" />
+                            <span className="font-medium">{order.expedition}</span>
+                            <span className="text-cyan-400">|</span>
+                            <span className="font-mono tracking-wider">Resi: {order.trackingNumber}</span>
+                            {order.shippedAt && (
+                              <>
+                                <span className="text-cyan-400">|</span>
+                                <span className="text-cyan-500">Dikirim: {new Date(order.shippedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
                         <Separator />
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-emerald-600">{formatPrice(order.totalAmount)}</span>
@@ -1197,7 +1280,10 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                               </>
                             )}
                             {order.status === 'paid' && (
-                              <Button size="sm" className="rounded-lg text-xs bg-cyan-500 hover:bg-cyan-600 text-white" onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}>Kirim Pesanan</Button>
+                              <Button size="sm" className="rounded-lg text-xs bg-cyan-500 hover:bg-cyan-600 text-white" onClick={() => openShippingDialog(order.id)}>
+                                <Truck className="w-3 h-3 mr-1" />
+                                Kirim Pesanan
+                              </Button>
                             )}
                             {order.status === 'shipped' && (
                               <Button size="sm" className="rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-white" onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}>Selesai</Button>
@@ -1311,6 +1397,93 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ===== SHIPPING DIALOG ===== */}
+      <Dialog open={shippingDialogOpen} onOpenChange={setShippingDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="w-5 h-5 text-emerald-500" />
+              Kirim Pesanan
+            </DialogTitle>
+            <DialogDescription>
+              Pilih ekspedisi dan masukkan nomor resi untuk mengirim pesanan ini
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Expedition Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Pilih Ekspedisi *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {EXPEDITIONS.map((exp) => (
+                  <button
+                    key={exp.id}
+                    onClick={() => setSelectedExpedition(exp.id)}
+                    className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-left ${
+                      selectedExpedition === exp.id
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">{exp.logo}</span>
+                    <span className="text-sm font-medium text-gray-700">{exp.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tracking Number Input */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Nomor Resi *</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-emerald-600 h-7"
+                  onClick={generateTrackingNumber}
+                >
+                  Auto Generate
+                </Button>
+              </div>
+              <Input
+                placeholder="Masukkan nomor resi pengiriman..."
+                value={inputTrackingNumber}
+                onChange={(e) => setInputTrackingNumber(e.target.value)}
+                className="rounded-xl tracking-wider font-mono"
+              />
+              <p className="text-xs text-gray-400">
+                Nomor resi akan ditampilkan ke pembeli untuk melacak pesanan
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShippingDialogOpen(false)}
+              className="rounded-xl"
+            >
+              Batal
+            </Button>
+            <Button
+              className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl"
+              onClick={handleShipOrder}
+              disabled={shippingLoading || !selectedExpedition || !inputTrackingNumber.trim()}
+            >
+              {shippingLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Mengirim...
+                </>
+              ) : (
+                <>
+                  <Truck className="w-4 h-4 mr-2" />
+                  Kirim Pesanan
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
