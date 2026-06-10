@@ -40,85 +40,82 @@ export async function GET(request: Request) {
       return Response.json({ messages });
     }
 
-    // Return list of conversations with last message and unread count
-    // Get all chat partners for this user
-    const sentChats = await db.chat.findMany({
-      where: { senderId: userId },
-      select: { receiverId: true },
-      distinct: ['receiverId'],
+    // Optimized conversations: 4 queries instead of N+1
+    // 1. Get all chats involving this user (we'll process in JS to find last message per partner)
+    const allChats = await db.chat.findMany({
+      where: {
+        OR: [{ senderId: userId }, { receiverId: userId }],
+      },
+      select: {
+        id: true,
+        message: true,
+        senderId: true,
+        receiverId: true,
+        createdAt: true,
+        read: true,
+      },
+      orderBy: { createdAt: 'desc' },
     });
 
-    const receivedChats = await db.chat.findMany({
-      where: { receiverId: userId },
-      select: { senderId: true },
-      distinct: ['senderId'],
-    });
+    if (allChats.length === 0) {
+      return Response.json({ conversations: [] });
+    }
 
-    // Combine unique partner IDs
+    // 2. Process in JS: find last message per partner and collect partner IDs
+    const lastMessageByPartner = new Map<string, typeof allChats[0]>();
     const partnerIds = new Set<string>();
-    for (const chat of sentChats) {
-      partnerIds.add(chat.receiverId);
-    }
-    for (const chat of receivedChats) {
-      partnerIds.add(chat.senderId);
-    }
 
-    // Build conversations with last message and unread count
-    const conversations = [];
+    for (const chat of allChats) {
+      const partnerId = chat.senderId === userId ? chat.receiverId : chat.senderId;
+      partnerIds.add(partnerId);
 
-    for (const partnerId of partnerIds) {
-      // Get the last message between the two users
-      const lastMessage = await db.chat.findFirst({
-        where: {
-          OR: [
-            { senderId: userId, receiverId: partnerId },
-            { senderId: partnerId, receiverId: userId },
-          ],
-        },
-        include: {
-          sender: {
-            select: { id: true, name: true },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      // Count unread messages from this partner
-      const unreadCount = await db.chat.count({
-        where: {
-          senderId: partnerId,
-          receiverId: userId,
-          read: false,
-        },
-      });
-
-      // Get partner info
-      const partner = await db.user.findUnique({
-        where: { id: partnerId },
-        select: { id: true, name: true, storeName: true },
-      });
-
-      if (partner && lastMessage) {
-        conversations.push({
-          partner,
-          lastMessage: {
-            id: lastMessage.id,
-            message: lastMessage.message,
-            senderId: lastMessage.senderId,
-            createdAt: lastMessage.createdAt,
-            read: lastMessage.read,
-          },
-          unreadCount,
-        });
+      // First encounter of this partner is the latest message (since ordered by desc)
+      if (!lastMessageByPartner.has(partnerId)) {
+        lastMessageByPartner.set(partnerId, chat);
       }
     }
 
-    // Sort by last message time, most recent first
-    conversations.sort((a, b) => {
-      const timeA = new Date(a.lastMessage.createdAt).getTime();
-      const timeB = new Date(b.lastMessage.createdAt).getTime();
-      return timeB - timeA;
+    // 3. Get all partner info in one query
+    const partners = await db.user.findMany({
+      where: { id: { in: Array.from(partnerIds) } },
+      select: { id: true, name: true, storeName: true },
     });
+    const partnerMap = new Map(partners.map((p) => [p.id, p]));
+
+    // 4. Get unread counts for all partners in one query
+    const unreadChats = await db.chat.findMany({
+      where: {
+        receiverId: userId,
+        read: false,
+        senderId: { in: Array.from(partnerIds) },
+      },
+      select: { senderId: true },
+    });
+    const unreadMap = new Map<string, number>();
+    for (const uc of unreadChats) {
+      unreadMap.set(uc.senderId, (unreadMap.get(uc.senderId) || 0) + 1);
+    }
+
+    // 5. Build conversations
+    const conversations = [];
+    for (const [partnerId, lastMsg] of lastMessageByPartner) {
+      const partner = partnerMap.get(partnerId);
+      if (!partner) continue;
+
+      conversations.push({
+        partner,
+        lastMessage: {
+          id: lastMsg.id,
+          message: lastMsg.message,
+          senderId: lastMsg.senderId,
+          createdAt: lastMsg.createdAt,
+          read: lastMsg.read,
+        },
+        unreadCount: unreadMap.get(partnerId) || 0,
+      });
+    }
+
+    // Already sorted by createdAt desc (from the query order + Map insertion order)
 
     return Response.json({ conversations });
   } catch (error) {

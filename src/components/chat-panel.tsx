@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
@@ -31,6 +30,7 @@ interface ChatMessage {
   read: boolean;
   sender: { id: string; name: string };
   receiver: { id: string; name: string };
+  isOptimistic?: boolean; // for optimistic UI
 }
 
 // Demo login credentials for reference
@@ -55,13 +55,21 @@ export function ChatPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activePartner, setActivePartner] = useState<string | null>(chatWithUserId);
   const [messageInput, setMessageInput] = useState('');
-  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
+  const activePartnerRef = useRef<string | null>(null);
+  const sendingRef = useRef(false); // prevent double-send
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const shouldScrollRef = useRef(false); // flag: scroll to bottom only on conversation open
 
-  // Mark messages as read for a specific partner
+  // Keep ref in sync with state
+  useEffect(() => {
+    activePartnerRef.current = activePartner;
+  }, [activePartner]);
+
+  // Mark messages as read for a specific partner (fire-and-forget)
   const markAsRead = useCallback(async (partnerId: string) => {
     if (!user) return;
     try {
@@ -84,7 +92,6 @@ export function ChatPanel() {
       if (res.ok) {
         const convs = data.conversations || [];
         setConversations(convs);
-        // Update global unread count for navbar & seller dashboard
         const total = convs.reduce((sum: number, c: Conversation) => sum + c.unreadCount, 0);
         setUnreadChatCount(total);
       }
@@ -100,16 +107,55 @@ export function ChatPanel() {
       const res = await fetch(`/api/chat?userId=${user.id}&otherUserId=${partnerId}`);
       const data = await res.json();
       if (res.ok) {
-        setMessages(data.messages || []);
+        const serverMessages: ChatMessage[] = data.messages || [];
+        setMessages((prev) => {
+          // Preserve optimistic messages that haven't been confirmed by server yet
+          const optimisticMsgs = prev.filter((m) => m.isOptimistic);
+          if (optimisticMsgs.length === 0) return serverMessages;
+          // Remove optimistic messages that have a matching server message
+          // (same senderId + same message text = confirmed by server)
+          const stillPending = optimisticMsgs.filter((opt) => {
+            return !serverMessages.some(
+              (srv) => srv.senderId === opt.senderId && srv.message === opt.message
+            );
+          });
+          return [...serverMessages, ...stillPending];
+        });
       }
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     }
   }, [user]);
 
-  // Send message
+  // Send message with optimistic update
   const handleSendMessage = async () => {
-    if (!user || !activePartner || !messageInput.trim()) return;
+    if (!user || !activePartner || !messageInput.trim() || sendingRef.current) return;
+    sendingRef.current = true;
+
+    const text = messageInput.trim();
+    const optimisticId = `temp-${Date.now()}`;
+
+    // Optimistic: add message to UI immediately
+    const optimisticMsg: ChatMessage = {
+      id: optimisticId,
+      message: text,
+      senderId: user.id,
+      receiverId: activePartner,
+      createdAt: new Date().toISOString(),
+      read: false,
+      sender: { id: user.id, name: user.name },
+      receiver: { id: activePartner, name: '' },
+      isOptimistic: true,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setMessageInput('');
+    isNearBottomRef.current = true;
+
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
 
     try {
       const res = await fetch('/api/chat', {
@@ -118,21 +164,29 @@ export function ChatPanel() {
         body: JSON.stringify({
           senderId: user.id,
           receiverId: activePartner,
-          message: messageInput.trim(),
+          message: text,
         }),
       });
 
       if (res.ok) {
-        setMessageInput('');
-        // Reset textarea height
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-        }
-        fetchMessages(activePartner);
-        fetchConversations();
+        // Refresh from server to get the real message with proper ID
+        // Use Promise.all for parallel requests
+        await Promise.all([
+          fetchMessages(activePartner),
+          fetchConversations(),
+        ]);
+      } else {
+        // Remove optimistic message on failure
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+        setMessageInput(text); // restore input
       }
     } catch (err) {
+      // Remove optimistic message on failure
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      setMessageInput(text); // restore input
       console.error('Failed to send message:', err);
+    } finally {
+      sendingRef.current = false;
     }
   };
 
@@ -142,7 +196,6 @@ export function ChatPanel() {
       e.preventDefault();
       handleSendMessage();
     }
-    // Shift+Enter naturally creates a new line in textarea - no special handling needed
   };
 
   // Auto-resize textarea (WhatsApp style: grows up to 5 lines, then scrolls)
@@ -169,37 +222,48 @@ export function ChatPanel() {
   useEffect(() => {
     if (!chatOpen || !user) return;
     const loadData = async () => {
-      await fetchConversations();
       if (chatWithUserId) {
         setActivePartner(chatWithUserId);
-        await fetchMessages(chatWithUserId);
-        // Mark messages from this partner as read when opening via chatWithUserId
+        // Parallel: fetch messages + conversations at the same time
+        await Promise.all([
+          fetchMessages(chatWithUserId),
+          fetchConversations(),
+        ]);
+        // Mark as read after messages are loaded
         await markAsRead(chatWithUserId);
+        // Quick refresh just for unread counts
+        fetchConversations();
+      } else {
         await fetchConversations();
       }
     };
     loadData();
   }, [chatOpen, user, chatWithUserId, fetchConversations, fetchMessages, markAsRead]);
 
-  // Polling for new messages when chat is open with an active partner
-  // Also auto mark-as-read so badges disappear while viewing
+  // Polling: parallel requests for speed
   useEffect(() => {
     if (chatOpen && user && activePartner) {
+      // Poll every 2 seconds for active conversation
       pollIntervalRef.current = setInterval(async () => {
-        await fetchMessages(activePartner);
-        await markAsRead(activePartner);
-        await fetchConversations();
-      }, 3000);
+        const currentPartner = activePartnerRef.current;
+        if (!currentPartner) return;
+
+        // Parallel: fetch messages + mark as read + refresh conversations
+        await Promise.all([
+          fetchMessages(currentPartner),
+          markAsRead(currentPartner),
+          fetchConversations(),
+        ]);
+      }, 2000);
     }
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [chatOpen, user, activePartner, fetchMessages, fetchConversations, markAsRead]);
 
-  // Background polling for unread count when chat is closed (updates navbar badge)
+  // Background polling for unread count when chat is closed
   useEffect(() => {
     if (!chatOpen && user) {
-      // Poll unread count every 10 seconds
       const interval = setInterval(() => {
         fetchConversations();
       }, 10000);
@@ -207,32 +271,48 @@ export function ChatPanel() {
     }
   }, [chatOpen, user, fetchConversations]);
 
-  // When activePartner changes, mark that we should scroll to bottom after messages load
+  // Check if user is near the bottom of the chat (within 100px threshold)
+  const checkIfNearBottom = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    return scrollHeight - scrollTop - clientHeight < 100;
+  }, []);
+
+  // When activePartner changes, force scroll to bottom
   useEffect(() => {
     if (activePartner) {
-      shouldScrollRef.current = true;
+      isNearBottomRef.current = true;
+      prevMessageCountRef.current = 0;
     }
   }, [activePartner]);
 
-  // Scroll to bottom only when messages change AND we just opened a conversation
-  // This prevents auto-scroll during polling while still scrolling on initial open
+  // Auto-scroll logic
   useEffect(() => {
-    if (shouldScrollRef.current && messages.length > 0) {
-      shouldScrollRef.current = false;
-      const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
-      }, 100);
-      return () => clearTimeout(timer);
+    if (messages.length === 0) return;
+
+    const isNewConversation = prevMessageCountRef.current === 0 && messages.length > 0;
+    const hasNewMessages = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+
+    // Scroll if: first load of conversation OR (new messages arrived AND user is near bottom)
+    if (isNewConversation || (hasNewMessages && isNearBottomRef.current)) {
+      const raf = requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: isNewConversation ? 'instant' : 'smooth' });
+      });
+      return () => cancelAnimationFrame(raf);
     }
   }, [messages]);
 
   const handleSelectPartner = async (partnerId: string) => {
     setActivePartner(partnerId);
-    await fetchMessages(partnerId);
-    // Mark messages from this partner as read
-    await markAsRead(partnerId);
-    // Refresh conversations to update unread counts
-    await fetchConversations();
+    // Parallel: fetch messages + mark as read
+    await Promise.all([
+      fetchMessages(partnerId),
+      markAsRead(partnerId),
+    ]);
+    // Then refresh conversations for unread counts
+    fetchConversations();
   };
 
   const formatTime = (dateStr: string) => {
@@ -308,7 +388,11 @@ export function ChatPanel() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-white">
+                <div
+                  ref={messagesContainerRef}
+                  onScroll={() => { isNearBottomRef.current = checkIfNearBottom(); }}
+                  className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-white"
+                >
                   {messages.map((msg) => {
                     const isMine = msg.senderId === user.id;
                     return (
@@ -317,15 +401,15 @@ export function ChatPanel() {
                           isMine
                             ? 'bg-emerald-100 text-gray-800 rounded-br-md'
                             : 'bg-gray-100 text-gray-800 rounded-bl-md'
-                        }`}>
+                        } ${msg.isOptimistic ? 'opacity-70' : ''}`}>
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                           <div className={`flex items-center justify-end gap-1 mt-0.5`}>
                             <span className={`text-[10px] ${isMine ? 'text-emerald-600/60' : 'text-gray-400'}`}>
                               {formatTime(msg.createdAt)}
                             </span>
                             {isMine && (
-                              <span className={`text-[10px] ${msg.read ? 'text-blue-500' : 'text-gray-400'}`}>
-                                ✓✓
+                              <span className={`text-[10px] ${msg.isOptimistic ? 'text-gray-400' : msg.read ? 'text-blue-500' : 'text-gray-400'}`}>
+                                {msg.isOptimistic ? '⏳' : '✓✓'}
                               </span>
                             )}
                           </div>
