@@ -609,29 +609,23 @@ function Navbar() {
 
               {user ? (
                 <div className="relative">
-                  {/* Profile Avatar Button - opens dropdown on mobile, inline on desktop */}
+                  {/* Profile Avatar Button - opens dropdown on all screen sizes */}
                   <button
-                    onClick={() => {
-                      // On mobile, toggle profile dropdown; on desktop, seller goes to dashboard
-                      if (window.innerWidth < 640) {
-                        setProfileMenuOpen(!profileMenuOpen);
-                      } else if (user.role === 'seller') {
-                        setSellerMode(true);
-                      }
-                    }}
+                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                     className="flex items-center gap-1.5 px-1.5 py-1 sm:px-3 sm:py-1.5 bg-white/10 border border-white/20 rounded-full hover:bg-white/20 transition-colors"
                   >
                     <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center">
                       <span className="text-gray-800 text-xs font-bold">{user.name.charAt(0).toUpperCase()}</span>
                     </div>
                     <span className="text-sm font-medium text-white max-w-[60px] sm:max-w-[80px] truncate hidden sm:inline">{user.name}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-white/70 hidden sm:block transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
                     {/* Unread indicator dot on mobile - shows if there are notifications */}
                     {(unreadNotifs > 0 || unreadChatCount > 0) && (
                       <span className="sm:hidden w-2 h-2 bg-red-500 rounded-full" />
                     )}
                   </button>
 
-                  {/* Profile Dropdown Menu - primarily for mobile */}
+                  {/* Profile Dropdown Menu - works on both mobile and desktop */}
                   {profileMenuOpen && (
                     <>
                       {/* Backdrop */}
