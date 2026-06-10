@@ -19,7 +19,34 @@ export async function POST(request: Request) {
     // Normalize email to lowercase
     const normalizedEmail = email.toLowerCase().trim();
 
-    const user = await db.user.findUnique({ where: { email: normalizedEmail } });
+    // Only select columns needed for login to avoid errors if Turso schema
+    // hasn't been updated with new columns yet
+    const user = await db.user.findUnique({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        password: true,
+        city: true,
+        address: true,
+        province: true,
+        postalCode: true,
+        avatar: true,
+        gender: true,
+        dateOfBirth: true,
+        role: true,
+        phone: true,
+        storeName: true,
+        storeDescription: true,
+        storeAvatar: true,
+        bankName: true,
+        bankAccount: true,
+        bankHolder: true,
+        sellerBalance: true,
+        totalSales: true,
+      },
+    });
     if (!user) {
       return NextResponse.json(
         { error: 'Email tidak ditemukan' },
@@ -90,8 +117,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check for missing column errors (Turso schema not synced)
+    if (message.includes('no such column') || message.includes('column') && message.includes('does not exist')) {
+      return NextResponse.json(
+        { error: 'Database perlu di-update. Buka halaman /api/db/migrate untuk menambahkan kolom yang kurang.' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: `Terjadi kesalahan saat login. Silakan coba lagi.` },
+      { error: `Terjadi kesalahan saat login. Silakan coba lagi. Detail: ${process.env.NODE_ENV === 'development' ? message : ''}` },
       { status: 500 }
     );
   }

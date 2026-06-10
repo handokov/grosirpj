@@ -5,7 +5,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-function isTursoUrl(url: string): boolean {
+export function isTursoUrl(url: string): boolean {
   return url.startsWith('libsql://') || url.startsWith('https://')
 }
 
@@ -93,13 +93,19 @@ let dbEnsurePromise: Promise<void> | null = null;
  * When using Turso, this function is a no-op since Turso persists data.
  */
 export async function ensureDb(): Promise<void> {
-  // If using Turso WITH a valid auth token, skip ensureDb - data is persisted
+  // If using Turso WITH a valid auth token, run migrations then skip seed
   const tursoUrl = process.env.TURSO_DATABASE_URL || ''
   const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db'
   const hasTursoUrl = isTursoUrl(tursoUrl) || isTursoUrl(databaseUrl)
   const hasAuthToken = !!process.env.TURSO_AUTH_TOKEN
-  // Only skip ensureDb if Turso is properly configured (URL + auth token)
-  if (hasTursoUrl && hasAuthToken) return
+  // If Turso is properly configured, ensure schema is up-to-date then skip seed
+  if (hasTursoUrl && hasAuthToken) {
+    if (!dbTablesEnsured) {
+      await ensureTursoSchema();
+      dbTablesEnsured = true;
+    }
+    return
+  }
 
   if (dbTablesEnsured) return;
 
@@ -124,6 +130,101 @@ export async function ensureDb(): Promise<void> {
 
 // Import bcrypt for password hashing in seed data
 import { hashPassword } from './auth';
+
+/**
+ * Ensures Turso database schema is up-to-date by adding missing columns.
+ * This is safe to run on every cold start - it uses IF NOT EXISTS / catches duplicate errors.
+ */
+async function ensureTursoSchema(): Promise<void> {
+  console.log('[ensureTursoSchema] Checking Turso schema...');
+
+  // List of ALTER TABLE migrations to run (safe to re-run, duplicates are caught)
+  const migrations: { sql: string; table: string; col: string }[] = [
+    // User table
+    { sql: `ALTER TABLE "User" ADD COLUMN "phone" TEXT NOT NULL DEFAULT ''`, table: 'User', col: 'phone' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "address" TEXT NOT NULL DEFAULT ''`, table: 'User', col: 'address' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "province" TEXT NOT NULL DEFAULT ''`, table: 'User', col: 'province' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "postalCode" TEXT NOT NULL DEFAULT ''`, table: 'User', col: 'postalCode' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "avatar" TEXT NOT NULL DEFAULT ''`, table: 'User', col: 'avatar' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "gender" TEXT NOT NULL DEFAULT ''`, table: 'User', col: 'gender' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "dateOfBirth" TEXT NOT NULL DEFAULT ''`, table: 'User', col: 'dateOfBirth' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "storeAvatar" TEXT`, table: 'User', col: 'storeAvatar' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "bankName" TEXT`, table: 'User', col: 'bankName' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "bankAccount" TEXT`, table: 'User', col: 'bankAccount' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "bankHolder" TEXT`, table: 'User', col: 'bankHolder' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "sellerBalance" INTEGER NOT NULL DEFAULT 0`, table: 'User', col: 'sellerBalance' },
+    { sql: `ALTER TABLE "User" ADD COLUMN "totalSales" INTEGER NOT NULL DEFAULT 0`, table: 'User', col: 'totalSales' },
+    // Order table
+    { sql: `ALTER TABLE "Order" ADD COLUMN "shippingCost" INTEGER NOT NULL DEFAULT 0`, table: 'Order', col: 'shippingCost' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "marketplaceFee" INTEGER NOT NULL DEFAULT 0`, table: 'Order', col: 'marketplaceFee' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "sellerPayout" INTEGER NOT NULL DEFAULT 0`, table: 'Order', col: 'sellerPayout' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "shippingAddress" TEXT NOT NULL DEFAULT ''`, table: 'Order', col: 'shippingAddress' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "paymentMethod" TEXT NOT NULL DEFAULT 'cod'`, table: 'Order', col: 'paymentMethod' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "paymentProof" TEXT NOT NULL DEFAULT ''`, table: 'Order', col: 'paymentProof' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "expedition" TEXT NOT NULL DEFAULT ''`, table: 'Order', col: 'expedition' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "trackingNumber" TEXT NOT NULL DEFAULT ''`, table: 'Order', col: 'trackingNumber' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "paidAt" DATETIME`, table: 'Order', col: 'paidAt' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "shippedAt" DATETIME`, table: 'Order', col: 'shippedAt' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "deliveredAt" DATETIME`, table: 'Order', col: 'deliveredAt' },
+    { sql: `ALTER TABLE "Order" ADD COLUMN "notes" TEXT NOT NULL DEFAULT ''`, table: 'Order', col: 'notes' },
+    // Product table
+    { sql: `ALTER TABLE "Product" ADD COLUMN "originalPrice" INTEGER NOT NULL DEFAULT 0`, table: 'Product', col: 'originalPrice' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "minOrder" INTEGER NOT NULL DEFAULT 1`, table: 'Product', col: 'minOrder' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "stock" INTEGER NOT NULL DEFAULT 0`, table: 'Product', col: 'stock' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "weight" INTEGER NOT NULL DEFAULT 500`, table: 'Product', col: 'weight' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "active" BOOLEAN NOT NULL DEFAULT true`, table: 'Product', col: 'active' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "sold" INTEGER NOT NULL DEFAULT 0`, table: 'Product', col: 'sold' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "rating" REAL NOT NULL DEFAULT 0`, table: 'Product', col: 'rating' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "description" TEXT NOT NULL DEFAULT ''`, table: 'Product', col: 'description' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "images" TEXT NOT NULL DEFAULT '[]'`, table: 'Product', col: 'images' },
+    { sql: `ALTER TABLE "Product" ADD COLUMN "location" TEXT NOT NULL DEFAULT 'Jakarta'`, table: 'Product', col: 'location' },
+  ];
+
+  let applied = 0;
+  for (const migration of migrations) {
+    try {
+      await db.$executeRawUnsafe(migration.sql);
+      applied++;
+    } catch {
+      // Column already exists - that's fine, skip
+    }
+  }
+
+  // Ensure critical indexes exist
+  const indexes = [
+    `CREATE INDEX IF NOT EXISTS "Order_buyerId_idx" ON "Order"("buyerId")`,
+    `CREATE INDEX IF NOT EXISTS "Order_sellerId_idx" ON "Order"("sellerId")`,
+    `CREATE INDEX IF NOT EXISTS "Order_status_idx" ON "Order"("status")`,
+    `CREATE INDEX IF NOT EXISTS "Product_sellerId_idx" ON "Product"("sellerId")`,
+    `CREATE INDEX IF NOT EXISTS "Product_category_idx" ON "Product"("category")`,
+    `CREATE INDEX IF NOT EXISTS "Notification_userId_read_idx" ON "Notification"("userId", "read")`,
+  ];
+  for (const sql of indexes) {
+    try { await db.$executeRawUnsafe(sql); } catch { /* ignore */ }
+  }
+
+  // Ensure missing tables exist (for Turso databases that only had core tables)
+  const tableCreations = [
+    `CREATE TABLE IF NOT EXISTS "Wishlist" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL, "productId" TEXT NOT NULL, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS "CartItem" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL, "productId" TEXT NOT NULL, "quantity" INTEGER NOT NULL DEFAULT 1, "variants" TEXT NOT NULL DEFAULT '{}', "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS "Notification" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL, "title" TEXT NOT NULL, "message" TEXT NOT NULL, "type" TEXT NOT NULL DEFAULT 'info', "read" BOOLEAN NOT NULL DEFAULT false, "link" TEXT NOT NULL DEFAULT '', "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS "UserAddress" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL, "label" TEXT NOT NULL, "recipient" TEXT NOT NULL, "phone" TEXT NOT NULL, "address" TEXT NOT NULL, "city" TEXT NOT NULL, "province" TEXT NOT NULL DEFAULT '', "postalCode" TEXT NOT NULL DEFAULT '', "isDefault" BOOLEAN NOT NULL DEFAULT false, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS "ProductView" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL, "productId" TEXT NOT NULL, "viewCount" INTEGER NOT NULL DEFAULT 1, "lastViewed" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS "SearchHistory" ("id" TEXT NOT NULL PRIMARY KEY, "userId" TEXT NOT NULL, "query" TEXT NOT NULL, "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS "VariantGroup" ("id" TEXT NOT NULL PRIMARY KEY, "name" TEXT NOT NULL, "order" INTEGER NOT NULL DEFAULT 0, "productId" TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS "VariantOption" ("id" TEXT NOT NULL PRIMARY KEY, "value" TEXT NOT NULL, "variantGroupId" TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS "Review" ("id" TEXT NOT NULL PRIMARY KEY, "productId" TEXT NOT NULL, "userId" TEXT NOT NULL, "rating" INTEGER NOT NULL, "comment" TEXT NOT NULL DEFAULT '', "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  ];
+  for (const sql of tableCreations) {
+    try { await db.$executeRawUnsafe(sql); } catch { /* table exists */ }
+  }
+
+  if (applied > 0) {
+    console.log(`[ensureTursoSchema] Applied ${applied} migrations`);
+  } else {
+    console.log('[ensureTursoSchema] Schema is up-to-date');
+  }
+}
 
 async function createTablesAndSeedIfNeeded(): Promise<void> {
   // Quick check: if tables already exist with data, skip
