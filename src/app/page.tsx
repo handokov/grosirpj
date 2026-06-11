@@ -1064,7 +1064,7 @@ export default function Home() {
         <CategorySection />
         <ProductGrid />
         <PromoBanners />
-        <TrackingSection />
+        {/* <TrackingSection /> */}
         <RecommendationSection />
       </main>
       <Footer />
