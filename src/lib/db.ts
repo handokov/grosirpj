@@ -224,6 +224,53 @@ async function ensureTursoSchema(): Promise<void> {
   } else {
     console.log('[ensureTursoSchema] Schema is up-to-date');
   }
+
+  // Fix product categories: migrate from new 18-category system back to original 8 categories
+  // This is needed because a previous deployment changed product categories in the database
+  const categoryMigrations: { from: string; to: string }[] = [
+    { from: 'fashion-pria', to: 'fashion' },
+    { from: 'fashion-wanita', to: 'fashion' },
+    { from: 'rumah-tangga', to: 'rumah' },
+    { from: 'makanan-minuman', to: 'makanan' },
+    { from: 'bangunan-teknik', to: 'rumah' },
+    { from: 'otomotif', to: 'elektronik' },
+    { from: 'ibu-anak', to: 'fashion' },
+    { from: 'hewan-peliharaan', to: 'rumah' },
+    { from: 'olahraga-outdoor', to: 'olahraga' },
+    { from: 'hobi-koleksi', to: 'mainan' },
+    { from: 'buku-alat-tulis', to: 'elektronik' },
+    { from: 'kado-souvenir', to: 'fashion' },
+    { from: 'perkantoran-bisnis', to: 'elektronik' },
+    { from: 'industri-grosir', to: 'rumah' },
+    { from: 'pertanian-peternakan', to: 'makanan' },
+    { from: 'produk-digital', to: 'elektronik' },
+  ];
+
+  let catFixed = 0;
+  for (const { from, to } of categoryMigrations) {
+    try {
+      const result = await db.$executeRawUnsafe(
+        `UPDATE "Product" SET category = '${to}' WHERE category = '${from}'`
+      );
+      if (result > 0) {
+        catFixed += result;
+        console.log(`[ensureTursoSchema] Fixed ${result} products: ${from} → ${to}`);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // Also remove subcategory column data if it exists (from the reverted category system)
+  try {
+    await db.$executeRawUnsafe(`UPDATE "Product" SET subcategory = '' WHERE subcategory IS NOT NULL AND subcategory != ''`);
+  } catch {
+    // subcategory column might not exist, that's fine
+  }
+
+  if (catFixed > 0) {
+    console.log(`[ensureTursoSchema] Fixed ${catFixed} product categories total`);
+  }
 }
 
 async function createTablesAndSeedIfNeeded(): Promise<void> {
