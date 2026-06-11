@@ -12,8 +12,8 @@ import { TrackingPanel } from '@/components/tracking-panel';
 
 // ===== DEMO TRACKING NUMBERS =====
 const DEMO_TRACKINGS = [
-  { resi: 'JNE1234567890', courier: 'JNE', from: 'Jakarta', to: 'Surabaya', label: 'JNE Reguler' },
-  { resi: 'SICEPAT9876543210', courier: 'SiCepat', from: 'Jakarta', to: 'Makassar', label: 'SiCepat BEST' },
+  { resi: 'JNE0000000050', courier: 'JNE', from: 'Jakarta', to: 'Surabaya', label: 'JNE Reguler' },
+  { resi: 'SICEPAT0000000002', courier: 'SiCepat', from: 'Jakarta', to: 'Makassar', label: 'SiCepat BEST' },
   { resi: 'JNT5678901234', courier: 'J&T', from: 'Jakarta', to: 'Medan', label: 'J&T Express' },
   { resi: 'TIK2468013579', courier: 'Tiki', from: 'Bandung', to: 'Denpasar', label: 'Tiki ONS' },
 ];
