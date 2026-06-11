@@ -17,10 +17,11 @@ import { formatPrice, getStatusInfo } from '@/lib/constants';
 import {
   Package, MapPin, CreditCard, ChevronDown, ChevronUp, Clock,
   ShoppingBag, Banknote, Star, Shield, Truck, CheckCircle, XCircle,
-  Navigation, Copy,
+  Navigation, Copy, MapPinned,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaymentDialog } from '@/components/payment-dialog';
+import { TrackingPanel } from '@/components/tracking-panel';
 import { toast } from 'sonner';
 
 interface OrderItem {
@@ -73,6 +74,8 @@ export function OrderHistory() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [trackingOrder, setTrackingOrder] = useState<Order | null>(null);
+  const [trackingOpen, setTrackingOpen] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     if (!user) return;
@@ -340,19 +343,33 @@ export function OrderHistory() {
                                   <Truck className="w-4 h-4 text-purple-600" />
                                   <span className="text-xs font-semibold text-purple-800">{order.expedition}</span>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-purple-600 hover:bg-purple-100 h-6 text-xs"
-                                  onClick={() => copyToClipboard(order.trackingNumber)}
-                                >
-                                  <Copy className="w-3 h-3 mr-1" /> Salin Resi
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-purple-600 hover:bg-purple-100 h-6 text-xs"
+                                    onClick={() => copyToClipboard(order.trackingNumber)}
+                                  >
+                                    <Copy className="w-3 h-3 mr-1" /> Salin
+                                  </Button>
+                                </div>
                               </div>
                               <p className="text-xs text-purple-700 font-mono">{order.trackingNumber}</p>
                               {order.shippedAt && (
                                 <p className="text-[10px] text-purple-500 mt-1">Dikirim: {formatDate(order.shippedAt)}</p>
                               )}
+                              {/* Lacak Paket Button */}
+                              <Button
+                                className="w-full mt-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-xl h-9 text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTrackingOrder(order);
+                                  setTrackingOpen(true);
+                                }}
+                              >
+                                <MapPinned className="w-3.5 h-3.5 mr-1.5" />
+                                Lacak Paket
+                              </Button>
                             </div>
                           )}
 
@@ -484,6 +501,18 @@ export function OrderHistory() {
         order={paymentOrder}
         onPaymentConfirmed={handlePaymentConfirmed}
       />
+
+      {/* Tracking Panel */}
+      {trackingOrder && (
+        <TrackingPanel
+          open={trackingOpen}
+          onOpenChange={setTrackingOpen}
+          trackingNumber={trackingOrder.trackingNumber}
+          courier={trackingOrder.expedition}
+          origin={trackingOrder.seller?.city || 'Jakarta'}
+          destination={trackingOrder.shippingAddress?.split(',').pop()?.trim() || 'Surabaya'}
+        />
+      )}
 
       {/* Review Dialog */}
       {reviewItem && (

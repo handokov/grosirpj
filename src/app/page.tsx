@@ -30,6 +30,7 @@ import { ChatPanel } from '@/components/chat-panel';
 import { NotificationPanel } from '@/components/notification-panel';
 import { AuthModal } from '@/components/auth-modal';
 import { Footer } from '@/components/footer';
+import { TrackingSection } from '@/components/tracking-section';
 
 // Only SellerDashboard is lazy-loaded — it imports recharts (~11MB) and is only for sellers
 import dynamic from 'next/dynamic';
@@ -1094,6 +1095,7 @@ export default function Home() {
         <CategorySection />
         <ProductGrid />
         <PromoBanners />
+        <TrackingSection />
         <RecommendationSection />
       </main>
       <Footer />
