@@ -130,6 +130,7 @@ export async function PUT(
       price,
       originalPrice,
       category,
+      subcategory,
       images,
       minOrder,
       stock,
@@ -147,6 +148,7 @@ export async function PUT(
     if (originalPrice !== undefined)
       updateData.originalPrice = parseInt(String(originalPrice), 10);
     if (category !== undefined) updateData.category = category.trim();
+    if (subcategory !== undefined) updateData.subcategory = subcategory.trim();
     if (images !== undefined) {
       updateData.images = Array.isArray(images)
         ? JSON.stringify(images)

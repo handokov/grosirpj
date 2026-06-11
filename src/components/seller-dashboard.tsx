@@ -92,14 +92,15 @@ interface SellerOrder {
   buyer: { id: string; name: string; email: string; city?: string };
 }
 
-const CATEGORY_OPTIONS = CATEGORIES.map(c => ({ value: c.value, label: c.label }));
+const CATEGORY_OPTIONS = CATEGORIES.map(c => ({ value: c.value, label: `${c.emoji} ${c.label}` }));
 
 const INITIAL_FORM = {
   name: '',
   price: 0,
   originalPrice: 0,
   images: [] as string[],
-  category: 'fashion',
+  category: 'elektronik',
+  subcategory: '',
   description: '',
   minOrder: 1,
   stock: 100,
@@ -393,6 +394,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       price: form.price,
       originalPrice: form.originalPrice,
       category: form.category,
+      subcategory: form.subcategory,
       description: form.description,
       minOrder: form.minOrder,
       stock: form.stock,
@@ -445,6 +447,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
       originalPrice: product.originalPrice,
       images: product.images,
       category: product.category,
+      subcategory: (product as SellerProduct & { subcategory?: string }).subcategory || '',
       description: product.description,
       minOrder: product.minOrder,
       stock: product.stock,
@@ -1041,7 +1044,7 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                                 <div className="min-w-0">
                                   <h3 className="font-semibold text-gray-900 text-sm line-clamp-1">{product.name}</h3>
                                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                    <Badge variant="secondary" className="text-xs capitalize">{CATEGORY_OPTIONS.find(c => c.value === product.category)?.label || product.category}</Badge>
+                                    <Badge variant="secondary" className="text-xs capitalize">{CATEGORY_OPTIONS.find(c => c.value === product.category)?.label || product.category}{(product as SellerProduct & { subcategory?: string }).subcategory ? ` • ${CATEGORIES.find(c => c.value === product.category)?.subcategories.find(s => s.value === (product as SellerProduct & { subcategory?: string }).subcategory)?.label || (product as SellerProduct & { subcategory?: string }).subcategory}` : ''}</Badge>
                                     <Badge className={`text-xs ${product.active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                                       {product.active ? 'Aktif' : 'Nonaktif'}
                                     </Badge>
@@ -1102,11 +1105,26 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                       </div>
                       <div>
                         <Label className="flex items-center gap-2 mb-2 text-sm font-semibold text-gray-700"><Layers className="w-4 h-4 text-emerald-500" /> Kategori</Label>
-                        <Select value={form.category} onValueChange={(v) => setForm(prev => ({ ...prev, category: v }))}>
+                        <Select value={form.category} onValueChange={(v) => setForm(prev => ({ ...prev, category: v, subcategory: '' }))}>
                           <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                           <SelectContent>{CATEGORY_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
+                      {(() => {
+                        const cat = CATEGORIES.find(c => c.value === form.category);
+                        if (!cat || cat.subcategories.length === 0) return null;
+                        return (
+                          <div>
+                            <Label className="flex items-center gap-2 mb-2 text-sm font-semibold text-gray-700"><Layers className="w-4 h-4 text-emerald-400" /> Subkategori</Label>
+                            <Select value={form.subcategory} onValueChange={(v) => setForm(prev => ({ ...prev, subcategory: v }))}>
+                              <SelectTrigger className="rounded-xl"><SelectValue placeholder="Pilih subkategori..." /></SelectTrigger>
+                              <SelectContent>
+                                {cat.subcategories.map(sub => <SelectItem key={sub.value} value={sub.value}>{sub.label}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })()}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label className="flex items-center gap-2 mb-2 text-sm font-semibold text-gray-700"><DollarSign className="w-4 h-4 text-emerald-500" /> Harga Jual *</Label>

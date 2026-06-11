@@ -16,7 +16,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_001', name: 'Kaos Polos Premium Cotton 1 Lusin', price: 185000, originalPrice: 350000,
     image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop',
-    category: 'fashion', description: 'Kaos polos premium cotton combed 30s, jahitan rantai double needle. 1 lusin isi 12 pcs campuran warna.',
+    category: 'fashion-pria',
+    subcategory: 'kaos',
+    description: 'Kaos polos premium cotton combed 30s, jahitan rantai double needle. 1 lusin isi 12 pcs campuran warna.',
     minOrder: 12, stock: 8500, sold: 4521, rating: 4.9,
     variants: '["S","M","L","XL","XXL"]',
     variantGroups: '[{"name":"Ukuran","options":[{"name":"S"},{"name":"M"},{"name":"L"},{"name":"XL"},{"name":"XXL"}]}]',
@@ -24,7 +26,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_002', name: 'Set Panci Masak Stainless Steel', price: 289000, originalPrice: 550000,
     image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&h=300&fit=crop',
-    category: 'rumah', description: 'Set panci masak stainless steel 5 lapis isi 4 pcs dengan tutup kaca. Bahan food grade.',
+    category: 'rumah-tangga',
+    subcategory: 'peralatan-dapur',
+    description: 'Set panci masak stainless steel 5 lapis isi 4 pcs dengan tutup kaca. Bahan food grade.',
     minOrder: 3, stock: 600, sold: 892, rating: 4.8,
     variants: '["4 Pcs","6 Pcs","8 Pcs"]',
     variantGroups: '[{"name":"Paket","options":[{"name":"4 Pcs"},{"name":"6 Pcs"},{"name":"8 Pcs"}]}]',
@@ -32,7 +36,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_003', name: 'Smartwatch Sport Waterproof', price: 199000, originalPrice: 450000,
     image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop',
-    category: 'elektronik', description: 'Smartwatch sport waterproof IP68 dengan layar AMOLED 1.69 inch. Dilengkapi heart rate monitor.',
+    category: 'elektronik',
+    subcategory: 'smartwatch',
+    description: 'Smartwatch sport waterproof IP68 dengan layar AMOLED 1.69 inch. Dilengkapi heart rate monitor.',
     minOrder: 5, stock: 3200, sold: 2341, rating: 4.7,
     variants: '["Hitam","Putih","Hijau"]',
     variantGroups: '[{"name":"Warna","options":[{"name":"Hitam"},{"name":"Putih"},{"name":"Hijau"}]}]',
@@ -40,7 +46,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_004', name: 'Rok Plisket Wanita 1 Paket', price: 125000, originalPrice: 280000,
     image: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=300&h=300&fit=crop',
-    category: 'fashion', description: 'Rok plisket wanita premium bahan crepe. 1 paket isi 6 pcs campuran warna.',
+    category: 'fashion-wanita',
+    subcategory: 'rok',
+    description: 'Rok plisket wanita premium bahan crepe. 1 paket isi 6 pcs campuran warna.',
     minOrder: 6, stock: 5500, sold: 1876, rating: 4.9,
     variants: '["S","M","L","XL"]',
     variantGroups: '[{"name":"Ukuran","options":[{"name":"S"},{"name":"M"},{"name":"L"},{"name":"XL"}]}]',
@@ -48,7 +56,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_005', name: 'Blender Philips 2L 350Watt', price: 245000, originalPrice: 420000,
     image: 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=300&h=300&fit=crop',
-    category: 'elektronik', description: 'Blender Philips kapasitas 2L dengan motor 350Watt. Mata pisau 6 sisi anti karat.',
+    category: 'elektronik',
+    subcategory: 'aksesoris-elektronik',
+    description: 'Blender Philips kapasitas 2L dengan motor 350Watt. Mata pisau 6 sisi anti karat.',
     minOrder: 3, stock: 450, sold: 654, rating: 4.6,
     variants: '["Putih","Hitam"]',
     variantGroups: '[{"name":"Warna","options":[{"name":"Putih"},{"name":"Hitam"}]}]',
@@ -56,7 +66,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_006', name: 'Kemeja Batik Pria Modern', price: 145000, originalPrice: 295000,
     image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=300&h=300&fit=crop',
-    category: 'fashion', description: 'Kemeja batik pria modern dengan motif batik tulis asli Pekalongan. Bahan katun premium.',
+    category: 'fashion-pria',
+    subcategory: 'kemeja',
+    description: 'Kemeja batik pria modern dengan motif batik tulis asli Pekalongan. Bahan katun premium.',
     minOrder: 6, stock: 4200, sold: 3456, rating: 4.7,
     variants: '["S","M","L","XL","XXL"]',
     variantGroups: '[{"name":"Ukuran","options":[{"name":"S"},{"name":"M"},{"name":"L"},{"name":"XL"},{"name":"XXL"}]}]',
@@ -64,7 +76,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_007', name: 'Speaker Bluetooth Portable', price: 165000, originalPrice: 350000,
     image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop',
-    category: 'elektronik', description: 'Speaker bluetooth portable 20W, IPX7 waterproof, baterai 15 jam.',
+    category: 'elektronik',
+    subcategory: 'audio-speaker',
+    description: 'Speaker bluetooth portable 20W, IPX7 waterproof, baterai 15 jam.',
     minOrder: 5, stock: 3800, sold: 2109, rating: 4.5,
     variants: '["Hitam","Merah","Biru"]',
     variantGroups: '[{"name":"Warna","options":[{"name":"Hitam"},{"name":"Merah"},{"name":"Biru"}]}]',
@@ -72,7 +86,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_008', name: 'Hijab Segi Empat Premium Voal', price: 85000, originalPrice: 180000,
     image: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=300&h=300&fit=crop',
-    category: 'fashion', description: 'Hijab segi empat premium bahan voal super. 1 paket isi 12 pcs campuran warna.',
+    category: 'fashion-wanita',
+    subcategory: 'hijab',
+    description: 'Hijab segi empat premium bahan voal super. 1 paket isi 12 pcs campuran warna.',
     minOrder: 12, stock: 12000, sold: 7890, rating: 4.9,
     variants: '["Campur Warna","Pastel Set","Dark Set"]',
     variantGroups: '[{"name":"Varian","options":[{"name":"Campur Warna"},{"name":"Pastel Set"},{"name":"Dark Set"}]}]',
@@ -80,7 +96,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_009', name: 'Powerbank 20000mAh Fast Charging', price: 125000, originalPrice: 280000,
     image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=300&h=300&fit=crop',
-    category: 'elektronik', description: 'Powerbank 20000mAh dengan fast charging 22.5W. 3 port output + LED display.',
+    category: 'elektronik',
+    subcategory: 'aksesoris-elektronik',
+    description: 'Powerbank 20000mAh dengan fast charging 22.5W. 3 port output + LED display.',
     minOrder: 10, stock: 8900, sold: 5432, rating: 4.8,
     variants: '["Hitam","Putih"]',
     variantGroups: '[{"name":"Warna","options":[{"name":"Hitam"},{"name":"Putih"}]}]',
@@ -88,7 +106,9 @@ const DEMO_PRODUCTS = [
   {
     id: 'prod_010', name: 'Bedcover Set King Size', price: 325000, originalPrice: 650000,
     image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=300&h=300&fit=crop',
-    category: 'rumah', description: 'Bedcover set king size dengan bahan katun Jepang premium. Isi: bedcover + sarung bantal + sarung guling.',
+    category: 'rumah-tangga',
+    subcategory: 'furniture',
+    description: 'Bedcover set king size dengan bahan katun Jepang premium. Isi: bedcover + sarung bantal + sarung guling.',
     minOrder: 3, stock: 900, sold: 567, rating: 4.9,
     variants: '["Putih","Krem","Abu-abu"]',
     variantGroups: '[{"name":"Warna","options":[{"name":"Putih"},{"name":"Krem"},{"name":"Abu-abu"}]}]',
@@ -141,13 +161,13 @@ export async function GET() {
           await db.$executeRawUnsafe(`
             INSERT OR IGNORE INTO "Product" (
               "id", "sellerId", "name", "price", "originalPrice", "images",
-              "category", "description", "minOrder", "stock", "location",
+              "category", "subcategory", "description", "minOrder", "stock", "location",
               "variants", "variantGroups", "sellerName", "sellerRating", "rating",
               "sold", "status", "createdAt", "updatedAt"
             ) VALUES (
               '${p.id}', '${sellerId}', '${p.name.replace(/'/g, "''")}',
               ${p.price}, ${p.originalPrice}, '${JSON.stringify([p.image])}',
-              '${p.category}', '${p.description.replace(/'/g, "''")}',
+              '${p.category}', '${p.subcategory}', '${p.description.replace(/'/g, "''")}',
               ${p.minOrder}, ${p.stock}, '${sellerCity}',
               '${p.variants.replace(/'/g, "''")}', '${p.variantGroups.replace(/'/g, "''")}',
               '${sellerName}', 4.8, ${p.rating},

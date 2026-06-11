@@ -38,9 +38,7 @@ const SORT_OPTIONS = [
 
 const FILTER_TABS = [
   { key: 'all', label: 'Semua' },
-  { key: 'fashion', label: 'Fashion' },
-  { key: 'elektronik', label: 'Elektronik' },
-  { key: 'rumah', label: 'Rumah' },
+  ...CATEGORIES.slice(0, 8).map(c => ({ key: c.value, label: c.label })),
 ];
 
 export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
@@ -51,10 +49,12 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
   const [mobileSearch, setMobileSearch] = useState('');
 
   const activeCategory = useUIStore((s) => s.activeCategory);
+  const activeSubcategory = useUIStore((s) => s.activeSubcategory);
   const sortBy = useUIStore((s) => s.sortBy);
   const currentPage = useUIStore((s) => s.currentPage);
   const searchQuery = useUIStore((s) => s.searchQuery);
   const setActiveCategory = useUIStore((s) => s.setActiveCategory);
+  const setActiveSubcategory = useUIStore((s) => s.setActiveSubcategory);
   const setSortBy = useUIStore((s) => s.setSortBy);
   const setCurrentPage = useUIStore((s) => s.setCurrentPage);
   const setSearchQuery = useUIStore((s) => s.setSearchQuery);
@@ -71,7 +71,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
   const sharedLoading = useProductStore((s) => s.productsLoading);
 
   // Check if we're using default filters (can use shared store data)
-  const isDefaultView = activeCategory === 'all' && !sortBy && !searchQuery && currentPage === 1;
+  const isDefaultView = activeCategory === 'all' && !activeSubcategory && !sortBy && !searchQuery && currentPage === 1;
 
   const fetchProducts = useCallback(async () => {
     // For default view, use shared store data (already fetched once)
@@ -87,6 +87,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
     try {
       const params = new URLSearchParams();
       if (activeCategory !== 'all') params.set('category', activeCategory);
+      if (activeSubcategory) params.set('subcategory', activeSubcategory);
       if (sortBy) params.set('sortBy', sortBy);
       if (searchQuery) params.set('search', searchQuery);
       params.set('page', currentPage.toString());
@@ -104,7 +105,7 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, sortBy, searchQuery, currentPage, isDefaultView, sharedProducts]);
+  }, [activeCategory, activeSubcategory, sortBy, searchQuery, currentPage, isDefaultView, sharedProducts]);
 
   useEffect(() => {
     fetchProducts();
@@ -226,12 +227,48 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
                     ? 'bg-emerald-500 text-white shadow-md'
                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                 }`}
-                onClick={() => setActiveCategory(tab.key)}
+                onClick={() => {
+                  setActiveCategory(tab.key);
+                  if (tab.key === 'all') setActiveSubcategory('');
+                }}
               >
                 {tab.label}
               </button>
             ))}
           </div>
+
+          {/* Subcategory Filter Pills */}
+          {activeCategory !== 'all' && (() => {
+            const cat = CATEGORIES.find(c => c.value === activeCategory);
+            if (!cat || cat.subcategories.length === 0) return null;
+            return (
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                <button
+                  className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all ${
+                    !activeSubcategory
+                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                  onClick={() => setActiveSubcategory('')}
+                >
+                  Semua
+                </button>
+                {cat.subcategories.map((sub) => (
+                  <button
+                    key={sub.value}
+                    className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-all ${
+                      activeSubcategory === sub.value
+                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                    onClick={() => setActiveSubcategory(sub.value)}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Product Grid */}

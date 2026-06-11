@@ -10,6 +10,7 @@ export async function GET(request: Request) {
 
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
+    const subcategory = searchParams.get('subcategory') || '';
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
     const sortBy = searchParams.get('sortBy') || 'newest';
@@ -30,6 +31,10 @@ export async function GET(request: Request) {
 
     if (category) {
       where.category = category;
+    }
+
+    if (subcategory) {
+      where.subcategory = subcategory;
     }
 
     if (sellerId) {
@@ -120,6 +125,7 @@ export async function GET(request: Request) {
         originalPrice: rest.originalPrice,
         discount,
         category: rest.category,
+        subcategory: rest.subcategory,
         images,
         minOrder: rest.minOrder,
         stock: rest.stock,
@@ -187,6 +193,7 @@ export async function POST(request: Request) {
       price,
       originalPrice,
       category,
+      subcategory,
       images,
       minOrder,
       stock,
@@ -223,6 +230,7 @@ export async function POST(request: Request) {
         price: parseInt(String(price), 10),
         originalPrice: originalPrice ? parseInt(String(originalPrice), 10) : 0,
         category: category.trim(),
+        subcategory: subcategory?.trim() || '',
         images: imagesJson,
         minOrder: minOrder ? parseInt(String(minOrder), 10) : 1,
         stock: stock ? parseInt(String(stock), 10) : 0,

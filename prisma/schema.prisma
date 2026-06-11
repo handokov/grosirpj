@@ -74,6 +74,7 @@ model Product {
   price          Int
   originalPrice  Int           @default(0)
   category       String
+  subcategory    String        @default("")
   images         String        @default("[]") // JSON array of URLs
   minOrder       Int           @default(1)
   stock          Int           @default(0)
@@ -96,6 +97,7 @@ model Product {
   productViews   ProductView[]
 
   @@index([category])
+  @@index([subcategory])
   @@index([sellerId])
   @@index([active])
 }

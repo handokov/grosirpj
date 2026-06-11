@@ -359,52 +359,80 @@ function QuickAccess() {
 // ===== CATEGORY SECTION =====
 function CategorySection() {
   const setActiveCategory = useUIStore((s) => s.setActiveCategory);
+  const setActiveSubcategory = useUIStore((s) => s.setActiveSubcategory);
+  const activeCategory = useUIStore((s) => s.activeCategory);
+  const activeSubcategory = useUIStore((s) => s.activeSubcategory);
 
-  const categoryItems = [
-    { label: 'Fashion Pria', icon: 'M15 11l-3 3-3-3', color: 'from-blue-500 to-blue-600' },
-    { label: 'Fashion Wanita', icon: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z', color: 'from-pink-500 to-pink-600' },
-    { label: 'Elektronik', icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5', color: 'from-cyan-500 to-cyan-600' },
-    { label: 'Rumah Tangga', icon: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', color: 'from-amber-500 to-amber-600' },
-    { label: 'Kecantikan', icon: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z', color: 'from-purple-500 to-purple-600' },
-    { label: 'Kesehatan', icon: 'M22 12h-4l-3 9L9 3l-3 9H2', color: 'from-green-500 to-green-600' },
-    { label: 'Olahraga', icon: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', color: 'from-orange-500 to-orange-600' },
-    { label: 'Mainan', icon: 'M12 2L2 7l10 5 10-5-10-5z', color: 'from-red-500 to-red-600' },
-  ];
+  const activeCatData = CATEGORIES.find((c) => c.value === activeCategory);
+
+  const handleCategoryClick = (catValue: string) => {
+    if (activeCategory === catValue) {
+      // Deselect: reset to 'all' and clear subcategory
+      setActiveCategory('all');
+      setActiveSubcategory('');
+    } else {
+      setActiveCategory(catValue);
+      setActiveSubcategory('');
+    }
+    document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSubcategoryClick = (catValue: string, subValue: string) => {
+    if (activeSubcategory === subValue && activeCategory === catValue) {
+      // Deselect subcategory
+      setActiveSubcategory('');
+    } else {
+      setActiveCategory(catValue);
+      setActiveSubcategory(subValue);
+    }
+    document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
-    <section id="categories" className="py-16 bg-white">
+    <section id="categories" className="py-3 bg-white border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 font-display">Kategori Populer</h2>
-            <p className="text-gray-500 mt-1">Temukan produk berdasarkan kategori favorit</p>
+        {/* Category pills row */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+          {CATEGORIES.map((cat) => {
+            const isActive = activeCategory === cat.value;
+            return (
+              <button
+                key={cat.value}
+                onClick={() => handleCategoryClick(cat.value)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-300 hover:text-emerald-600'
+                }`}
+              >
+                <span className="text-base leading-none">{cat.emoji}</span>
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Subcategory pills row — only when a category is active */}
+        {activeCatData && activeCategory !== 'all' && (
+          <div className="flex gap-1.5 overflow-x-auto pt-2 pb-1 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+            {activeCatData.subcategories.map((sub) => {
+              const isActive = activeSubcategory === sub.value;
+              return (
+                <button
+                  key={sub.value}
+                  onClick={() => handleSubcategoryClick(activeCatData.value, sub.value)}
+                  className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                    isActive
+                      ? 'bg-emerald-500 text-white shadow-sm'
+                      : 'bg-gray-50 text-gray-500 border border-gray-150 hover:border-emerald-300 hover:text-emerald-600'
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              );
+            })}
           </div>
-          <a className="hidden md:flex items-center gap-2 text-emerald-600 font-medium hover:text-emerald-700 transition-colors cursor-pointer">
-            Lihat Semua <ChevronRight className="w-4 h-4" />
-          </a>
-        </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-          {categoryItems.map((cat) => (
-            <a
-              key={cat.label}
-              href="#"
-              className="category-card flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-all hover:scale-105"
-              onClick={(e) => {
-                e.preventDefault();
-                const catValue = cat.label.toLowerCase().replace(/\s+/g, '');
-                setActiveCategory(catValue === 'fashionpria' || catValue === 'fashionwanita' ? 'fashion' : catValue === 'rumahtangga' ? 'rumah' : catValue);
-                document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              <div className={`category-icon w-14 h-14 bg-gradient-to-br ${cat.color} rounded-2xl flex items-center justify-center shadow-lg transition-transform hover:scale-110 hover:rotate-3`}>
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={cat.icon} />
-                </svg>
-              </div>
-              <span className="text-xs font-medium text-gray-700 text-center">{cat.label}</span>
-            </a>
-          ))}
-        </div>
+        )}
       </div>
     </section>
   );
