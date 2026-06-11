@@ -245,8 +245,13 @@ export function ChatPanel() {
         
         // Re-ensure scroll after everything is loaded
         // (handles Sheet animation timing issues)
+        // Use delayed scroll retries because the Sheet open animation
+        // takes 500ms, and when navigating from notification panel,
+        // both sheets transition simultaneously making timing unpredictable
         shouldScrollToBottomRef.current = true;
         scrollToBottom();
+        scrollToBottom(600);
+        scrollToBottom(900);
       } else {
         await fetchConversations();
       }
@@ -321,8 +326,8 @@ export function ChatPanel() {
           container.scrollTop = container.scrollHeight;
         }
       });
-      // Delayed retry for Sheet open animation (~300ms)
-      const timeout = setTimeout(() => {
+      // Retry after Sheet open animation completes (500ms animation + buffer)
+      const timeout1 = setTimeout(() => {
         if (shouldScrollToBottomRef.current) {
           messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
           const container = messagesContainerRef.current;
@@ -330,10 +335,21 @@ export function ChatPanel() {
             container.scrollTop = container.scrollHeight;
           }
         }
-      }, 400);
+      }, 600);
+      // Safety-net retry for cases with concurrent sheet transitions (notif → chat)
+      const timeout2 = setTimeout(() => {
+        if (shouldScrollToBottomRef.current) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+          const container = messagesContainerRef.current;
+          if (container) {
+            container.scrollTop = container.scrollHeight;
+          }
+        }
+      }, 900);
       return () => {
         cancelAnimationFrame(raf);
-        clearTimeout(timeout);
+        clearTimeout(timeout1);
+        clearTimeout(timeout2);
       };
     }
   }, [messages]);
