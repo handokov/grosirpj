@@ -39,6 +39,36 @@ const DEMO_ACCOUNTS = [
   { email: 'seller1@grosirpj.id', password: 'password123', label: 'Seller (CV Garment)', icon: '🏪' },
 ];
 
+// LocalStorage cache keys for instant chat rendering
+const LS_CONV_KEY = 'grosirpj_chat_conv';
+const LS_CONV_TS_KEY = 'grosirpj_chat_conv_ts';
+
+function loadCachedConversations(userId: string): Conversation[] | null {
+  try {
+    const ts = localStorage.getItem(`${LS_CONV_TS_KEY}_${userId}`);
+    const data = localStorage.getItem(`${LS_CONV_KEY}_${userId}`);
+    if (!ts || !data) return null;
+    const timestamp = parseInt(ts, 10);
+    // Use cache if less than 2 minutes old
+    if (Date.now() - timestamp < 120_000) {
+      const convs = JSON.parse(data);
+      if (Array.isArray(convs)) return convs;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveConversationsToCache(userId: string, convs: Conversation[]) {
+  try {
+    localStorage.setItem(`${LS_CONV_KEY}_${userId}`, JSON.stringify(convs));
+    localStorage.setItem(`${LS_CONV_TS_KEY}_${userId}`, Date.now().toString());
+  } catch {
+    // localStorage full or unavailable
+  }
+}
+
 export function ChatPanel() {
   const chatOpen = useUIStore((s) => s.chatOpen);
   const chatWithUserId = useUIStore((s) => s.chatWithUserId);
@@ -63,7 +93,8 @@ export function ChatPanel() {
   const activePartnerRef = useRef<string | null>(null);
   const sendingRef = useRef(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const latestFetchIdRef = useRef(0); // Track the latest fetch to prevent stale data
+  const latestFetchIdRef = useRef(0);
+  const initDoneRef = useRef(false); // Track if init has completed
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -84,7 +115,7 @@ export function ChatPanel() {
     }
   }, [user]);
 
-  // Fetch conversations
+  // Fetch conversations (lightweight, for polling updates)
   const fetchConversations = useCallback(async () => {
     if (!user) return;
     try {
@@ -95,30 +126,26 @@ export function ChatPanel() {
         setConversations(convs);
         const total = convs.reduce((sum: number, c: Conversation) => sum + c.unreadCount, 0);
         setUnreadChatCount(total);
+        saveConversationsToCache(user.id, convs);
       }
     } catch (err) {
       console.error('Failed to fetch conversations:', err);
     }
   }, [user, setUnreadChatCount]);
 
-  // Fetch messages with a specific partner
-  // Uses fetchId to prevent stale data from overwriting current partner's messages
+  // Fetch messages with a specific partner (for polling updates)
   const fetchMessages = useCallback(async (partnerId: string) => {
     if (!user) return;
-    const fetchId = ++latestFetchIdRef.current; // Increment to track this fetch
+    const fetchId = ++latestFetchIdRef.current;
     try {
       const res = await fetch(`/api/chat?userId=${user.id}&otherUserId=${partnerId}`);
       const data = await res.json();
       if (res.ok) {
         const serverMessages: ChatMessage[] = data.messages || [];
-        
-        // Only apply if this is still the latest fetch AND partner hasn't changed
         if (fetchId === latestFetchIdRef.current && activePartnerRef.current === partnerId) {
           setMessages((prev) => {
-            // Preserve optimistic messages that haven't been confirmed by server yet
             const optimisticMsgs = prev.filter((m) => m.isOptimistic);
             if (optimisticMsgs.length === 0) return serverMessages;
-            // Remove optimistic messages that have been confirmed by server
             const stillPending = optimisticMsgs.filter((opt) => {
               return !serverMessages.some(
                 (srv) => srv.senderId === opt.senderId && srv.message === opt.message
@@ -137,14 +164,12 @@ export function ChatPanel() {
   // Send message with optimistic update
   const handleSendMessage = useCallback(async () => {
     if (!user || !activePartnerRef.current || !messageInput.trim() || sendingRef.current) return;
-    
+
     const currentPartner = activePartnerRef.current;
     const text = messageInput.trim();
     sendingRef.current = true;
 
     const optimisticId = `temp-${Date.now()}`;
-
-    // Optimistic: add message to UI immediately
     const optimisticMsg: ChatMessage = {
       id: optimisticId,
       message: text,
@@ -161,7 +186,6 @@ export function ChatPanel() {
     setMessageInput('');
     shouldScrollToBottomRef.current = true;
 
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -178,23 +202,19 @@ export function ChatPanel() {
       });
 
       if (res.ok) {
-        // Refresh from server to get the real message with proper ID
         await Promise.all([
           fetchMessages(currentPartner),
           fetchConversations(),
         ]);
       } else {
-        // Remove optimistic message on failure
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-        setMessageInput(text); // restore input
+        setMessageInput(text);
       }
     } catch (err) {
-      // Remove optimistic message on failure
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-      setMessageInput(text); // restore input
+      setMessageInput(text);
       console.error('Failed to send message:', err);
     } finally {
-      // Always reset sending flag
       sendingRef.current = false;
     }
   }, [user, messageInput, fetchMessages, fetchConversations]);
@@ -219,51 +239,82 @@ export function ChatPanel() {
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   };
 
-  // Initial load and auto-select partner
+  // ===== OPTIMIZED INITIAL LOAD =====
+  // Uses /api/chat/init (1 request instead of 4) + localStorage cache for instant rendering
   useEffect(() => {
     if (!chatOpen || !user) return;
-    
-    const loadData = async () => {
+
+    const initChat = async () => {
+      // 1. Try to show cached conversations IMMEDIATELY
+      if (user) {
+        const cached = loadCachedConversations(user.id);
+        if (cached && cached.length > 0) {
+          setConversations(cached);
+          const total = cached.reduce((sum, c) => sum + c.unreadCount, 0);
+          setUnreadChatCount(total);
+        }
+      }
+
+      // 2. If opening with a specific partner, show loading for messages
       if (chatWithUserId) {
-        // Clear old messages immediately when opening with specific partner
         setMessages([]);
         setActivePartner(chatWithUserId);
-        // IMPORTANT: Set scroll flag BEFORE fetching so the scroll effect
-        // picks it up when messages arrive. Previously this was set after
-        // the fetch, which meant the scroll effect ran with ref=false.
         shouldScrollToBottomRef.current = true;
         setMessagesLoading(true);
-        
-        await Promise.all([
-          fetchMessages(chatWithUserId),
-          fetchConversations(),
-        ]);
-        
+      }
+
+      // 3. Single combined API call for everything
+      try {
+        const res = await fetch('/api/chat/init', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            partnerId: chatWithUserId || null,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const convs = data.conversations || [];
+          const msgs = data.messages || [];
+
+          setConversations(convs);
+          setUnreadChatCount(data.totalUnread || 0);
+          saveConversationsToCache(user.id, convs);
+
+          // Only set messages if we requested for a specific partner
+          if (chatWithUserId && activePartnerRef.current === chatWithUserId) {
+            // Only overwrite if no optimistic messages pending
+            setMessages((prev) => {
+              const optimisticMsgs = prev.filter((m) => m.isOptimistic);
+              if (optimisticMsgs.length === 0) return msgs;
+              return [...msgs, ...optimisticMsgs];
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Chat init failed:', err);
+      } finally {
         setMessagesLoading(false);
-        await markAsRead(chatWithUserId);
-        fetchConversations();
-        
-        // Re-ensure scroll after everything is loaded
-        // (handles Sheet animation timing issues)
-        // Use delayed scroll retries because the Sheet open animation
-        // takes 500ms, and when navigating from notification panel,
-        // both sheets transition simultaneously making timing unpredictable
-        shouldScrollToBottomRef.current = true;
-        scrollToBottom();
-        scrollToBottom(600);
-        scrollToBottom(900);
-      } else {
-        await fetchConversations();
+        initDoneRef.current = true;
+
+        // Ensure scroll to bottom after everything is loaded
+        if (chatWithUserId) {
+          shouldScrollToBottomRef.current = true;
+          scrollToBottom();
+          scrollToBottom(400);
+          scrollToBottom(800);
+        }
       }
     };
-    loadData();
+
+    initChat();
   }, [chatOpen, user, chatWithUserId]); // Remove fetch functions from deps to avoid re-triggering
 
-  // Polling for active conversation (5s interval — 60% less API calls vs 2s)
+  // Polling for active conversation (5s interval)
   useEffect(() => {
-    if (chatOpen && user && activePartner) {
+    if (chatOpen && user && activePartner && initDoneRef.current) {
       const doPoll = async () => {
-        // Skip polling if tab is not visible
         if (document.visibilityState !== 'visible') return;
         const currentPartner = activePartnerRef.current;
         if (!currentPartner) return;
@@ -275,8 +326,7 @@ export function ChatPanel() {
         ]);
       };
 
-      // Immediate first poll
-      doPoll();
+      // First poll after 5s (NOT immediately — init already loaded data)
       pollIntervalRef.current = setInterval(doPoll, 5000);
     }
     return () => {
@@ -285,22 +335,21 @@ export function ChatPanel() {
         pollIntervalRef.current = null;
       }
     };
-  }, [chatOpen, user, activePartner]); // Remove fetch functions from deps
+  }, [chatOpen, user, activePartner]);
 
-  // Background polling for unread count when chat is closed (30s, respects visibility)
+  // Background polling for unread count when chat is closed (30s)
   useEffect(() => {
     if (!chatOpen && user) {
       const doPoll = () => {
-        // Skip if tab is not visible — saves battery and API calls
         if (document.visibilityState !== 'visible') return;
         fetchConversations();
       };
       const interval = setInterval(doPoll, 30000);
       return () => clearInterval(interval);
     }
-  }, [chatOpen, user]); // Remove fetchConversations from deps
+  }, [chatOpen, user]);
 
-  // Robust scroll-to-bottom helper — tries scrollIntoView AND direct scrollTop
+  // Robust scroll-to-bottom helper
   const scrollToBottom = useCallback((delay = 0) => {
     const doScroll = () => {
       const container = messagesContainerRef.current;
@@ -308,7 +357,6 @@ export function ChatPanel() {
       if (endRef) {
         endRef.scrollIntoView({ behavior: 'instant' });
       }
-      // Direct scrollTop as fallback (more reliable during animations)
       if (container) {
         container.scrollTop = container.scrollHeight;
       }
@@ -326,16 +374,13 @@ export function ChatPanel() {
     if (messages.length === 0) return;
 
     if (shouldScrollToBottomRef.current) {
-      // Immediate scroll attempt via rAF
       const raf = requestAnimationFrame(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
-        // Also set scrollTop directly as fallback
         const container = messagesContainerRef.current;
         if (container) {
           container.scrollTop = container.scrollHeight;
         }
       });
-      // Retry after Sheet open animation completes (500ms animation + buffer)
       const timeout1 = setTimeout(() => {
         if (shouldScrollToBottomRef.current) {
           messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
@@ -345,7 +390,6 @@ export function ChatPanel() {
           }
         }
       }, 600);
-      // Safety-net retry for cases with concurrent sheet transitions (notif → chat)
       const timeout2 = setTimeout(() => {
         if (shouldScrollToBottomRef.current) {
           messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
@@ -368,30 +412,24 @@ export function ChatPanel() {
     const container = messagesContainerRef.current;
     if (!container) return;
     const { scrollTop, scrollHeight, clientHeight } = container;
-    // Near bottom = within 150px
     shouldScrollToBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
   }, []);
 
-  // Select a partner — clear old messages FIRST, then fetch new
+  // Select a partner — use lightweight fetch (not full init)
   const handleSelectPartner = async (partnerId: string) => {
-    // 1. Clear messages immediately to prevent showing old partner's chat
     setMessages([]);
     setActivePartner(partnerId);
     shouldScrollToBottomRef.current = true;
     setMessagesLoading(true);
-    
-    // 2. Fetch new partner's messages
+
     await Promise.all([
       fetchMessages(partnerId),
       markAsRead(partnerId),
     ]);
-    
+
     setMessagesLoading(false);
-    
-    // 3. Refresh conversations for unread counts
     fetchConversations();
-    
-    // 4. Ensure scroll to bottom after render (handles Sheet animation)
+
     shouldScrollToBottomRef.current = true;
     scrollToBottom();
   };
@@ -403,9 +441,10 @@ export function ChatPanel() {
       setActivePartner(null);
       setMessageInput('');
       setMessagesLoading(false);
-      sendingRef.current = false; // Reset sending flag
+      sendingRef.current = false;
       latestFetchIdRef.current = 0;
-      shouldScrollToBottomRef.current = true; // Reset for next open
+      initDoneRef.current = false;
+      shouldScrollToBottomRef.current = true;
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
@@ -573,7 +612,7 @@ export function ChatPanel() {
                     <MessageCircle className="w-12 h-12 text-gray-300 mb-4" />
                     <h3 className="font-semibold text-gray-800 mb-1">Belum Ada Chat</h3>
                     <p className="text-sm text-gray-400 mb-4">{isSeller ? 'Chat dari pembeli akan muncul di sini' : 'Chat seller dari halaman produk untuk mulai percakapan'}</p>
-                    
+
                     <div className="w-full max-w-xs space-y-2 mt-2">
                       <p className="text-xs text-gray-400">Login dengan akun demo untuk melihat contoh chat:</p>
                       {DEMO_ACCOUNTS.map((account) => (
