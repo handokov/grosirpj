@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     await ensureDb()
 
     const body = await request.json()
-    const { id, sellerId, name, price, originalPrice, images, category, subcategory, description,
+    const { id, sellerId, name, price, originalPrice, images, category, description,
             minOrder, stock, location, variants, variantGroups, sellerName, status } = body
 
     if (!sellerId || !name || !price) {
@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
           "originalPrice" = ?,
           "images" = ?,
           "category" = ?,
-          "subcategory" = ?,
           "description" = ?,
           "minOrder" = ?,
           "stock" = ?,
@@ -65,8 +64,8 @@ export async function POST(request: NextRequest) {
           "status" = ?,
           "updatedAt" = CURRENT_TIMESTAMP
         WHERE "id" = ? AND "sellerId" = ?
-      `, name, Number(price), Number(originalPrice || 0), imagesJson, category || 'elektronik',
-         subcategory || '', description || '', Number(minOrder || 1), Number(stock || 100), location || 'Jakarta',
+      `, name, Number(price), Number(originalPrice || 0), imagesJson, category || 'fashion',
+         description || '', Number(minOrder || 1), Number(stock || 100), location || 'Jakarta',
          variantsJson, variantGroupsJson, status || 'active', id, sellerId)
 
       return NextResponse.json({ success: true, productId: id })
@@ -76,17 +75,17 @@ export async function POST(request: NextRequest) {
       await db.$executeRawUnsafe(`
         INSERT INTO "Product" (
           "id", "sellerId", "name", "price", "originalPrice", "images",
-          "category", "subcategory", "description", "minOrder", "stock", "location",
+          "category", "description", "minOrder", "stock", "location",
           "variants", "variantGroups", "sellerName", "sellerRating", "rating",
           "sold", "status", "createdAt", "updatedAt"
         ) VALUES (
           ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
           ?, ?, ?, 4.5, 4.5,
           0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
       `, productId, sellerId, name, Number(price), Number(originalPrice || 0), imagesJson,
-         category || 'elektronik', subcategory || '', description || '', Number(minOrder || 1), Number(stock || 100),
+         category || 'fashion', description || '', Number(minOrder || 1), Number(stock || 100),
          location || 'Jakarta', variantsJson, variantGroupsJson, sellerName || '', status || 'active')
 
       return NextResponse.json({ success: true, productId })

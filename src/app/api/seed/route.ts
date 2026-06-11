@@ -213,14 +213,13 @@ async function seedDatabase(force = false) {
   const productsData = [
     // ===== SELLER 1 - CV Garment Prima (17 products) =====
 
-    // FASHION (8 products from seller1: 5 pria, 3 wanita)
+    // FASHION (8 products from seller1)
     {
       name: 'Kaos Polos Premium Cotton Combed 30s',
       description: 'Kaos polos premium berbahan cotton combed 30s, nyaman dipakai sehari-hari. Tersedia dalam berbagai ukuran dan warna. Cocok untuk reseller dan sablon. Minim pilling, adem dan menyerap keringat dengan baik.',
       price: 35000,
       originalPrice: 50000,
-      category: 'fashion-pria',
-      subcategory: 'kaos',
+      category: 'fashion',
       images: JSON.stringify([img(FASHION_IMGS[0]), img(FASHION_IMGS[1])]),
       minOrder: 12,
       stock: 500,
@@ -239,8 +238,7 @@ async function seedDatabase(force = false) {
       description: 'Kemeja batik pria lengan panjang dengan motif klasik Indonesia. Bahan katun premium yang halus dan nyaman. Cocok untuk acara formal maupun kasual. Jahitan rapi dan kuat.',
       price: 85000,
       originalPrice: 120000,
-      category: 'fashion-pria',
-      subcategory: 'kemeja',
+      category: 'fashion',
       images: JSON.stringify([img(FASHION_IMGS[2]), img(FASHION_IMGS[3])]),
       minOrder: 6,
       stock: 200,
@@ -259,8 +257,7 @@ async function seedDatabase(force = false) {
       description: 'Celana jeans slim fit pria dengan bahan denim stretch yang nyaman. Potongan modern yang mengikuti kontur tubuh tanpa terlalu ketat. Cocok untuk berbagai kesempatan.',
       price: 110000,
       originalPrice: 165000,
-      category: 'fashion-pria',
-      subcategory: 'celana',
+      category: 'fashion',
       images: JSON.stringify([img(FASHION_IMGS[4])]),
       minOrder: 6,
       stock: 300,
@@ -279,8 +276,7 @@ async function seedDatabase(force = false) {
       description: 'Gaun muslimah premium dengan bahan crepe yang jatuh dan tidak menerawang. Desain elegan dengan detail bros di dada. Cocok untuk acara pesta dan kondangan.',
       price: 135000,
       originalPrice: 185000,
-      category: 'fashion-wanita',
-      subcategory: 'dress',
+      category: 'fashion',
       images: JSON.stringify([img(FASHION_IMGS[5]), img(FASHION_IMGS[6])]),
       minOrder: 3,
       stock: 150,
@@ -299,8 +295,7 @@ async function seedDatabase(force = false) {
       description: 'Hoodie oversize unisex dengan bahan fleece tebal 280gsm. Hangat dan nyaman untuk cuaca dingin. Tersedia dalam warna-warna trendi. Cocok untuk reseller fashion.',
       price: 95000,
       originalPrice: 140000,
-      category: 'fashion-pria',
-      subcategory: 'jaket',
+      category: 'fashion',
       images: JSON.stringify([img(FASHION_IMGS[7]), img(FASHION_IMGS[8])]),
       minOrder: 6,
       stock: 250,
@@ -319,8 +314,7 @@ async function seedDatabase(force = false) {
       description: 'Rok plisket untuk anak sekolah dengan bahan premium yang tidak mudah kusut. Lipatan rapi dan tahan lama. Tersedia dalam berbagai ukuran sesuai standar sekolah.',
       price: 42000,
       originalPrice: 55000,
-      category: 'fashion-wanita',
-      subcategory: 'rok',
+      category: 'fashion',
       images: JSON.stringify([img(FASHION_IMGS[1])]),
       minOrder: 24,
       stock: 600,
@@ -338,8 +332,7 @@ async function seedDatabase(force = false) {
       description: 'Jaket parasut waterproof ringan dan tahan air. Dilengkapi hoodie dan saku resleting. Ideal untuk outdoor dan berkendara saat hujan. Compact dan mudah dilipat.',
       price: 75000,
       originalPrice: 110000,
-      category: 'fashion-pria',
-      subcategory: 'jaket',
+      category: 'fashion',
       images: JSON.stringify([img(FASHION_IMGS[4]), img(FASHION_IMGS[7])]),
       minOrder: 12,
       stock: 400,
@@ -358,8 +351,7 @@ async function seedDatabase(force = false) {
       description: 'Daster rumah wanita berbahan katun rayon yang adem dan menyerap keringat. Motif cantik dan trendy. Nyaman untuk harian di rumah.',
       price: 28000,
       originalPrice: 40000,
-      category: 'fashion-wanita',
-      subcategory: 'blouse',
+      category: 'fashion',
       images: JSON.stringify([img(FASHION_IMGS[5])]),
       minOrder: 24,
       stock: 800,
@@ -380,7 +372,6 @@ async function seedDatabase(force = false) {
       price: 25000,
       originalPrice: 35000,
       category: 'kesehatan',
-      subcategory: 'masker',
       images: JSON.stringify([img(KESEHATAN_IMGS[0])]),
       minOrder: 10,
       stock: 1000,
@@ -399,7 +390,6 @@ async function seedDatabase(force = false) {
       price: 45000,
       originalPrice: 65000,
       category: 'kesehatan',
-      subcategory: 'vitamin-suplemen',
       images: JSON.stringify([img(KESEHATAN_IMGS[0])]),
       minOrder: 12,
       stock: 500,
@@ -418,7 +408,6 @@ async function seedDatabase(force = false) {
       price: 55000,
       originalPrice: 85000,
       category: 'kecantikan',
-      subcategory: 'skincare',
       images: JSON.stringify([img(KECANTIKAN_IMGS[0])]),
       minOrder: 12,
       stock: 350,
@@ -437,7 +426,6 @@ async function seedDatabase(force = false) {
       price: 125000,
       originalPrice: 200000,
       category: 'kecantikan',
-      subcategory: 'skincare',
       images: JSON.stringify([img(KECANTIKAN_IMGS[0])]),
       minOrder: 6,
       stock: 200,
@@ -451,14 +439,13 @@ async function seedDatabase(force = false) {
       ],
     },
 
-    // MAKANAN & MINUMAN (2 products from seller1)
+    // MAKANAN (2 products from seller1)
     {
       name: 'Kopi Arabica Gayo Premium 1kg',
       description: 'Kopi arabica Gayo premium dari dataran tinggi Aceh. Roasting medium dengan rasa fruity dan nutty. Aroma harum khas kopi Gayo. Fresh roasted dan dikemas vacuum seal.',
       price: 85000,
       originalPrice: 110000,
-      category: 'makanan-minuman',
-      subcategory: 'kopi-teh',
+      category: 'makanan',
       images: JSON.stringify([img(MAKANAN_IMGS[0])]),
       minOrder: 5,
       stock: 300,
@@ -477,8 +464,7 @@ async function seedDatabase(force = false) {
       description: 'Keripik singkong renyah dengan bumbu pedas original. Digoreng dengan minyak berkualitas tanpa pengawet. Cocok untuk camilan dan oleh-oleh. Harga grosir terjangkau.',
       price: 15000,
       originalPrice: 20000,
-      category: 'makanan-minuman',
-      subcategory: 'makanan-ringan',
+      category: 'makanan',
       images: JSON.stringify([img(MAKANAN_IMGS[0])]),
       minOrder: 24,
       stock: 1000,
@@ -492,14 +478,13 @@ async function seedDatabase(force = false) {
       ],
     },
 
-    // IBU & ANAK (1 product from seller1)
+    // MAINAN (1 product from seller1)
     {
       name: 'Boneka Plush Bear 50cm',
       description: 'Boneka plush bear lembut dan menggemaskan berukuran 50cm. Bahan super soft yang aman untuk anak-anak. Jahitan kuat dan tidak mudah rontok bulunya. Cocok untuk hadiah dan souvenir.',
       price: 35000,
       originalPrice: 50000,
-      category: 'ibu-anak',
-      subcategory: 'mainan-anak',
+      category: 'mainan',
       images: JSON.stringify([img(MAINAN_IMGS[0])]),
       minOrder: 12,
       stock: 400,
@@ -513,14 +498,13 @@ async function seedDatabase(force = false) {
       ],
     },
 
-    // OLAHRAGA & OUTDOOR (2 products from seller1)
+    // OLAHRAGA (2 products from seller1)
     {
       name: 'Sepatu Running Olahraga Unisex',
       description: 'Sepatu running olahraga unisex dengan teknologi cushion yang nyaman. Sol karet anti-slip. Desain modern dan ringan. Cocok untuk lari, jalan, dan olahraga ringan.',
       price: 125000,
       originalPrice: 200000,
-      category: 'olahraga-outdoor',
-      subcategory: 'fitness',
+      category: 'olahraga',
       images: JSON.stringify([img(OLAHRAGA_IMGS[0])]),
       minOrder: 6,
       stock: 200,
@@ -539,8 +523,7 @@ async function seedDatabase(force = false) {
       description: 'Yoga mat premium tebal 8mm untuk kenyamanan maksimal. Permukaan anti-slip pada kedua sisi. Bahan TPE eco-friendly dan mudah dibersihkan. Dilengkapi tali carry.',
       price: 65000,
       originalPrice: 95000,
-      category: 'olahraga-outdoor',
-      subcategory: 'fitness',
+      category: 'olahraga',
       images: JSON.stringify([img(OLAHRAGA_IMGS[0])]),
       minOrder: 10,
       stock: 250,
@@ -563,7 +546,6 @@ async function seedDatabase(force = false) {
       price: 75000,
       originalPrice: 120000,
       category: 'elektronik',
-      subcategory: 'audio-speaker',
       images: JSON.stringify([img(ELEKTRONIK_IMGS[0]), img(ELEKTRONIK_IMGS[1])]),
       minOrder: 10,
       stock: 400,
@@ -582,7 +564,6 @@ async function seedDatabase(force = false) {
       price: 95000,
       originalPrice: 150000,
       category: 'elektronik',
-      subcategory: 'audio-speaker',
       images: JSON.stringify([img(ELEKTRONIK_IMGS[2])]),
       minOrder: 6,
       stock: 250,
@@ -601,7 +582,6 @@ async function seedDatabase(force = false) {
       price: 110000,
       originalPrice: 165000,
       category: 'elektronik',
-      subcategory: 'aksesoris-elektronik',
       images: JSON.stringify([img(ELEKTRONIK_IMGS[3])]),
       minOrder: 6,
       stock: 300,
@@ -620,7 +600,6 @@ async function seedDatabase(force = false) {
       price: 145000,
       originalPrice: 220000,
       category: 'elektronik',
-      subcategory: 'smartwatch',
       images: JSON.stringify([img(ELEKTRONIK_IMGS[4])]),
       minOrder: 6,
       stock: 200,
@@ -639,7 +618,6 @@ async function seedDatabase(force = false) {
       price: 18000,
       originalPrice: 28000,
       category: 'elektronik',
-      subcategory: 'aksesoris-elektronik',
       images: JSON.stringify([img(ELEKTRONIK_IMGS[1])]),
       minOrder: 50,
       stock: 2000,
@@ -659,7 +637,6 @@ async function seedDatabase(force = false) {
       price: 55000,
       originalPrice: 85000,
       category: 'elektronik',
-      subcategory: 'aksesoris-elektronik',
       images: JSON.stringify([img(ELEKTRONIK_IMGS[5])]),
       minOrder: 12,
       stock: 500,
@@ -679,8 +656,7 @@ async function seedDatabase(force = false) {
       description: 'Lampu LED strip sepanjang 5 meter dengan kontrol remote dan 16 juta warna. Bisa dipotong sesuai kebutuhan. Pemasangan mudah dengan perekat di belakang. Cocok untuk dekorasi kamar, ruang tamu, dan toko.',
       price: 35000,
       originalPrice: 55000,
-      category: 'rumah-tangga',
-      subcategory: 'lampu-pencahayaan',
+      category: 'rumah',
       images: JSON.stringify([img(RUMAH_IMGS[0])]),
       minOrder: 12,
       stock: 600,
@@ -698,8 +674,7 @@ async function seedDatabase(force = false) {
       description: 'Rak serbaguna 5 tingkat yang bisa dibongkar pasang. Bahan besi kokoh dengan coating anti karat. Cocok untuk dapur, kamar mandi, gudang, dan toko. Kapasitas hingga 30kg per tingkat.',
       price: 85000,
       originalPrice: 125000,
-      category: 'rumah-tangga',
-      subcategory: 'penyimpanan-organizer',
+      category: 'rumah',
       images: JSON.stringify([img(RUMAH_IMGS[1])]),
       minOrder: 5,
       stock: 150,
@@ -715,8 +690,7 @@ async function seedDatabase(force = false) {
       description: 'Diffuser aromatherapy ultrasonik kapasitas 300ml. Dilengkapi LED 7 warna dan timer auto-off. Operasi ultra-quiet di bawah 30dB. Membantu melembapkan udara dan menenangkan pikiran.',
       price: 65000,
       originalPrice: 95000,
-      category: 'rumah-tangga',
-      subcategory: 'dekorasi-rumah',
+      category: 'rumah',
       images: JSON.stringify([img(RUMAH_IMGS[2])]),
       minOrder: 10,
       stock: 350,
@@ -730,14 +704,13 @@ async function seedDatabase(force = false) {
       ],
     },
 
-    // IBU-ANAK & HOBI (2 products from seller2)
+    // MAINAN (2 products from seller2)
     {
       name: 'Set Balok Building Blocks 500pcs',
       description: 'Set balok building blocks 500pcs untuk kreativitas anak-anak. Bahan plastik ABS aman dan berkualitas. Kompatibel dengan merek balok lainnya. Membantu mengembangkan motorik halus dan imajinasi.',
       price: 55000,
       originalPrice: 80000,
-      category: 'ibu-anak',
-      subcategory: 'mainan-anak',
+      category: 'mainan',
       images: JSON.stringify([img(MAINAN_IMGS[0])]),
       minOrder: 12,
       stock: 300,
@@ -753,8 +726,7 @@ async function seedDatabase(force = false) {
       description: 'Mobil remote control drift skala 1:16 dengan kecepatan tinggi. Dilengkapi lampu LED dan suspensi yang baik. Baterai rechargeable tahan 20-30 menit. Kontrol jarak jauh hingga 30 meter.',
       price: 95000,
       originalPrice: 145000,
-      category: 'hobi-koleksi',
-      subcategory: 'diecast',
+      category: 'mainan',
       images: JSON.stringify([img(MAINAN_IMGS[0])]),
       minOrder: 6,
       stock: 200,
@@ -774,8 +746,7 @@ async function seedDatabase(force = false) {
       description: 'Resistance band set 5 level ketebalan untuk latihan dari pemula hingga lanjutan. Bahan latex premium yang elastis dan tahan lama. Dilengkapi handle, door anchor, dan ankle straps. Cocok untuk home workout.',
       price: 45000,
       originalPrice: 70000,
-      category: 'olahraga-outdoor',
-      subcategory: 'fitness',
+      category: 'olahraga',
       images: JSON.stringify([img(OLAHRAGA_IMGS[0])]),
       minOrder: 12,
       stock: 400,
@@ -787,14 +758,13 @@ async function seedDatabase(force = false) {
       variants: [],
     },
 
-    // MAKANAN & MINUMAN (1 product from seller2)
+    // MAKANAN (1 product from seller2)
     {
       name: 'Sambal Bawang Crispy Jar 250ml',
       description: 'Sambal bawang crispy homemade dalam jar 250ml. Dibuat dari cabai pilihan dan bawang goreng renyah. Pedasnya nampol tapi nagih! Cocok untuk lauk makan dan oleh-oleh. Tanpa pengawet buatan.',
       price: 25000,
       originalPrice: 35000,
-      category: 'makanan-minuman',
-      subcategory: 'bumbu-masak',
+      category: 'makanan',
       images: JSON.stringify([img(MAKANAN_IMGS[0])]),
       minOrder: 24,
       stock: 500,
@@ -810,7 +780,7 @@ async function seedDatabase(force = false) {
   ];
 
   // Create all products with their variants
-  const createdProducts: { id: string; name: string; sellerId: string; price: number; category: string; subcategory: string }[] = [];
+  const createdProducts: { id: string; name: string; sellerId: string; price: number; category: string }[] = [];
 
   for (const pData of productsData) {
     const { variants, ...productFields } = pData;
@@ -836,7 +806,6 @@ async function seedDatabase(force = false) {
       sellerId: product.sellerId,
       price: product.price,
       category: product.category,
-      subcategory: product.subcategory,
     });
   }
 

@@ -40,7 +40,6 @@ interface UIStore {
   // Search/filter state
   searchQuery: string;
   activeCategory: string;
-  activeSubcategory: string;
   sortBy: string;
   currentPage: number;
 
@@ -61,7 +60,6 @@ interface UIStore {
   setUnreadChatCount: (count: number) => void;
   setSearchQuery: (query: string) => void;
   setActiveCategory: (category: string) => void;
-  setActiveSubcategory: (subcategory: string) => void;
   setSortBy: (sort: string) => void;
   setCurrentPage: (page: number) => void;
   resetFilters: () => void;
@@ -99,7 +97,6 @@ export const useUIStore = create<UIStore>((set) => ({
   unreadChatCount: 0,
   searchQuery: '',
   activeCategory: 'all',
-  activeSubcategory: '',
   sortBy: 'popular',
   currentPage: 1,
 
@@ -167,9 +164,8 @@ export const useUIStore = create<UIStore>((set) => ({
   },
   setUnreadChatCount: (count) => set({ unreadChatCount: count }),
   setSearchQuery: (query) => set({ searchQuery: query, currentPage: 1 }),
-  setActiveCategory: (category) => set({ activeCategory: category, activeSubcategory: '', currentPage: 1 }),
-  setActiveSubcategory: (subcategory) => set({ activeSubcategory: subcategory, currentPage: 1 }),
+  setActiveCategory: (category) => set({ activeCategory: category, currentPage: 1 }),
   setSortBy: (sort) => set({ sortBy: sort, currentPage: 1 }),
   setCurrentPage: (page) => set({ currentPage: page }),
-  resetFilters: () => set({ searchQuery: '', activeCategory: 'all', activeSubcategory: '', sortBy: 'popular', currentPage: 1 }),
+  resetFilters: () => set({ searchQuery: '', activeCategory: 'all', sortBy: 'popular', currentPage: 1 }),
 }));

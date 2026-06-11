@@ -7,7 +7,6 @@ export interface ProductItem {
   price: number;
   originalPrice: number;
   category: string;
-  subcategory: string;
   images: string[];
   minOrder: number;
   stock: number;
