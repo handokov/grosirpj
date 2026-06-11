@@ -20,22 +20,19 @@ import { useNotificationStore } from '@/store/notification';
 import { CATEGORIES, formatPrice } from '@/lib/constants';
 import { calculateShipping } from '@/lib/shipping';
 
-// Lazy-loaded components with next/dynamic for faster initial load
-import dynamic from 'next/dynamic';
-
-// Eager import - needed immediately on page load (above the fold)
+// Import components - eager for instant interaction
 import { ProductGrid } from '@/components/product-grid';
+import { ProductDetail } from '@/components/product-detail';
+import { CartSidebar } from '@/components/cart-sidebar';
+import { CheckoutFlow } from '@/components/checkout-flow';
+import { OrderHistory } from '@/components/order-history';
+import { ChatPanel } from '@/components/chat-panel';
+import { NotificationPanel } from '@/components/notification-panel';
+import { AuthModal } from '@/components/auth-modal';
 import { Footer } from '@/components/footer';
 
-// Lazy imports - only loaded when user interacts
-const ProductDetail = dynamic(() => import('@/components/product-detail').then(m => ({ default: m.ProductDetail })), { ssr: false });
-const CartSidebar = dynamic(() => import('@/components/cart-sidebar').then(m => ({ default: m.CartSidebar })), { ssr: false });
-const CheckoutFlow = dynamic(() => import('@/components/checkout-flow').then(m => ({ default: m.CheckoutFlow })), { ssr: false });
-const OrderHistory = dynamic(() => import('@/components/order-history').then(m => ({ default: m.OrderHistory })), { ssr: false });
-const ChatPanel = dynamic(() => import('@/components/chat-panel').then(m => ({ default: m.ChatPanel })), { ssr: false });
-const NotificationPanel = dynamic(() => import('@/components/notification-panel').then(m => ({ default: m.NotificationPanel })), { ssr: false });
-const AuthModal = dynamic(() => import('@/components/auth-modal').then(m => ({ default: m.AuthModal })), { ssr: false });
-// SellerDashboard is the heaviest - imports recharts (~11MB). Only load for sellers.
+// Only SellerDashboard is lazy-loaded — it imports recharts (~11MB) and is only for sellers
+import dynamic from 'next/dynamic';
 const SellerDashboard = dynamic(() => import('@/components/seller-dashboard').then(m => ({ default: m.SellerDashboard })), {
   ssr: false,
   loading: () => (

@@ -40,17 +40,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import dynamic from 'next/dynamic';
 import { useAuthStore } from '@/store/auth';
 import { useUIStore } from '@/store/ui';
 import { useNotificationStore } from '@/store/notification';
+import { ChatPanel } from '@/components/chat-panel';
+import { NotificationPanel } from '@/components/notification-panel';
 import { formatPrice, getStatusInfo, CATEGORIES, PAYMENT_METHODS } from '@/lib/constants';
 import { calculateShipping, getCityNames } from '@/lib/shipping';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-
-// Lazy load overlay components
-const ChatPanel = dynamic(() => import('@/components/chat-panel').then(m => ({ default: m.ChatPanel })), { ssr: false });
-const NotificationPanel = dynamic(() => import('@/components/notification-panel').then(m => ({ default: m.NotificationPanel })), { ssr: false });
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
