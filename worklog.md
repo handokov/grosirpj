@@ -110,3 +110,36 @@ Stage Summary:
 - No duplicate panels: ✅ Fixed (removed duplicate NotificationPanel)
 - Lint: ✅ Clean (0 errors, 0 warnings)
 - Browser verification: ✅ Chat panel opens scrolled to bottom from notification click
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Performance optimization - reduce loading delays on page refresh
+
+Work Log:
+- Analyzed current architecture and identified remaining bottlenecks despite previous optimizations
+- Product store had only in-memory cache (lost on refresh) → added localStorage caching with stale-while-revalidate pattern
+- Auth/me route called ensureDb() before JWT check → reordered to check JWT first, skip DB if no valid token
+- Added Cache-Control headers to auth/me response (private, max-age=30, stale-while-revalidate=60)
+- Implemented "instant render" pattern: show cached products from localStorage immediately, refresh in background
+
+Changes:
+1. src/store/products.ts - Complete rewrite:
+   - Added loadFromLocalStorage() / saveToLocalStorage() helpers
+   - 5-minute localStorage cache for cross-session persistence
+   - Stale-while-revalidate: show cached data instantly, fetch fresh data in background
+   - No more loading spinner on refresh when cached data exists
+   - Only show loading spinner on very first visit (no cache)
+
+2. src/app/api/auth/me/route.ts - Optimized:
+   - JWT check FIRST → skip DB entirely if no valid token (saves ensureDb() + db.user.findUnique())
+   - Added Cache-Control headers for browser/CDN caching
+   - private, max-age=30, stale-while-revalidate=60 for authenticated responses
+   - no-store for unauthenticated responses
+
+Stage Summary:
+- Product rendering on refresh: ⚡ Instant (from localStorage cache)
+- Auth/me for non-logged users: ⚡ Faster (skip DB entirely)
+- Auth/me for logged-in users: 🔄 Cached for 30s in browser
+- Lint: ✅ Clean (0 errors, 0 warnings)
+- Browser verification: ✅ All features working (42 products visible, banner carousel, product detail, chat)
