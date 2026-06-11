@@ -140,6 +140,11 @@ export async function GET(request: Request) {
       total,
       page,
       totalPages,
+    }, {
+      headers: {
+        // Cache for 60s on CDN, serve stale while revalidating
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+      },
     });
   } catch (error) {
     console.error('GET /api/products error:', error);

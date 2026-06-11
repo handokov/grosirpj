@@ -17,30 +17,12 @@ import { useUIStore } from '@/store/ui';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useWishlistStore } from '@/store/wishlist';
+import { useProductStore, type ProductItem } from '@/store/products';
 import { CATEGORIES, formatPrice } from '@/lib/constants';
 import { toast } from 'sonner';
 
-interface ProductResponse {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  originalPrice: number;
-  category: string;
-  images: string[];
-  minOrder: number;
-  stock: number;
-  location: string;
-  active: boolean;
-  sold: number;
-  rating: number;
-  sellerId: string;
-  seller: { name: string; storeName?: string; city?: string };
-  variantGroups: { id: string; name: string; order: number; options: { id: string; value: string }[] }[];
-  reviewCount: number;
-  discount: number;
-  createdAt: string;
-}
+// Re-use ProductItem from shared product store
+type ProductResponse = ProductItem;
 
 interface ProductGridProps {
   flashSaleIds?: string[];
@@ -84,7 +66,23 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
   const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
   const isWishlisted = useWishlistStore((s) => s.isWishlisted);
 
+  // Shared product store for initial/popular load
+  const sharedProducts = useProductStore((s) => s.allProducts);
+  const sharedLoading = useProductStore((s) => s.productsLoading);
+
+  // Check if we're using default filters (can use shared store data)
+  const isDefaultView = activeCategory === 'all' && !sortBy && !searchQuery && currentPage === 1;
+
   const fetchProducts = useCallback(async () => {
+    // For default view, use shared store data (already fetched once)
+    if (isDefaultView && sharedProducts.length > 0) {
+      setProducts(sharedProducts.slice(0, 30));
+      setTotalProducts(sharedProducts.length);
+      setTotalPages(Math.ceil(sharedProducts.length / 30));
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -106,11 +104,21 @@ export function ProductGrid({ flashSaleIds = [] }: ProductGridProps) {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, sortBy, searchQuery, currentPage]);
+  }, [activeCategory, sortBy, searchQuery, currentPage, isDefaultView, sharedProducts]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // When shared store loads, update default view
+  useEffect(() => {
+    if (isDefaultView && sharedProducts.length > 0 && !sharedLoading) {
+      setProducts(sharedProducts.slice(0, 30));
+      setTotalProducts(sharedProducts.length);
+      setTotalPages(Math.ceil(sharedProducts.length / 30));
+      setLoading(false);
+    }
+  }, [isDefaultView, sharedProducts, sharedLoading]);
 
   const handleQuickAdd = (e: React.MouseEvent, product: ProductResponse) => {
     e.stopPropagation();

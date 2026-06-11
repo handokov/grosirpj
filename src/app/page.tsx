@@ -17,6 +17,7 @@ import { useUIStore } from '@/store/ui';
 import { toast } from 'sonner';
 import { useWishlistStore } from '@/store/wishlist';
 import { useNotificationStore } from '@/store/notification';
+import { useProductStore } from '@/store/products';
 import { CATEGORIES, formatPrice } from '@/lib/constants';
 import { calculateShipping } from '@/lib/shipping';
 
@@ -150,22 +151,14 @@ interface FlashProduct {
 }
 
 function FlashSaleSection() {
-  const [products, setProducts] = useState<FlashProduct[]>([]);
-  const [loading, setLoading] = useState(true);
   const openProductDetail = useUIStore((s) => s.openProductDetail);
+  const allProducts = useProductStore((s) => s.allProducts);
+  const productsLoading = useProductStore((s) => s.productsLoading);
 
-  useEffect(() => {
-    fetch('/api/products?sortBy=popular&limit=8')
-      .then(res => res.json())
-      .then(data => {
-        const flashProducts = (data.products || []).filter((p: FlashProduct) => p.discount > 0).slice(0, 6);
-        setProducts(flashProducts);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  // Derive flash sale products from shared store
+  const products = allProducts.filter((p: FlashProduct) => p.discount > 0).slice(0, 6);
 
-  if (loading || products.length === 0) return null;
+  if (productsLoading || products.length === 0) return null;
 
   return (
     <section className="py-12 bg-gradient-to-r from-emerald-600 to-emerald-500 relative overflow-hidden">
@@ -937,21 +930,14 @@ function PromoBanners() {
 
 // ===== RECOMMENDATION SECTION =====
 function RecommendationSection() {
-  const [products, setProducts] = useState<FlashProduct[]>([]);
-  const [loading, setLoading] = useState(true);
   const openProductDetail = useUIStore((s) => s.openProductDetail);
+  const allProducts = useProductStore((s) => s.allProducts);
+  const productsLoading = useProductStore((s) => s.productsLoading);
 
-  useEffect(() => {
-    fetch('/api/products?sortBy=rating&limit=12')
-      .then(res => res.json())
-      .then(data => {
-        setProducts(data.products || []);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  // Derive top-rated products from shared store
+  const products = [...allProducts].sort((a, b) => b.rating - a.rating).slice(0, 12);
 
-  if (loading) return null;
+  if (productsLoading) return null;
 
   return (
     <section className="py-12 bg-white">
@@ -1042,31 +1028,15 @@ export default function Home() {
     }
   }, [user, sellerMode, setSellerMode]);
 
-  // Ensure database is seeded (auto-seeds on Vercel via ensureDb)
+  // Fetch shared product data once (used by FlashSale, ProductGrid, Recommendation)
+  const fetchAllProducts = useProductStore((s) => s.fetchAllProducts);
   useEffect(() => {
-    fetch('/api/seed')
-      .then(res => res.json())
-      .then((data) => {
-        if (data.success) {
-          console.log('Database ready:', data.data?.users?.total || 0, 'users');
-        }
-      })
-      .catch(console.error);
-  }, []);
+    fetchAllProducts();
+  }, [fetchAllProducts]);
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f0fdf4]">
-        <div className="text-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <Zap className="w-7 h-7 text-white" />
-          </div>
-          <p className="text-gray-500">Memuat...</p>
-        </div>
-      </div>
-    );
-  }
+  // No more full-page loading spinner!
+  // Auth resolves in background; content renders immediately.
+  // Navbar shows login/masuk button until auth resolves.
 
   // ===== SELLER MODE =====
   // Only allow actual sellers to access seller dashboard

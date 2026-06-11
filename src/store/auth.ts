@@ -130,34 +130,41 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   init: async () => {
     try {
-      // First, try to verify via JWT cookie (without userId param)
-      const cookieRes = await fetch('/api/auth/me');
-      const cookieData = await cookieRes.json();
-      if (cookieData.user) {
-        const savedSellerMode = localStorage.getItem('grosirpj_seller_mode');
-        const sellerMode = savedSellerMode !== null ? JSON.parse(savedSellerMode) : false;
-        // Sync localStorage with the verified user
-        localStorage.setItem('grosirpj_user', JSON.stringify(cookieData.user));
-        set({ user: cookieData.user, loading: false, sellerMode: cookieData.user.role === 'seller' ? sellerMode : false });
-        return;
-      }
-
-      // Fallback: check localStorage and verify with userId
+      // INSTANT UI: Check localStorage first for immediate rendering
+      // This eliminates the blank loading spinner while auth verifies
       const stored = localStorage.getItem('grosirpj_user');
       if (stored) {
-        const user = JSON.parse(stored);
-        const res = await fetch(`/api/auth/me?userId=${user.id}`);
-        const data = await res.json();
-        if (data.user) {
+        try {
+          const cachedUser = JSON.parse(stored);
           const savedSellerMode = localStorage.getItem('grosirpj_seller_mode');
           const sellerMode = savedSellerMode !== null ? JSON.parse(savedSellerMode) : false;
-          set({ user: data.user, loading: false, sellerMode: data.user.role === 'seller' ? sellerMode : false });
+          // Immediately set user from cache so the page renders instantly
+          set({ user: cachedUser, loading: false, sellerMode: cachedUser.role === 'seller' ? sellerMode : false });
+        } catch {
+          localStorage.removeItem('grosirpj_user');
+        }
+      } else {
+        // No cached user, mark loading false immediately so content renders
+        set({ loading: false });
+      }
+
+      // BACKGROUND: Verify auth via JWT cookie (non-blocking)
+      try {
+        const cookieRes = await fetch('/api/auth/me');
+        const cookieData = await cookieRes.json();
+        if (cookieData.user) {
+          const savedSellerMode = localStorage.getItem('grosirpj_seller_mode');
+          const sellerMode = savedSellerMode !== null ? JSON.parse(savedSellerMode) : false;
+          localStorage.setItem('grosirpj_user', JSON.stringify(cookieData.user));
+          set({ user: cookieData.user, loading: false, sellerMode: cookieData.user.role === 'seller' ? sellerMode : false });
         } else {
+          // Server says no valid session — clear cached user
           localStorage.removeItem('grosirpj_user');
           set({ user: null, loading: false, sellerMode: false });
         }
-      } else {
-        set({ loading: false });
+      } catch {
+        // Network error — keep cached user if exists, otherwise already set
+        // loading: false was already set above
       }
     } catch {
       set({ loading: false });

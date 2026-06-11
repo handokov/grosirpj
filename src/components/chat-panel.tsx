@@ -259,10 +259,12 @@ export function ChatPanel() {
     loadData();
   }, [chatOpen, user, chatWithUserId]); // Remove fetch functions from deps to avoid re-triggering
 
-  // Polling for active conversation
+  // Polling for active conversation (5s interval — 60% less API calls vs 2s)
   useEffect(() => {
     if (chatOpen && user && activePartner) {
-      pollIntervalRef.current = setInterval(async () => {
+      const doPoll = async () => {
+        // Skip polling if tab is not visible
+        if (document.visibilityState !== 'visible') return;
         const currentPartner = activePartnerRef.current;
         if (!currentPartner) return;
 
@@ -271,7 +273,11 @@ export function ChatPanel() {
           markAsRead(currentPartner),
           fetchConversations(),
         ]);
-      }, 2000);
+      };
+
+      // Immediate first poll
+      doPoll();
+      pollIntervalRef.current = setInterval(doPoll, 5000);
     }
     return () => {
       if (pollIntervalRef.current) {
@@ -281,12 +287,15 @@ export function ChatPanel() {
     };
   }, [chatOpen, user, activePartner]); // Remove fetch functions from deps
 
-  // Background polling for unread count when chat is closed
+  // Background polling for unread count when chat is closed (30s, respects visibility)
   useEffect(() => {
     if (!chatOpen && user) {
-      const interval = setInterval(() => {
+      const doPoll = () => {
+        // Skip if tab is not visible — saves battery and API calls
+        if (document.visibilityState !== 'visible') return;
         fetchConversations();
-      }, 10000);
+      };
+      const interval = setInterval(doPoll, 30000);
       return () => clearInterval(interval);
     }
   }, [chatOpen, user]); // Remove fetchConversations from deps
