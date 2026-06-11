@@ -50,21 +50,27 @@ export function NotificationPanel() {
   const handleNotifClick = (notifId: string, read: boolean, type: string, link: string) => {
     if (!read) markAsRead(notifId);
 
-    // Close notification panel first
-    closeNotifPanel();
-
     // Navigate based on notification type
     if (type === 'chat') {
       // Extract partner userId from link (format: /chat/{userId})
       const partnerId = link.replace('/chat/', '');
-      if (partnerId) {
-        openChat(partnerId);
-      } else {
-        openChat();
-      }
+      // IMPORTANT: Do atomic state transition instead of closeNotifPanel() + openChat().
+      // Calling closeNotifPanel() first would trigger history.back() via popOverlayHistory(),
+      // which fires a popstate event that asynchronously closes ALL overlays — including
+      // the chat panel we're about to open. By setting state directly, we replace the
+      // notification overlay with the chat overlay in one update, keeping the history entry.
+      useUIStore.setState({
+        notifPanelOpen: false,
+        chatOpen: true,
+        chatWithUserId: partnerId || null,
+      });
     } else {
       // All order-related notifications (order, new_order, payment, shipping, system) → Order History
-      openOrderHistory();
+      // Same atomic transition to avoid popstate race condition
+      useUIStore.setState({
+        notifPanelOpen: false,
+        orderHistoryOpen: true,
+      });
     }
   };
 

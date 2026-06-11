@@ -228,6 +228,10 @@ export function ChatPanel() {
         // Clear old messages immediately when opening with specific partner
         setMessages([]);
         setActivePartner(chatWithUserId);
+        // IMPORTANT: Set scroll flag BEFORE fetching so the scroll effect
+        // picks it up when messages arrive. Previously this was set after
+        // the fetch, which meant the scroll effect ran with ref=false.
+        shouldScrollToBottomRef.current = true;
         setMessagesLoading(true);
         
         await Promise.all([
@@ -239,8 +243,10 @@ export function ChatPanel() {
         await markAsRead(chatWithUserId);
         fetchConversations();
         
-        // Scroll to bottom after messages load
+        // Re-ensure scroll after everything is loaded
+        // (handles Sheet animation timing issues)
         shouldScrollToBottomRef.current = true;
+        scrollToBottom();
       } else {
         await fetchConversations();
       }
@@ -280,16 +286,55 @@ export function ChatPanel() {
     }
   }, [chatOpen, user]); // Remove fetchConversations from deps
 
+  // Robust scroll-to-bottom helper — tries scrollIntoView AND direct scrollTop
+  const scrollToBottom = useCallback((delay = 0) => {
+    const doScroll = () => {
+      const container = messagesContainerRef.current;
+      const endRef = messagesEndRef.current;
+      if (endRef) {
+        endRef.scrollIntoView({ behavior: 'instant' });
+      }
+      // Direct scrollTop as fallback (more reliable during animations)
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+    if (delay > 0) {
+      const id = setTimeout(doScroll, delay);
+      return () => clearTimeout(id);
+    } else {
+      doScroll();
+    }
+  }, []);
+
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (messages.length === 0) return;
 
     if (shouldScrollToBottomRef.current) {
-      // Use requestAnimationFrame to ensure DOM has updated
+      // Immediate scroll attempt via rAF
       const raf = requestAnimationFrame(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+        // Also set scrollTop directly as fallback
+        const container = messagesContainerRef.current;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
       });
-      return () => cancelAnimationFrame(raf);
+      // Delayed retry for Sheet open animation (~300ms)
+      const timeout = setTimeout(() => {
+        if (shouldScrollToBottomRef.current) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+          const container = messagesContainerRef.current;
+          if (container) {
+            container.scrollTop = container.scrollHeight;
+          }
+        }
+      }, 400);
+      return () => {
+        cancelAnimationFrame(raf);
+        clearTimeout(timeout);
+      };
     }
   }, [messages]);
 
@@ -321,8 +366,9 @@ export function ChatPanel() {
     // 3. Refresh conversations for unread counts
     fetchConversations();
     
-    // 4. Ensure scroll to bottom after render
+    // 4. Ensure scroll to bottom after render (handles Sheet animation)
     shouldScrollToBottomRef.current = true;
+    scrollToBottom();
   };
 
   // Reset state when chat panel closes
@@ -334,6 +380,7 @@ export function ChatPanel() {
       setMessagesLoading(false);
       sendingRef.current = false; // Reset sending flag
       latestFetchIdRef.current = 0;
+      shouldScrollToBottomRef.current = true; // Reset for next open
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;

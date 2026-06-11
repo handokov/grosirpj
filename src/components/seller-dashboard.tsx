@@ -793,7 +793,20 @@ export function SellerDashboard({ onBack }: SellerDashboardProps) {
                           className={`w-full text-left p-4 hover:bg-gray-50 border-b border-gray-50 transition-colors ${!notif.read ? 'bg-emerald-50/40' : ''}`}
                           onClick={() => {
                             if (!notif.read) markAsRead(notif.id);
-                            if (notif.type === 'order' || notif.type === 'new_order') {
+                            if (notif.type === 'chat') {
+                              // Open chat with the specific partner
+                              const partnerId = (notif.link || '').replace('/chat/', '');
+                              setNotifOpen(false);
+                              if (partnerId) {
+                                openChat(partnerId);
+                              } else {
+                                openChat();
+                              }
+                            } else if (notif.type === 'order' || notif.type === 'new_order') {
+                              setActiveTab('orders');
+                              setNotifOpen(false);
+                            } else {
+                              // For payment, shipping, system notifications → orders tab
                               setActiveTab('orders');
                               setNotifOpen(false);
                             }

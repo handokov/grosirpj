@@ -1074,7 +1074,6 @@ export default function Home() {
     return (
       <>
         <SellerDashboard onBack={() => setSellerMode(false)} />
-        <NotificationPanel />
       </>
     );
   }

@@ -79,3 +79,34 @@ Stage Summary:
 - "Lacak Paket" button in OrderHistory: ✅ Working (appears on shipped orders)
 - Lint: ✅ Clean (0 errors, 0 warnings)
 - Browser verification: ✅ All features confirmed working
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix chat scroll-to-bottom when opening chat via notification click
+
+Work Log:
+- Analyzed notification → chat flow: notification-panel.tsx handleNotifClick → closeNotifPanel() → openChat(partnerId)
+- Identified 4 bugs:
+  1. **shouldScrollToBottomRef timing**: Set AFTER fetchMessages() completed, but scroll effect ran BEFORE with ref=false from previous session
+  2. **Sheet animation race**: scrollIntoView called during Sheet open animation, before container had final dimensions
+  3. **history.back() race condition**: closeNotifPanel() called popOverlayHistory() → history.back() → popstate event → closeAllOverlays() closed the chat panel that just opened
+  4. **Missing ChatPanel in seller mode**: page.tsx seller mode return didn't include ChatPanel, and seller-dashboard.tsx already had its own
+  5. **Seller dashboard notification dropdown**: didn't handle 'chat' type notifications at all
+  6. **Duplicate NotificationPanel**: both page.tsx and seller-dashboard.tsx rendered NotificationPanel, causing 2 sheets
+
+Fixes applied:
+- chat-panel.tsx: Set shouldScrollToBottomRef=true BEFORE fetching (not after)
+- chat-panel.tsx: Added scrollToBottom() helper with dual approach (scrollIntoView + scrollTop fallback)
+- chat-panel.tsx: Added 400ms delayed retry scroll for Sheet animation timing
+- chat-panel.tsx: Reset shouldScrollToBottomRef=true when chat panel closes
+- notification-panel.tsx: Changed handleNotifClick to use atomic useUIStore.setState() instead of closeNotifPanel()+openChat() to avoid history.back() race
+- seller-dashboard.tsx: Added chat notification handling in inline notification dropdown onClick
+- page.tsx: Removed duplicate NotificationPanel and ChatPanel from seller mode return (seller-dashboard.tsx already includes them)
+
+Stage Summary:
+- Chat scroll-to-bottom from notification: ✅ Working (VLM confirmed latest message visible)
+- Chat opens correctly from notification click: ✅ Working (notification panel closes, chat opens)
+- Seller dashboard chat notification: ✅ Working (added chat type handling)
+- No duplicate panels: ✅ Fixed (removed duplicate NotificationPanel)
+- Lint: ✅ Clean (0 errors, 0 warnings)
+- Browser verification: ✅ Chat panel opens scrolled to bottom from notification click
