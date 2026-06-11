@@ -143,3 +143,44 @@ Stage Summary:
 - Auth/me for logged-in users: 🔄 Cached for 30s in browser
 - Lint: ✅ Clean (0 errors, 0 warnings)
 - Browser verification: ✅ All features working (42 products visible, banner carousel, product detail, chat)
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Optimize chat loading speed - eliminate spinner delay when opening chat
+
+Problem Analysis:
+- When chat panel opens, it made 4 sequential API calls:
+  1. GET /api/chat?userId=X&otherUserId=Y (fetch messages)
+  2. GET /api/chat?userId=X (fetch conversations)
+  3. PATCH /api/chat (mark as read)
+  4. GET /api/chat?userId=X (refresh conversations after markAsRead)
+- Each API call runs ensureDb() which is slow on Vercel cold starts
+- Polling effect also fires immediately, adding duplicate requests
+- No caching at all — every chat open starts from zero
+
+Fixes:
+1. Created POST /api/chat/init endpoint - combines all data into ONE request:
+   - Conversations list with unread counts
+   - Messages for specific partner (if partnerId provided)
+   - Auto-marks messages as read (fire-and-forget, doesn't block response)
+   - Returns totalUnread count
+
+2. Optimized chat-panel.tsx:
+   - Uses /api/chat/init for initial load (1 request instead of 4)
+   - Shows cached conversations from localStorage instantly
+   - Polling only starts AFTER init completes (no duplicate first poll)
+   - Added initDoneRef to track initialization state
+
+3. Added localStorage cache for conversations:
+   - 2-minute TTL per user (keyed by userId)
+   - Conversations appear instantly from cache on chat open
+   - Fresh data loaded in background via /api/chat/init
+
+Stage Summary:
+- Chat API calls reduced: 4 → 1 (75% reduction)
+- Chat opens with cached conversations instantly
+- Polling no longer duplicates initial load
+- Lint: ✅ Clean
+- Browser verification: ✅ Chat panel opens, conversations load, messages display
+- Pushed to Vercel: commit ea2dfae
